@@ -20,7 +20,7 @@ const STAGES: StageConfig[] = [
     enemyTypes: ['normal' as PokemonType],
     bgColor: 0x2a5c1a,
     locked: false,
-    bgPokemon: ['pokemon_001', 'pokemon_004', 'pokemon_007', 'pokemon_025'],
+    bgPokemon: ['pokemon_143', 'pokemon_115', 'pokemon_007', 'pokemon_025'],
   },
   {
     id: 2,
