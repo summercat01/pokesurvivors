@@ -161,7 +161,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_ghost',
     spreadAngle: 0,
     behavior: 'zone',
-    zoneRadius: 210,
+    zoneRadius: 110,
     zoneDamageInterval: 1400,
   },
   {
