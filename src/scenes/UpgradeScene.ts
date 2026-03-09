@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from './GameScene';
 import {
   UPGRADES, type UpgradeConfig,
   getUpgradeLevel, setUpgradeLevel,
@@ -12,13 +11,12 @@ const CARD_W    = 83;
 const CARD_H    = 142;
 const GAP_X     = 6;
 const GAP_Y     = 6;
-const GRID_LEFT = Math.floor((GAME_WIDTH - (COLS * CARD_W + (COLS - 1) * GAP_X)) / 2); // ≈ 20
 const GRID_TOP  = 76;
 
 // 카드 (col, row) → 중심 좌표
-function cardCenter(col: number, row: number) {
+function cardCenter(col: number, row: number, gridLeft: number) {
   return {
-    x: GRID_LEFT + col * (CARD_W + GAP_X) + CARD_W / 2,
+    x: gridLeft + col * (CARD_W + GAP_X) + CARD_W / 2,
     y: GRID_TOP  + row * (CARD_H + GAP_Y) + CARD_H / 2,
   };
 }
@@ -51,11 +49,13 @@ export class UpgradeScene extends Phaser.Scene {
     this.selectedIdx = 0;
 
     // ── 배경 ──
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x1a3d0a).setOrigin(0, 0);
+    const W = this.scale.width;
+    const H = this.scale.height;
+    this.add.rectangle(0, 0, W, H, 0x1a3d0a).setOrigin(0, 0);
     const grid = this.add.graphics();
     grid.lineStyle(1, 0x2a5518, 0.22);
-    for (let x = 0; x < GAME_WIDTH; x += 32) grid.lineBetween(x, 0, x, GAME_HEIGHT);
-    for (let y = 0; y < GAME_HEIGHT; y += 32) grid.lineBetween(0, y, GAME_WIDTH, y);
+    for (let x = 0; x < W; x += 32) grid.lineBetween(x, 0, x, H);
+    for (let y = 0; y < H; y += 32) grid.lineBetween(0, y, W, y);
 
     this.createHeader();
     this.createCardGrid();
@@ -69,11 +69,12 @@ export class UpgradeScene extends Phaser.Scene {
 
   // ── 헤더 ──────────────────────────────────────────────
   private createHeader() {
-    const CX = GAME_WIDTH / 2;
-    this.add.rectangle(CX, 38, GAME_WIDTH - 16, 62, 0x181810);
-    this.add.rectangle(CX, 38, GAME_WIDTH - 20, 58, 0xd8d8c0);
+    const CX = this.scale.width / 2;
+    const W  = this.scale.width;
+    this.add.rectangle(CX, 38, W - 16, 62, 0x181810);
+    this.add.rectangle(CX, 38, W - 20, 58, 0xd8d8c0);
     this.add.rectangle(13, 38, 2, 52, 0xf0f0e0);
-    this.add.rectangle(CX, 10, GAME_WIDTH - 24, 2, 0xf0f0e0);
+    this.add.rectangle(CX, 10, W - 24, 2, 0xf0f0e0);
 
     this.add.text(CX, 22, '영구 업그레이드', {
       fontSize: '17px', color: '#181810', fontStyle: 'bold',
@@ -86,10 +87,11 @@ export class UpgradeScene extends Phaser.Scene {
 
   // ── 카드 그리드 ───────────────────────────────────────
   private createCardGrid() {
+    const gridLeft = Math.floor((this.scale.width - (COLS * CARD_W + (COLS - 1) * GAP_X)) / 2);
     UPGRADES.forEach((upg, idx) => {
       const col = idx % COLS;
       const row = Math.floor(idx / COLS);
-      const { x: cx, y: cy } = cardCenter(col, row);
+      const { x: cx, y: cy } = cardCenter(col, row, gridLeft);
       const curLevel = getUpgradeLevel(upg.id);
       const isMaxed  = curLevel >= 5;
 
@@ -167,14 +169,15 @@ export class UpgradeScene extends Phaser.Scene {
   private createInfoPanel() {
     const PANEL_Y  = 390;
     const PANEL_H  = 220;
-    const CX       = GAME_WIDTH / 2;
+    const CX       = this.scale.width / 2;
+    const W        = this.scale.width;
     const panelCY  = PANEL_Y + PANEL_H / 2;
 
     // DP 스타일 패널
-    this.add.rectangle(CX, panelCY, GAME_WIDTH - 16, PANEL_H, 0x181810);
-    this.add.rectangle(CX, panelCY, GAME_WIDTH - 20, PANEL_H - 4, 0xd8d8c0);
+    this.add.rectangle(CX, panelCY, W - 16, PANEL_H, 0x181810);
+    this.add.rectangle(CX, panelCY, W - 20, PANEL_H - 4, 0xd8d8c0);
     this.add.rectangle(13,  panelCY, 2, PANEL_H - 12, 0xf0f0e0);
-    this.add.rectangle(CX, PANEL_Y + 3, GAME_WIDTH - 24, 2, 0xf0f0e0);
+    this.add.rectangle(CX, PANEL_Y + 3, W - 24, 2, 0xf0f0e0);
 
     // ─ 아이콘 배경 (좌측) ─
     this.infoIconBg = this.add.rectangle(52, PANEL_Y + 56, 72, 72, 0x888870);
@@ -197,7 +200,7 @@ export class UpgradeScene extends Phaser.Scene {
 
     this.infoDesc  = this.add.text(TX, PANEL_Y + 54, '', {
       fontSize: '12px', color: '#484840',
-      wordWrap: { width: GAME_WIDTH - TX - 20 },
+      wordWrap: { width: this.scale.width - TX - 20 },
     }).setOrigin(0, 0);
 
     this.infoBonus = this.add.text(TX, PANEL_Y + 74, '', {
@@ -212,7 +215,7 @@ export class UpgradeScene extends Phaser.Scene {
     }
 
     // ─ 구매 버튼 (우측 하단) ─
-    const BTN_X = GAME_WIDTH - 70;
+    const BTN_X = this.scale.width - 70;
     const BTN_Y = PANEL_Y + 92;
     this.add.rectangle(BTN_X, BTN_Y, 100, 56, 0x181810);
     this.buyBtnInner = this.add.rectangle(BTN_X, BTN_Y, 98, 54, 0x3aaa3a)
@@ -310,15 +313,15 @@ export class UpgradeScene extends Phaser.Scene {
 
   // ── 돌아가기 버튼 ─────────────────────────────────────
   private createBackButton() {
-    const BTN_Y = 755;
-    const CX    = GAME_WIDTH / 2;
+    const BTN_Y = this.scale.height - 89;
+    const CX    = this.scale.width / 2;
 
     this.add.rectangle(CX, BTN_Y, 202, 52, 0x181810);
     const bg = this.add.rectangle(CX, BTN_Y, 200, 50, 0xd8d8c0)
       .setInteractive({ useHandCursor: true });
 
     // 좌측 스트라이프 (파랑 = 타이틀 복귀)
-    this.add.rectangle(CX - 92, BTN_Y, 7, 44, 0x4488cc);
+    this.add.rectangle(CX - 100 + 3, BTN_Y, 7, 44, 0x4488cc);
     this.add.text(CX + 4, BTN_Y, '← 타이틀로', {
       fontSize: '16px', color: '#181810', fontStyle: 'bold',
     }).setOrigin(0.5);

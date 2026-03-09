@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT } from './GameScene';
 
 // 배경에 돌아다닐 포켓몬 스프라이트 키 목록
 const BG_POKEMON = [
@@ -20,6 +19,22 @@ export class TitleScene extends Phaser.Scene {
     this.createLogo();
     this.createButtons();
     this.createFooter();
+
+    // BGM 재생
+    this.playBGM();
+
+    // 첫 실행 시 오박사 가이드 표시
+    if (!localStorage.getItem('guideShown')) {
+      this.scene.launch('OakGuideScene');
+    }
+  }
+
+  private playBGM() {
+    if (!this.cache.audio.exists('bgm_title')) return;
+    const existing = this.sound.get('bgm_title');
+    if (existing?.isPlaying) return;
+    this.sound.stopAll();
+    this.sound.play('bgm_title', { loop: true, volume: 0.5 });
   }
 
   // ─────────────────────────────────────────────
@@ -27,18 +42,18 @@ export class TitleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────
   private createBackground() {
     // 풀밭 기본 색
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x1e4a10).setOrigin(0, 0);
+    this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x1e4a10).setOrigin(0, 0);
 
     // 격자 (연한 선)
     const g = this.add.graphics();
     g.lineStyle(1, 0x2a6018, 0.4);
-    for (let x = 0; x < GAME_WIDTH; x += 48) g.lineBetween(x, 0, x, GAME_HEIGHT);
-    for (let y = 0; y < GAME_HEIGHT; y += 48) g.lineBetween(0, y, GAME_WIDTH, y);
+    for (let x = 0; x < this.scale.width; x += 48) g.lineBetween(x, 0, x, this.scale.height);
+    for (let y = 0; y < this.scale.height; y += 48) g.lineBetween(0, y, this.scale.width, y);
 
     // 하단 그라데이션 오버레이 (버튼 가독성)
     const overlay = this.add.graphics();
     overlay.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.7, 0.7);
-    overlay.fillRect(0, GAME_HEIGHT * 0.45, GAME_WIDTH, GAME_HEIGHT * 0.55);
+    overlay.fillRect(0, this.scale.height * 0.45, this.scale.width, this.scale.height * 0.55);
   }
 
   // ─────────────────────────────────────────────
@@ -48,8 +63,8 @@ export class TitleScene extends Phaser.Scene {
     const COUNT = 8;
     for (let i = 0; i < COUNT; i++) {
       const key = BG_POKEMON[i % BG_POKEMON.length];
-      const x   = Phaser.Math.Between(30, GAME_WIDTH - 30);
-      const y   = Phaser.Math.Between(60, GAME_HEIGHT * 0.48 - 20);
+      const x   = Phaser.Math.Between(30, this.scale.width - 30);
+      const y   = Phaser.Math.Between(60, this.scale.height * 0.48 - 20);
       const spr = this.add.image(x, y, key)
         .setDisplaySize(56, 56)
         .setAlpha(0.55)
@@ -60,8 +75,8 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private startWander(spr: Phaser.GameObjects.Image) {
-    const nextX = Phaser.Math.Between(30, GAME_WIDTH - 30);
-    const nextY = Phaser.Math.Between(60, GAME_HEIGHT * 0.46);
+    const nextX = Phaser.Math.Between(30, this.scale.width - 30);
+    const nextY = Phaser.Math.Between(60, this.scale.height * 0.46);
     const dur   = Phaser.Math.Between(2500, 5000);
 
     spr.setFlipX(nextX > spr.x); // 오른쪽이면 flip (Gen4 기본=왼쪽 방향)
@@ -81,21 +96,23 @@ export class TitleScene extends Phaser.Scene {
   // ─────────────────────────────────────────────
   private createLogo() {
     // ── "포켓몬" 소제목 ──
-    this.add.text(GAME_WIDTH / 2, 120, '포켓몬', {
+    this.add.text(this.scale.width / 2, 120, '포켓몬', {
       fontSize: '22px',
       color: '#ffe040',
       fontStyle: 'bold',
       stroke: '#302000',
       strokeThickness: 4,
+      padding: { top: 6 },
     }).setOrigin(0.5).setDepth(10);
 
     // ── 메인 타이틀 ──
-    const title = this.add.text(GAME_WIDTH / 2, 178, '서바이버즈', {
+    const title = this.add.text(this.scale.width / 2, 178, '서바이버즈', {
       fontSize: '52px',
       color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#1a1a00',
       strokeThickness: 7,
+      padding: { top: 10 },
     }).setOrigin(0.5).setDepth(10);
 
     // 타이틀 등장 애니메이션 (아래서 올라오며 페이드인)
@@ -109,7 +126,7 @@ export class TitleScene extends Phaser.Scene {
     });
 
     // ── 영문 서브타이틀 ──
-    this.add.text(GAME_WIDTH / 2, 240, 'Pokémon Survivors', {
+    this.add.text(this.scale.width / 2, 240, 'Pokémon Survivors', {
       fontSize: '15px',
       color: '#cceeaa',
       stroke: '#102010',
@@ -117,7 +134,7 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(10);
 
     // ── 버전 배지 (영문 서브타이틀 오른쪽 옆) ──
-    const badgeX = GAME_WIDTH - 50;
+    const badgeX = this.scale.width - 50;
     const badgeY = 240;
     this.add.rectangle(badgeX, badgeY, 40, 18, 0x3377cc).setDepth(10);
     this.add.text(badgeX, badgeY, 'v0.1', {
@@ -128,7 +145,7 @@ export class TitleScene extends Phaser.Scene {
 
     // ── 트레이너 이미지 ──
     if (this.textures.exists('trainer')) {
-      const trainer = this.add.image(GAME_WIDTH / 2, 330, 'trainer')
+      const trainer = this.add.image(this.scale.width / 2, 330, 'trainer')
         .setOrigin(0.5, 1)
         .setDepth(8);
 
@@ -149,7 +166,7 @@ export class TitleScene extends Phaser.Scene {
   private createButtons() {
     const BTN_W  = 280;
     const BTN_H  = 54;
-    const BTN_CX = GAME_WIDTH / 2;
+    const BTN_CX = this.scale.width / 2;
     const BTN_Y0 = 490;
     const BTN_GAP = 68;
 
@@ -158,7 +175,10 @@ export class TitleScene extends Phaser.Scene {
       BTN_W, BTN_H,
       '▶  게임 시작',
       0x44cc66,      // 포인트 컬러 (초록)
-      () => this.scene.start('GameScene'),
+      () => {
+        this.cameras.main.fadeOut(200, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('StageSelectScene'));
+      },
     );
 
     this.createDPButton(
@@ -218,16 +238,17 @@ export class TitleScene extends Phaser.Scene {
       fontSize: '18px',
       color: '#181810',
       fontStyle: 'bold',
+      padding: { top: 6 },
     }).setOrigin(0.5).setDepth(D + 4);
 
     // ── 인터랙션 ──
     bg.on('pointerover', () => {
       bg.setFillStyle(0xd8d8c8);
-      txt.setStyle({ color: '#003399', fontSize: '18px', fontStyle: 'bold' });
+      txt.setStyle({ color: '#003399', fontSize: '18px', fontStyle: 'bold', padding: { top: 6 } });
     });
     bg.on('pointerout', () => {
       bg.setFillStyle(0xeeeee0);
-      txt.setStyle({ color: '#181810', fontSize: '18px', fontStyle: 'bold' });
+      txt.setStyle({ color: '#181810', fontSize: '18px', fontStyle: 'bold', padding: { top: 6 } });
     });
     bg.on('pointerdown', () => {
       bg.setFillStyle(0xc8c8b8);
@@ -261,9 +282,39 @@ export class TitleScene extends Phaser.Scene {
   // 하단 푸터
   // ─────────────────────────────────────────────
   private createFooter() {
-    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 24, '© 2025  포켓서바이버즈', {
-      fontSize: '11px',
-      color: '#556644',
+    const W = this.scale.width;
+    const H = this.scale.height;
+
+
+    this.add.rectangle(W / 2, H - 58, W, 112, 0x000000, 0.60).setDepth(9);
+    this.add.text(W / 2, H - 108,
+      'Pokémon and all related names are trademarks of Nintendo / Creatures Inc. / GAME FREAK inc.\n이 게임은 닌텐도와 무관한 비영리 팬 게임입니다.', {
+        fontSize: '15px', color: '#aabbaa', align: 'center',
+        lineSpacing: 6,
+        wordWrap: { width: W - 24 },
+      }).setOrigin(0.5, 0).setDepth(10);
+
+    const GAP = 8;
+    const ICON_SIZE = 18;
+    const devTxt = this.add.text(0, 0, 'Developed by  SummerCat', {
+      fontSize: '15px', color: '#88bbff', fontStyle: 'bold',
+      padding: { top: 4 },
     }).setOrigin(0.5).setDepth(10);
+    const totalW = devTxt.width + GAP + ICON_SIZE;
+    devTxt.setPosition(W / 2 - (GAP + ICON_SIZE) / 2, H - 16);
+
+    const iconX = W / 2 - totalW / 2 + devTxt.width + GAP + ICON_SIZE / 2;
+    if (this.textures.exists('icon_github')) {
+      this.add.image(iconX, H - 16, 'icon_github').setDisplaySize(ICON_SIZE, ICON_SIZE).setDepth(10);
+    } else {
+      this.add.text(iconX, H - 16, '🐙', { fontSize: '15px' }).setOrigin(0.5).setDepth(10);
+    }
+
+    // 전체 영역 히트박스
+    const devHit = this.add.rectangle(W / 2, H - 16, totalW + 16, 28, 0xffffff, 0)
+      .setDepth(11).setInteractive({ useHandCursor: true });
+    devHit.on('pointerover', () => devTxt.setStyle({ fontSize: '15px', color: '#bbddff', fontStyle: 'bold' }));
+    devHit.on('pointerout',  () => devTxt.setStyle({ fontSize: '15px', color: '#88bbff', fontStyle: 'bold' }));
+    devHit.on('pointerdown', () => window.open('https://github.com/summercat01', '_blank'));
   }
 }

@@ -14,8 +14,8 @@ export class LevelUpScene extends Phaser.Scene {
   }
 
   create(data: { options: LevelUpOption[] }) {
-    const W = 390;
-    const H = 844;
+    const W = this.scale.width;
+    const H = this.scale.height;
     const { options } = data;
 
     // ── 어두운 반투명 오버레이 ──
@@ -28,6 +28,7 @@ export class LevelUpScene extends Phaser.Scene {
       fontStyle: 'bold',
       stroke: '#302010',
       strokeThickness: 5,
+      padding: { top: 8 },
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 118, '강화할 능력을 고르세요', {
@@ -35,6 +36,7 @@ export class LevelUpScene extends Phaser.Scene {
       color: '#ccccbb',
       stroke: '#000000',
       strokeThickness: 2,
+      padding: { top: 4 },
     }).setOrigin(0.5);
 
     // ── 카드 ──
@@ -67,9 +69,22 @@ export class LevelUpScene extends Phaser.Scene {
     const stripeX  = cx - CARD_W / 2 + STRIPE_W / 2;
     this.add.rectangle(stripeX, cy, STRIPE_W, CARD_H, typeColor, 0.85);
 
-    // 포켓몬 스프라이트 (타입 영역 중앙)
+    // 포켓몬 스프라이트 or 타입 심볼
     if (sprKey && this.textures.exists(sprKey)) {
       this.add.image(stripeX, cy, sprKey).setDisplaySize(64, 64);
+    } else if (opt.passiveType) {
+      // 타입 이름 심볼 (한글 타입명)
+      const typeKr: Record<string, string> = {
+        normal: '노말', fire: '불꽃', water: '물', grass: '풀',
+        electric: '전기', ice: '얼음', fighting: '격투', poison: '독',
+        ground: '땅', flying: '비행', psychic: '에스퍼', bug: '벌레',
+        rock: '바위', ghost: '고스트', dragon: '드래곤', dark: '악', steel: '강철',
+      };
+      this.add.text(stripeX, cy - 8, '💎', { fontSize: '28px' }).setOrigin(0.5);
+      this.add.text(stripeX, cy + 20, typeKr[opt.passiveType] ?? opt.passiveType, {
+        fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0.5);
     }
 
     // ── 배지 (NEW / Lv.X→Y) ──
@@ -95,6 +110,7 @@ export class LevelUpScene extends Phaser.Scene {
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
+      padding: { top: 6 },
     }).setOrigin(0, 0.5);
 
     // ── 설명 텍스트 ──

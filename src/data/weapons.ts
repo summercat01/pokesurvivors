@@ -85,6 +85,54 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_psychic',
     spreadAngle: 0,
   },
+  {
+    pokemonId: 74,
+    name: '꼬마돌',
+    type: 'rock',
+    damage: 20,
+    cooldown: 2000,
+    projectileSpeed: 220,
+    projectileCount: 1,
+    duration: 2500,
+    textureKey: 'proj_rock',
+    spreadAngle: 0,
+  },
+  {
+    pokemonId: 41,
+    name: '주뱃',
+    type: 'flying',
+    damage: 5,
+    cooldown: 400,
+    projectileSpeed: 500,
+    projectileCount: 2,
+    duration: 600,
+    textureKey: 'proj_flying',
+    spreadAngle: 0.3,
+  },
+  {
+    pokemonId: 92,
+    name: '고오스',
+    type: 'ghost',
+    damage: 18,
+    cooldown: 1800,
+    projectileSpeed: 130,
+    projectileCount: 1,
+    duration: 5000,
+    textureKey: 'proj_ghost',
+    spreadAngle: 0,
+  },
+  {
+    pokemonId: 66,
+    name: '알통몬',
+    type: 'fighting',
+    damage: 14,
+    cooldown: 700,
+    projectileSpeed: 380,
+    projectileCount: 1,
+    duration: 900,
+    textureKey: 'proj_fighting',
+    spreadAngle: 0,
+  },
 ];
 
 // 하위 호환성 alias
@@ -110,6 +158,29 @@ export function getUpgradedWeapon(base: WeaponConfig, level: number): WeaponConf
 export function getUpgradeDescription(base: WeaponConfig, toLevel: number): string {
   const upgraded = getUpgradedWeapon(base, toLevel);
   return `공격력 ${upgraded.damage} / 쿨다운 ${(upgraded.cooldown / 1000).toFixed(1)}s / 투사체 ×${upgraded.projectileCount}`;
+}
+
+// ===== 타입 상성 (공격 타입 → 약점 타입 목록) =====
+const SUPER_EFFECTIVE: Partial<Record<PokemonType, PokemonType[]>> = {
+  fire:     ['grass', 'bug', 'steel', 'ice'],
+  water:    ['fire', 'rock', 'ground'],
+  grass:    ['water', 'ground', 'rock'],
+  electric: ['water', 'flying'],
+  ice:      ['grass', 'dragon', 'flying', 'ground'],
+  fighting: ['normal', 'rock', 'steel', 'ice', 'dark'],
+  ground:   ['fire', 'electric', 'poison', 'rock', 'steel'],
+  rock:     ['fire', 'ice', 'flying', 'bug'],
+  ghost:    ['ghost', 'psychic'],
+  psychic:  ['fighting', 'poison'],
+  flying:   ['grass', 'fighting', 'bug'],
+  poison:   ['grass'],
+  dark:     ['ghost', 'psychic'],
+  dragon:   ['dragon'],
+};
+
+/** 1.5배 데미지면 true */
+export function isSuperEffective(attackType: PokemonType, defenderType: PokemonType): boolean {
+  return SUPER_EFFECTIVE[attackType]?.includes(defenderType) ?? false;
 }
 
 // ===== 타입별 투사체 색상 =====

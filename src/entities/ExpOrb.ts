@@ -19,16 +19,16 @@ export class ExpOrb extends Phaser.GameObjects.Image {
     super(scene, x, y, key);
     scene.add.existing(this);
 
+    // 경험치 양에 따라 구슬 크기 결정
+    const orbScale = expValue >= 9 ? 1.5 : expValue >= 5 ? 1.2 : 1.0;
     this.setDepth(12).setScale(0);
     if (key === 'rare_candy') {
       this.setDisplaySize(22, 22);
     }
 
-    // 팝 애니메이션 → 플레이어 방향으로 날아가기
-    // 플레이어 위치는 tween 완료 시점에 캡처 (짧은 duration이라 충분히 정확)
     scene.tweens.add({
       targets: this,
-      scale: key === 'rare_candy' ? 1 : 1.1,
+      scale: key === 'rare_candy' ? orbScale : orbScale * 1.1,
       duration: 100,
       ease: 'Back.easeOut',
       onComplete: () => this.flyToPlayer(scene, expValue),
@@ -50,6 +50,7 @@ export class ExpOrb extends Phaser.GameObjects.Image {
       onComplete: () => {
         // 흡수 파티클 효과 (작은 흰 원)
         const burst = scene.add.circle(targetX, targetY, 8, 0xffee44, 0.7).setDepth(13);
+        scene.cameras.main.ignore(burst);
         scene.tweens.add({
           targets: burst,
           scale: 2,
@@ -57,6 +58,21 @@ export class ExpOrb extends Phaser.GameObjects.Image {
           duration: 180,
           onComplete: () => burst.destroy(),
         });
+
+        // EXP 획득 텍스트 (3 이상일 때만 표시)
+        if (expValue >= 3) {
+          const expTxt = scene.add.text(targetX, targetY - 12, `+${expValue} EXP`, {
+            fontSize: '11px', color: '#ffee44',
+            stroke: '#443300', strokeThickness: 2,
+          }).setOrigin(0.5).setDepth(14);
+          scene.cameras.main.ignore(expTxt);
+          scene.tweens.add({
+            targets: expTxt,
+            y: expTxt.y - 18, alpha: 0,
+            duration: 600,
+            onComplete: () => expTxt.destroy(),
+          });
+        }
 
         scene.gainExp(expValue);
         this.destroy();

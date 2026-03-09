@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from './Player';
+import type { PokemonType } from '../types';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   hp: number;
@@ -7,7 +8,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   moveSpeed: number;
   exp: number;
   isBoss: boolean;
-
+  isElite: boolean;
+  pokemonTypes: PokemonType[];   // 이중 타입 지원 (최대 2개)
+  /** @deprecated pokemonTypes[0] 사용 권장 */
+  get pokemonType(): PokemonType { return this.pokemonTypes[0]; }
+  goldValue: number;
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -18,23 +23,40 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       moveSpeed: number;
       exp: number;
       isBoss?: boolean;
+      isElite?: boolean;
+      pokemonTypes?: PokemonType[];
+      pokemonType?: PokemonType;   // 단일 타입 하위 호환
+      goldValue?: number;
     }
   ) {
     super(scene, x, y, texture);
     scene.add.existing(this);
     scene.physics.add.existing(this);
+    this.postFX.addGlow(0x000000, 1, 0, false, 0.1, 2);
 
     this.hp = config.hp;
     this.maxHp = config.hp;
     this.moveSpeed = config.moveSpeed;
     this.exp = config.exp;
     this.isBoss = config.isBoss ?? false;
+    this.isElite = config.isElite ?? false;
+    this.pokemonTypes = config.pokemonTypes
+      ?? (config.pokemonType ? [config.pokemonType] : ['normal']);
+    this.goldValue = config.goldValue ?? (this.isBoss ? 5 : 1);
 
-    this.setScale(this.isBoss ? 1.0 : 0.75);
+    this.setScale(this.isBoss ? 1.6 : this.isElite ? 1.0 : 0.75);
+    this.setCollideWorldBounds(true);
+
+    // 엘리트 → 황금 틴트
+    if (this.isElite) {
+      this.setTint(0xffdd44);
+      this.postFX.clear();
+      this.postFX.addGlow(0xffaa00, 2, 0, false, 0.15, 3);
+    }
 
     // 원형 히트박스 설정
-    // 일반: 반지름 15px, 보스: 반지름 20px
-    const radius = this.isBoss ? 20 : 15;
+    // 일반: 반지름 15px, 보스: 반지름 28px
+    const radius = this.isBoss ? 28 : 15;
     this.setCircle(
       radius,
       this.width / 2 - radius,   // offset X (스프라이트 중앙 정렬)
@@ -64,6 +86,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(amount: number): number {
     this.hp = Math.max(0, this.hp - amount);
+    // 피격 시 흰색 플래시
+    this.setTint(0xffffff);
+    this.scene.time.delayedCall(80, () => {
+      if (this.active) this.clearTint();
+    });
     return amount;
   }
 

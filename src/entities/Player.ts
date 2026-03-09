@@ -29,15 +29,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private hpRegenTimer: number = 0;
   private iFrameTimer: number = 0;       // 현재 무적 남은 시간 (ms)
   private readonly I_FRAME_DURATION = 500; // 피격 후 0.5초 무적
-
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'trainer');
     scene.add.existing(this);
     scene.physics.add.existing(this);
+    this.postFX.addGlow(0x000000, 1, 0, false, 0.1, 2);
 
     this.stats = { ...DEFAULT_STATS };
     this.setScale(0.75);
-    this.setCollideWorldBounds(false);
+    this.setCollideWorldBounds(true);
 
     // 원형 히트박스 (반지름 20px)
     const radius = 15;
@@ -69,6 +69,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   isInvincible(): boolean {
     return this.iFrameTimer > 0;
+  }
+
+  startInvincible(duration: number) {
+    this.iFrameTimer = Math.max(this.iFrameTimer, duration);
   }
 
   private handleMovement(joystickDx: number, joystickDy: number) {
@@ -121,8 +125,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   takeDamage(amount: number): number {
     // 무적 시간 중 피격 무시
     if (this.iFrameTimer > 0) return 0;
-    // 회피 판정
-    if (Math.random() < this.stats.evasion) return 0;
+    // 회피 판정 (최대 50%)
+    if (Math.random() < Math.min(this.stats.evasion, 0.50)) return 0;
 
     const actual = Math.max(1, amount - this.stats.defense);
     this.stats.hp = Math.max(0, this.stats.hp - actual);

@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 
 export class Projectile extends Phaser.Physics.Arcade.Sprite {
   damage: number;
+  pierce: number;           // 관통 횟수 (0 = 관통 없음)
+  hitEnemies: Set<number>;  // 이미 맞춘 적 ID (관통 시 재히트 방지)
   private lifeTimer: number;
   private maxLife: number;
 
@@ -13,13 +15,16 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     damage: number,
     speed: number,
     angle: number,   // 라디안
-    duration: number // 밀리초
+    duration: number, // 밀리초
+    pierce: number = 0
   ) {
     super(scene, x, y, texture);
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
     this.damage = damage;
+    this.pierce = pierce;
+    this.hitEnemies = new Set();
     this.lifeTimer = 0;
     this.maxLife = duration;
 
