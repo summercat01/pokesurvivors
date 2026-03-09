@@ -513,9 +513,6 @@ export class GameScene extends Phaser.Scene {
     const actual = player.takeDamage(dmg);
     if (actual <= 0) return;
 
-    // 피격 시 약한 진동 + 붉은 플래시
-    this.gameCam.shake(60, 0.003);
-    this.gameCam.flash(120, 255, 60, 60, false);
 
     const dmgText = this.add.text(player.x, player.y - 20, `-${actual}`, {
       fontSize: '14px',
