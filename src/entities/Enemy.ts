@@ -14,6 +14,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   get pokemonType(): PokemonType { return this.pokemonTypes[0]; }
   goldValue: number;
   contactDamage?: number;  // 설정 시 접촉 데미지로 사용 (기본값: 게임씬 수식)
+  movementOverride: { vx: number; vy: number } | null = null; // 보스 패턴용 이동 오버라이드
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -68,6 +69,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(player: Player) {
+    // 보스 패턴에서 이동 오버라이드가 설정된 경우
+    if (this.movementOverride !== null) {
+      const body = this.body as Phaser.Physics.Arcade.Body;
+      body.velocity.x = Phaser.Math.Linear(body.velocity.x, this.movementOverride.vx, 0.25);
+      body.velocity.y = Phaser.Math.Linear(body.velocity.y, this.movementOverride.vy, 0.25);
+      const dx = player.x - this.x;
+      if (Math.abs(dx) > 8) this.setFlipX(dx > 0);
+      return;
+    }
+
     // 플레이어 방향 목표 속도
     const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y);
     const targetVx = Math.cos(angle) * this.moveSpeed;

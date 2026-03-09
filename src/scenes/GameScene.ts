@@ -90,6 +90,12 @@ export class GameScene extends Phaser.Scene {
   private readonly MAX_ENEMIES = 60;
   private darkraiSpawned: boolean = false;
 
+  // 보스 패턴
+  private bossPatternTimer: number = 0;
+  private bossPatternState: string = 'walk';
+  private bossRollTarget: { x: number; y: number } | null = null;
+  private bossIndicatorGfx: Phaser.GameObjects.Graphics | null = null;
+
   // 콤보
   private comboCount: number = 0;
   private comboTimer: number = 0;
@@ -138,7 +144,12 @@ export class GameScene extends Phaser.Scene {
     this.waveTimer      = 0;
     this.waveNumber     = 0;
     this.spawnTimer     = 0;
-    this.darkraiSpawned = false;
+    this.darkraiSpawned   = false;
+    this.bossPatternTimer = 0;
+    this.bossPatternState = 'walk';
+    this.bossRollTarget   = null;
+    this.bossIndicatorGfx?.destroy();
+    this.bossIndicatorGfx = null;
     this.comboCount   = 0;
     this.comboTimer   = 0;
     this.reachedKillMilestones = new Set();
@@ -326,6 +337,7 @@ export class GameScene extends Phaser.Scene {
 
     this.updateWeapons(delta);
     this.tickOrbitCooldowns(delta);
+    this.updateBossPattern(delta);
     this.applySeparation();
     this.renderEnemyHpBars();
     this.updateCombo(delta);
@@ -895,6 +907,11 @@ export class GameScene extends Phaser.Scene {
 
     if (enemy.isBoss && this.currentBoss === enemy) {
       this.currentBoss = null;
+      this.bossPatternTimer = 0;
+      this.bossPatternState = 'walk';
+      this.bossRollTarget   = null;
+      this.bossIndicatorGfx?.destroy();
+      this.bossIndicatorGfx = null;
       this.bossHpBarBg.setVisible(false);
       this.bossHpBar.setVisible(false);
       this.bossHpLabel.setVisible(false);
@@ -1563,6 +1580,149 @@ export class GameScene extends Phaser.Scene {
 
     this.gameCam.shake(1000, 0.025);
     this.showDarkraiAlert();
+  }
+
+  // ===== 보스 패턴 =====
+  private updateBossPattern(delta: number) {
+    if (!this.currentBoss?.active) return;
+    const key = this.currentBoss.texture.key;
+    if (key === 'pokemon_143') this.updateSnorlaxPattern(delta);
+    else if (key === 'pokemon_115') this.updateKangaskhanPattern(delta);
+  }
+
+  // ── 잠만보: 걷기 → 준비 → 굴리기 ──
+  private updateSnorlaxPattern(delta: number) {
+    const boss = this.currentBoss!;
+    this.bossPatternTimer += delta;
+
+    if (this.bossPatternState === 'walk') {
+      boss.movementOverride = null;
+      if (this.bossPatternTimer >= 4500) {
+        this.bossPatternState = 'charging';
+        this.bossPatternTimer = 0;
+        this.bossRollTarget = { x: this.player.x, y: this.player.y };
+        boss.setTint(0xff8800);
+        // 경고 원 생성
+        this.bossIndicatorGfx?.destroy();
+        this.bossIndicatorGfx = this.add.graphics();
+        this.cameras.main.ignore(this.bossIndicatorGfx);
+      }
+
+    } else if (this.bossPatternState === 'charging') {
+      boss.movementOverride = { vx: 0, vy: 0 };
+      // 경고 원 그리기 (점점 커짐)
+      if (this.bossIndicatorGfx) {
+        const progress = this.bossPatternTimer / 1200;
+        const r = 20 + progress * 60;
+        this.bossIndicatorGfx.clear();
+        this.bossIndicatorGfx.lineStyle(3, 0xff6600, 0.7);
+        this.bossIndicatorGfx.strokeCircle(boss.x, boss.y, r);
+        this.bossIndicatorGfx.fillStyle(0xff6600, 0.1);
+        this.bossIndicatorGfx.fillCircle(boss.x, boss.y, r);
+      }
+      if (this.bossPatternTimer >= 1200) {
+        this.bossPatternState = 'rolling';
+        this.bossPatternTimer = 0;
+        this.bossIndicatorGfx?.destroy();
+        this.bossIndicatorGfx = null;
+        boss.setTint(0xff2200);
+        // 굴리기 방향 고정
+        if (this.bossRollTarget) {
+          const angle = Phaser.Math.Angle.Between(boss.x, boss.y, this.bossRollTarget.x, this.bossRollTarget.y);
+          boss.movementOverride = {
+            vx: Math.cos(angle) * 300,
+            vy: Math.sin(angle) * 300,
+          };
+        }
+      }
+
+    } else if (this.bossPatternState === 'rolling') {
+      if (this.bossPatternTimer >= 750) {
+        this.bossPatternState = 'walk';
+        this.bossPatternTimer = 0;
+        boss.movementOverride = null;
+        boss.clearTint();
+        this.bossRollTarget = null;
+      }
+    }
+  }
+
+  // ── 캥카: 걷기 → 조준 → 발사 ──
+  private updateKangaskhanPattern(delta: number) {
+    const boss = this.currentBoss!;
+    this.bossPatternTimer += delta;
+
+    if (this.bossPatternState === 'walk') {
+      boss.movementOverride = null;
+      if (this.bossPatternTimer >= 3500) {
+        this.bossPatternState = 'aiming';
+        this.bossPatternTimer = 0;
+        this.bossRollTarget = { x: this.player.x, y: this.player.y };
+        boss.setTint(0xffee44);
+        // 조준선 표시
+        this.bossIndicatorGfx?.destroy();
+        this.bossIndicatorGfx = this.add.graphics();
+        this.cameras.main.ignore(this.bossIndicatorGfx);
+      }
+
+    } else if (this.bossPatternState === 'aiming') {
+      boss.movementOverride = { vx: 0, vy: 0 };
+      // 조준선 업데이트 (플레이어 위치 추적)
+      if (this.bossIndicatorGfx) {
+        this.bossIndicatorGfx.clear();
+        this.bossIndicatorGfx.lineStyle(2, 0xffee44, 0.5);
+        this.bossIndicatorGfx.lineBetween(boss.x, boss.y, this.player.x, this.player.y);
+        this.bossIndicatorGfx.fillStyle(0xffee44, 0.6);
+        this.bossIndicatorGfx.fillCircle(this.player.x, this.player.y, 12);
+      }
+      if (this.bossPatternTimer >= 700) {
+        this.bossPatternState = 'walk';
+        this.bossPatternTimer = 0;
+        this.bossIndicatorGfx?.destroy();
+        this.bossIndicatorGfx = null;
+        boss.movementOverride = null;
+        boss.clearTint();
+        // 에너지볼 발사 (조준 시작 시 플레이어 위치로)
+        const target = this.bossRollTarget ?? { x: this.player.x, y: this.player.y };
+        this.fireKangaskhanBall(boss.x, boss.y, target.x, target.y);
+        this.bossRollTarget = null;
+      }
+    }
+  }
+
+  private fireKangaskhanBall(fromX: number, fromY: number, toX: number, toY: number) {
+    const ball = this.add.circle(fromX, fromY, 10, 0xffcc22, 1).setDepth(15);
+    this.cameras.main.ignore(ball);
+
+    this.tweens.add({
+      targets: ball,
+      x: toX, y: toY,
+      duration: 480,
+      ease: 'Linear',
+      onComplete: () => {
+        ball.destroy();
+        // 착탄 이펙트
+        const splash = this.add.circle(toX, toY, 12, 0xffcc22, 0.7).setDepth(15);
+        this.cameras.main.ignore(splash);
+        this.tweens.add({
+          targets: splash, alpha: 0, scaleX: 3, scaleY: 3,
+          duration: 280, onComplete: () => splash.destroy(),
+        });
+        // 범위 내 플레이어 피해
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, toX, toY);
+        if (dist <= 44) {
+          const dmg = 12 + this.waveNumber * 2;
+          const actual = this.player.takeDamage(dmg);
+          if (actual > 0) {
+            const txt = this.add.text(this.player.x, this.player.y - 20, `-${actual}`, {
+              fontSize: '14px', color: '#ff4444', stroke: '#000000', strokeThickness: 3,
+            }).setDepth(20);
+            this.cameras.main.ignore(txt);
+            this.tweens.add({ targets: txt, y: txt.y - 20, alpha: 0, duration: 600, onComplete: () => txt.destroy() });
+          }
+        }
+      },
+    });
   }
 
   private showWaveAnnouncement() {
