@@ -1173,7 +1173,7 @@ export class GameScene extends Phaser.Scene {
     const PH = 220;
     const CX = W / 2;
     const CY = H / 2 - 20;
-    const D  = 200;
+    const D  = 300; // 일시정지 패널(D=200) 위에 뜨도록
 
     const behavior = weapon.behavior ?? 'projectile';
     const behaviorLabel: Record<string, string> = {
@@ -1806,12 +1806,7 @@ export class GameScene extends Phaser.Scene {
       this.add.rectangle(sx, ROW_P_Y, SLOT_W, SLOT_H, 0x181810)
         .setScrollFactor(0).setDepth(D + 2);
       const bg = this.add.rectangle(sx, ROW_P_Y, SLOT_W - 2, SLOT_H - 2, 0x8cb890)
-        .setScrollFactor(0).setDepth(D + 3)
-        .setInteractive({ useHandCursor: true });
-      const slotIdx = i;
-      bg.on('pointerdown', () => {
-        if (this.weapons[slotIdx]) this.showWeaponPopup(slotIdx);
-      });
+        .setScrollFactor(0).setDepth(D + 3);
       this.pokemonSlotBgs.push(bg);
       // 포켓몬 스프라이트 이미지 (처음엔 숨김)
       const img = this.add.image(sx, ROW_P_Y - 2, 'pokemon_001')
@@ -1909,7 +1904,7 @@ export class GameScene extends Phaser.Scene {
 
     // 패널 크기: 화면 폭 거의 풀로 사용
     const PW  = W - 24;          // 패널 너비 (좌우 12px 여백)
-    const PH  = 420;             // 패널 높이
+    const PH  = 530;             // 패널 높이 (포켓몬 슬롯 섹션 포함)
     const PL  = CX - PW / 2;    // 패널 왼쪽 x
     const PT  = CY - PH / 2;    // 패널 위쪽 y
 
@@ -1995,8 +1990,66 @@ export class GameScene extends Phaser.Scene {
       statValueTexts.push({ text: val, fn });
     });
 
+    // ── 장착 포켓몬 슬롯 섹션 ──
+    const POKE_TOP    = GRID_TOP + CELL_H * 4 + 14;
+    const POKE_SLOT_W = 50;
+    const POKE_SLOT_H = 54;
+    const POKE_GAP    = Math.floor((PW - 20 - 6 * POKE_SLOT_W) / 5);
+    const POKE_X0     = COL_L + POKE_SLOT_W / 2;
+
+    addOverlay(
+      this.add.text(COL_L, POKE_TOP + 12, '장착 포켓몬', {
+        fontSize: '11px', color: '#8888aa',
+      }).setOrigin(0, 0.5)
+    );
+    addOverlay(this.add.graphics().lineStyle(1, 0x444466)
+      .lineBetween(COL_L, POKE_TOP + 22, COL_L + PW - 20, POKE_TOP + 22));
+
+    // 포켓몬 슬롯 6개 (클릭 → 무기 팝업)
+    const pausePokeSlotImgs:  Phaser.GameObjects.Image[]     = [];
+    const pausePokeSlotLvs:   Phaser.GameObjects.Text[]      = [];
+    const pausePokeSlotBgs:   Phaser.GameObjects.Rectangle[] = [];
+    const pausePokeSlotTypes: Phaser.GameObjects.Rectangle[] = [];
+
+    for (let i = 0; i < 6; i++) {
+      const sx = POKE_X0 + i * (POKE_SLOT_W + POKE_GAP);
+      const sy = POKE_TOP + 28 + POKE_SLOT_H / 2;
+
+      addOverlay(this.add.rectangle(sx, sy, POKE_SLOT_W, POKE_SLOT_H, 0x181810));
+
+      const slotBg = this.add.rectangle(sx, sy, POKE_SLOT_W - 2, POKE_SLOT_H - 2, 0x2a3040)
+        .setScrollFactor(0).setDepth(D + 3).setVisible(false)
+        .setInteractive({ useHandCursor: true });
+      const capturedIdx = i;
+      slotBg.on('pointerdown', () => {
+        if (this.weapons[capturedIdx]) this.showWeaponPopup(capturedIdx);
+      });
+      slotBg.on('pointerover', () => { if (this.weapons[capturedIdx]) slotBg.setFillStyle(0x3a4a60); });
+      slotBg.on('pointerout',  () => slotBg.setFillStyle(
+        this.weapons[capturedIdx] ? 0x2a3a50 : 0x2a3040
+      ));
+      pausePokeSlotBgs.push(slotBg);
+      this.pauseOverlayItems.push(slotBg);
+
+      const img = this.add.image(sx, sy - 4, 'pokemon_001')
+        .setDisplaySize(36, 36).setScrollFactor(0).setDepth(D + 4).setVisible(false);
+      pausePokeSlotImgs.push(img);
+      this.pauseOverlayItems.push(img);
+
+      const typeBar = this.add.rectangle(sx, sy + POKE_SLOT_H / 2 - 3, POKE_SLOT_W - 2, 4, 0x000000, 0)
+        .setScrollFactor(0).setDepth(D + 5).setVisible(false);
+      pausePokeSlotTypes.push(typeBar);
+      this.pauseOverlayItems.push(typeBar);
+
+      const lv = this.add.text(sx + POKE_SLOT_W / 2 - 2, sy + POKE_SLOT_H / 2 - 2, '', {
+        fontSize: '9px', color: '#ffffff', stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(1, 1).setScrollFactor(0).setDepth(D + 5).setVisible(false);
+      pausePokeSlotLvs.push(lv);
+      this.pauseOverlayItems.push(lv);
+    }
+
     // ── 버튼 섹션 ──
-    const BTN_TOP = GRID_TOP + CELL_H * 4 + 16;
+    const BTN_TOP = POKE_TOP + 28 + POKE_SLOT_H + 14;
     const BTN_H2  = 48;
     const BTN_W2  = PW - 20;
 
@@ -2032,9 +2085,25 @@ export class GameScene extends Phaser.Scene {
     titleBg.on('pointerout',   () => { titleBg.setFillStyle(0xeeeee0); titleTxt.setStyle({ color: '#181810', fontSize: '18px', fontStyle: 'bold' }); });
     titleBg.on('pointerdown',  () => this.scene.start('TitleScene'));
 
-    // 일시정지 열릴 때 스탯 갱신
+    // 일시정지 열릴 때 스탯 + 슬롯 갱신
     this.events.on('pause-opened', () => {
       statValueTexts.forEach(({ text, fn }) => text.setText(fn()));
+
+      for (let i = 0; i < 6; i++) {
+        const w = this.weapons[i];
+        if (w) {
+          const sprKey = `pokemon_${String(w.pokemonId).padStart(3, '0')}`;
+          pausePokeSlotBgs[i].setFillStyle(0x2a3a50);
+          pausePokeSlotImgs[i].setTexture(sprKey).setVisible(true);
+          pausePokeSlotTypes[i].setFillStyle(TYPE_COLORS[w.type] ?? 0x888888, 1);
+          pausePokeSlotLvs[i].setText(`Lv${this.weaponLevels[i] ?? 1}`);
+        } else {
+          pausePokeSlotBgs[i].setFillStyle(0x2a3040);
+          pausePokeSlotImgs[i].setVisible(false);
+          pausePokeSlotTypes[i].setFillStyle(0x000000, 0);
+          pausePokeSlotLvs[i].setText('');
+        }
+      }
     });
   }
 
@@ -2052,6 +2121,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private resumeGame() {
+    this.closeWeaponPopup();
     this.isPaused = false;
     this.physics.resume();
     // 오버레이 숨김
