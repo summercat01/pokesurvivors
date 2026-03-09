@@ -2083,7 +2083,11 @@ export class GameScene extends Phaser.Scene {
 
     titleBg.on('pointerover',  () => { titleBg.setFillStyle(0xd8d8c8); titleTxt.setStyle({ color: '#003399', fontSize: '18px', fontStyle: 'bold' }); });
     titleBg.on('pointerout',   () => { titleBg.setFillStyle(0xeeeee0); titleTxt.setStyle({ color: '#181810', fontSize: '18px', fontStyle: 'bold' }); });
-    titleBg.on('pointerdown',  () => this.scene.start('TitleScene'));
+    titleBg.on('pointerdown',  () => {
+      const prevTotal = parseInt(localStorage.getItem('totalGold') ?? '0', 10);
+      localStorage.setItem('totalGold', String(prevTotal + this.gold));
+      this.scene.start('TitleScene');
+    });
 
     // 일시정지 열릴 때 스탯 + 슬롯 갱신
     this.events.on('pause-opened', () => {
