@@ -1507,7 +1507,7 @@ export class GameScene extends Phaser.Scene {
     // Wave 5 → 카비곤(143),  Wave 10 → 강크칸(115)
     const isWave5 = this.waveNumber === 5;
     const bossId  = isWave5 ? '143' : '115';
-    this.currentBossName = isWave5 ? '카비곤' : '강크칸';
+    this.currentBossName = isWave5 ? '잠만보' : '캥카';
 
     const boss = new Enemy(this, x, y, `pokemon_${bossId}`, {
       hp:        isWave5 ? 500 : 1200,
