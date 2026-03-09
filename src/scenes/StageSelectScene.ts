@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { TYPE_COLORS } from '../data/weapons';
+import type { PokemonType } from '../types';
 
 interface StageConfig {
   id: number;
   name: string;
   subtitle: string;
-  enemyTypes: string[];
+  enemyTypes: PokemonType[];
   bgColor: number;
   locked: boolean;
   bgPokemon: string[];
@@ -16,7 +17,7 @@ const STAGES: StageConfig[] = [
     id: 1,
     name: '태초마을',
     subtitle: 'Pallet Town',
-    enemyTypes: ['normal'],
+    enemyTypes: ['normal' as PokemonType],
     bgColor: 0x2a5c1a,
     locked: false,
     bgPokemon: ['pokemon_001', 'pokemon_004', 'pokemon_007', 'pokemon_025'],
@@ -25,7 +26,7 @@ const STAGES: StageConfig[] = [
     id: 2,
     name: '1번 도로',
     subtitle: 'Route 1',
-    enemyTypes: ['normal', 'flying'],
+    enemyTypes: ['normal', 'flying'] as PokemonType[],
     bgColor: 0x1a3a5c,
     locked: true,
     bgPokemon: [],
@@ -34,7 +35,7 @@ const STAGES: StageConfig[] = [
     id: 3,
     name: '달맞이산',
     subtitle: 'Mt. Moon',
-    enemyTypes: ['rock', 'poison'],
+    enemyTypes: ['rock', 'poison'] as PokemonType[],
     bgColor: 0x2a1a4a,
     locked: true,
     bgPokemon: [],
@@ -116,7 +117,7 @@ export class StageSelectScene extends Phaser.Scene {
     if (!stage.locked) cardBg.setInteractive({ useHandCursor: true });
 
     // 왼쪽 타입 컬러 사이드바
-    const typeColor = TYPE_COLORS[stage.enemyTypes[0] as any] ?? 0x888888;
+    const typeColor = TYPE_COLORS[stage.enemyTypes[0]] ?? 0x888888;
     this.add.rectangle(cardLeft + 4, cy, 6, cardH - 4, stage.locked ? 0x333333 : typeColor);
 
     // 테두리
@@ -167,7 +168,7 @@ export class StageSelectScene extends Phaser.Scene {
     // ── Row 4 (cardTop + 124): 타입 뱃지 ──
     let bx = 0;
     stage.enemyTypes.forEach(t => {
-      const hex = `#${(TYPE_COLORS[t as any] ?? 0x888888).toString(16).padStart(6, '0')}`;
+      const hex = `#${(TYPE_COLORS[t] ?? 0x888888).toString(16).padStart(6, '0')}`;
       const badge = this.add.text(L + bx, cardTop + 124, `  ${t.toUpperCase()}  `, {
         fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
         backgroundColor: hex,
