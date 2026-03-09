@@ -48,8 +48,10 @@ export class BootScene extends Phaser.Scene {
 
     // 포켓몬 스프라이트 — 적 + 무기 + 보스
     const POKEMON_NAMES: Record<string, string> = {
-      // 무기 포켓몬 (시작 선택지)
-      '001': 'bulbasaur',  '004': 'charmander', '007': 'squirtle',
+      // 무기 포켓몬 + 타이틀 배경 포켓몬
+      '001': 'bulbasaur',  '002': 'ivysaur',    '003': 'venusaur',
+      '004': 'charmander', '005': 'charmeleon',  '006': 'charizard',
+      '007': 'squirtle',   '008': 'wartortle',   '009': 'blastoise',
       '025': 'pikachu',    '054': 'psyduck',     '074': 'geodude',
       '041': 'zubat',      '092': 'gastly',      '066': 'machop',
       // Stage 1 일반 적 (노말 타입)
