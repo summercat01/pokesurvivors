@@ -289,16 +289,16 @@ export class TitleScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H - 58, W, 112, 0x000000, 0.60).setDepth(9);
 
     // ── 오박사 가이드 책 버튼 (저작권 박스 위 우측) ──
-    const bookBg = this.add.rectangle(W - 36, H - 155, 52, 28, 0x224422, 0.9)
+    const bookBg = this.add.rectangle(W - 50, H - 138, 84, 32, 0x224422, 0.9)
       .setDepth(12).setInteractive({ useHandCursor: true });
     this.add.graphics().lineStyle(1, 0x44aa44, 0.8)
-      .strokeRect(W - 62, H - 169, 52, 28).setDepth(12);  // border around bookBg
-    const bookTxt = this.add.text(W - 36, H - 155, '📖 가이드', {
+      .strokeRect(W - 92, H - 154, 84, 32).setDepth(12);  // border around bookBg
+    const bookTxt = this.add.text(W - 50, H - 138, '📖 가이드', {
       fontSize: '12px', color: '#88eeaa', fontStyle: 'bold',
       padding: { top: 3 },
     }).setOrigin(0.5).setDepth(13);
-    bookBg.on('pointerover', () => { bookBg.setFillStyle(0x336633); bookTxt.setStyle({ fontSize: '12px', color: '#aaffcc', fontStyle: 'bold' }); });
-    bookBg.on('pointerout',  () => { bookBg.setFillStyle(0x224422); bookTxt.setStyle({ fontSize: '12px', color: '#88eeaa', fontStyle: 'bold' }); });
+    bookBg.on('pointerover', () => { bookBg.setFillStyle(0x336633); bookTxt.setStyle({ fontSize: '13px', color: '#aaffcc', fontStyle: 'bold', padding: { top: 3 } }); });
+    bookBg.on('pointerout',  () => { bookBg.setFillStyle(0x224422); bookTxt.setStyle({ fontSize: '13px', color: '#88eeaa', fontStyle: 'bold', padding: { top: 3 } }); });
     bookBg.on('pointerdown', () => this.scene.launch('OakGuideScene'));
     this.add.text(W / 2, H - 108,
       'Pokémon and all related names are trademarks of Nintendo / Creatures Inc. / GAME FREAK inc.\n이 게임은 닌텐도와 무관한 비영리 팬 게임입니다.', {

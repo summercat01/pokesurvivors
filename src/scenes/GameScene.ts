@@ -78,8 +78,6 @@ export class GameScene extends Phaser.Scene {
   private joystickOriginY   = 0;
   private joystickDx        = 0;   // -1 ~ 1
   private joystickDy        = 0;   // -1 ~ 1
-  private joystickContainer!: Phaser.GameObjects.Container;
-  private joystickKnob!: Phaser.GameObjects.Arc;
   private readonly JOY_RADIUS = 52;
   private readonly JOY_KNOB_R = 22;
   private readonly JOY_UI_TOP = 70;
@@ -1206,30 +1204,6 @@ export class GameScene extends Phaser.Scene {
 
   // ===== 가상 조이스틱 =====
   private setupJoystick() {
-    const D = 150;
-
-    const JR = this.JOY_RADIUS;
-    const KR = this.JOY_KNOB_R;
-    const AR = JR - 10;
-
-    // 베이스 원
-    const base = this.add.arc(0, 0, JR, 0, 360, false, 0x000000, 0.35);
-    // 외곽선
-    const outline = this.add.graphics().lineStyle(2, 0xffffff, 0.6).strokeCircle(0, 0, JR);
-    // 방향 화살표
-    const arrowStyle = { fontSize: '18px', color: '#ffffff' };
-    const arrowU = this.add.text(  0, -AR, '▲', arrowStyle).setOrigin(0.5).setAlpha(0.85);
-    const arrowD = this.add.text(  0,  AR, '▼', arrowStyle).setOrigin(0.5).setAlpha(0.85);
-    const arrowL = this.add.text(-AR,   0, '◀', arrowStyle).setOrigin(0.5).setAlpha(0.85);
-    const arrowR = this.add.text( AR,   0, '▶', arrowStyle).setOrigin(0.5).setAlpha(0.85);
-    // 노브 (컨테이너 자식, 드래그 시 내부 좌표로 이동)
-    this.joystickKnob = this.add.arc(0, 0, KR, 0, 360, false, 0xffffff, 0.65);
-
-    // 컨테이너로 묶기 (scrollFactor 0 → 화면 고정)
-    this.joystickContainer = this.add.container(0, 0, [
-      base, outline, arrowU, arrowD, arrowL, arrowR, this.joystickKnob,
-    ]).setScrollFactor(0).setDepth(D).setVisible(false);
-
     // 탭 비활성화 시 자동 일시정지
     this.game.events.on('hidden', () => {
       if (!this.isGameOver && !this.isLevelingUp && !this.isPaused) {
@@ -1257,8 +1231,6 @@ export class GameScene extends Phaser.Scene {
       this.joystickOriginX    = p.x;
       this.joystickOriginY    = p.y;
 
-      this.joystickKnob.setPosition(0, 0);
-      this.joystickContainer.setPosition(p.x, p.y).setVisible(true);
     });
 
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
@@ -1269,12 +1241,6 @@ export class GameScene extends Phaser.Scene {
       const dist   = Math.sqrt(dx * dx + dy * dy);
       const clamped = Math.min(dist, this.JOY_RADIUS);
       const angle   = Math.atan2(dy, dx);
-
-      // 컨테이너 내부 좌표 (joystickOrigin 기준 상대 위치)
-      this.joystickKnob.setPosition(
-        Math.cos(angle) * clamped,
-        Math.sin(angle) * clamped,
-      );
 
       if (dist < 5) {
         this.joystickDx = 0;
@@ -1292,7 +1258,6 @@ export class GameScene extends Phaser.Scene {
       this.joystickPointerId  = -1;
       this.joystickDx         = 0;
       this.joystickDy         = 0;
-      this.joystickContainer.setVisible(false);
     };
 
     this.input.on('pointerup',     resetJoystick);
@@ -1639,11 +1604,9 @@ export class GameScene extends Phaser.Scene {
   private pauseGame() {
     this.isPaused = true;
     this.physics.pause();
-    // 조이스틱 숨기기
     this.joystickActive = false;
     this.joystickDx     = 0;
     this.joystickDy     = 0;
-    this.joystickContainer.setVisible(false);
     // 오버레이 표시
     this.pauseOverlayItems.forEach(obj => (obj as any).setVisible(true));
     this.events.emit('pause-opened');
