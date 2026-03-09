@@ -6,6 +6,7 @@ export interface WeaponConfig {
   pokemonId: number;
   name: string;
   type: PokemonType;
+  description?: string;   // 무기 행동 설명
   damage: number;
   cooldown: number;       // 밀리초
   projectileSpeed: number;
@@ -49,6 +50,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 1,
     name: '이상해씨',
     type: 'grass',
+    description: '전방 135° 범위의 덩굴채찍으로\n주변 적을 후려칩니다.',
     damage: 12,
     cooldown: 1000,
     projectileSpeed: 0,
@@ -58,12 +60,13 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     spreadAngle: 0,
     behavior: 'melee',
     meleeRange: 130,
-    meleeAngle: Math.PI * 0.75, // 135° 부채꼴
+    meleeAngle: Math.PI * 0.75,
   },
   {
     pokemonId: 4,
     name: '파이리',
     type: 'fire',
+    description: '전방에 화염 빔을 방사합니다.\n범위 내 모든 적에게 피해를 줍니다.',
     damage: 18,
     cooldown: 1400,
     projectileSpeed: 0,
@@ -79,6 +82,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 7,
     name: '꼬부기',
     type: 'water',
+    description: '물 투사체를 발사합니다.\n느리지만 꾸준히 적을 압박합니다.',
     damage: 10,
     cooldown: 1000,
     projectileSpeed: 200,
@@ -92,6 +96,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 25,
     name: '피카츄',
     type: 'electric',
+    description: '가장 가까운 적부터 번개를\n최대 3마리까지 연쇄시킵니다.',
     damage: 10,
     cooldown: 650,
     projectileSpeed: 0,
@@ -107,6 +112,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 54,
     name: '고라파덕',
     type: 'psychic',
+    description: '에스퍼 구체가 주위를 공전하며\n닿는 적에게 지속 피해를 줍니다.',
     damage: 18,
     cooldown: 1500,
     projectileSpeed: 0,
@@ -123,6 +129,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 74,
     name: '꼬마돌',
     type: 'rock',
+    description: '넓고 짧은 바위 빔을 굴립니다.\n전방의 여러 적을 한번에 공격합니다.',
     damage: 28,
     cooldown: 2000,
     projectileSpeed: 0,
@@ -138,19 +145,21 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 41,
     name: '주뱃',
     type: 'flying',
+    description: '초음파를 부채꼴로 3발 발사합니다.\n빠른 속도로 전방의 적을 공격합니다.',
     damage: 7,
     cooldown: 900,
     projectileSpeed: 520,
     projectileCount: 3,
     duration: 700,
     textureKey: 'proj_flying',
-    spreadAngle: 1.4, // ~80° 부채꼴
+    spreadAngle: 1.4,
     behavior: 'projectile',
   },
   {
     pokemonId: 92,
     name: '고오스',
     type: 'ghost',
+    description: '주변에 독기를 발산해 범위 내\n모든 적에게 지속 피해를 줍니다.',
     damage: 14,
     cooldown: 2200,
     projectileSpeed: 0,
@@ -166,6 +175,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 66,
     name: '알통몬',
     type: 'fighting',
+    description: '360° 전방위 강타로 주변의\n모든 적을 동시에 공격합니다.',
     damage: 22,
     cooldown: 900,
     projectileSpeed: 0,
@@ -175,7 +185,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     spreadAngle: 0,
     behavior: 'melee',
     meleeRange: 95,
-    meleeAngle: Math.PI * 2, // 360° 강타
+    meleeAngle: Math.PI * 2,
   },
 ];
 
@@ -208,25 +218,28 @@ export function getUpgradedWeapon(base: WeaponConfig, level: number): WeaponConf
   };
 }
 
-/** 레벨업 후 스탯 설명 문자열 */
-export function getUpgradeDescription(base: WeaponConfig, toLevel: number): string {
-  const upgraded = getUpgradedWeapon(base, toLevel);
+/** 레벨업 전→후 스탯 설명 문자열 */
+export function getUpgradeDescription(base: WeaponConfig, fromLevel: number, toLevel: number): string {
+  const before  = getUpgradedWeapon(base, fromLevel);
+  const after   = getUpgradedWeapon(base, toLevel);
   const behavior = base.behavior ?? 'projectile';
-  const dmgStr = `공격력 ${upgraded.damage}`;
-  const cdStr  = `쿨다운 ${(upgraded.cooldown / 1000).toFixed(1)}s`;
+
+  const dmg = `공격력 ${before.damage}→${after.damage}`;
+  const cd  = `쿨다운 ${(before.cooldown / 1000).toFixed(1)}→${(after.cooldown / 1000).toFixed(1)}s`;
+
   switch (behavior) {
     case 'orbit':
-      return `${dmgStr} / ${cdStr} / 구체 ×${upgraded.orbitCount ?? 1}`;
+      return `${dmg} / ${cd} / 구체 ×${before.orbitCount ?? 1}→×${after.orbitCount ?? 1}`;
     case 'lightning':
-      return `${dmgStr} / ${cdStr} / 체인 ${upgraded.lightningChainCount ?? 3}회`;
+      return `${dmg} / ${cd} / 체인 ${before.lightningChainCount ?? 3}→${after.lightningChainCount ?? 3}회`;
     case 'melee':
-      return `${dmgStr} / ${cdStr} / 범위 ${upgraded.meleeRange ?? 120}px`;
+      return `${dmg} / ${cd} / 범위 ${before.meleeRange ?? 120}→${after.meleeRange ?? 120}px`;
     case 'zone':
-      return `${dmgStr} / ${cdStr} / 반경 ${upgraded.zoneRadius ?? 180}px`;
+      return `${dmg} / ${cd} / 반경 ${before.zoneRadius ?? 180}→${after.zoneRadius ?? 180}px`;
     case 'beam':
-      return `${dmgStr} / ${cdStr} / 길이 ${upgraded.beamLength ?? 270}px`;
+      return `${dmg} / ${cd} / 길이 ${before.beamLength ?? 270}→${after.beamLength ?? 270}px`;
     default:
-      return `${dmgStr} / ${cdStr} / 투사체 ×${upgraded.projectileCount}`;
+      return `${dmg} / ${cd} / 투사체 ×${before.projectileCount}→×${after.projectileCount}`;
   }
 }
 

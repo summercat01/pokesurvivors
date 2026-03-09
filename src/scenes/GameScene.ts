@@ -113,6 +113,9 @@ export class GameScene extends Phaser.Scene {
   private enemyHpGraphics!: Phaser.GameObjects.Graphics;
   private bossArrow!: Phaser.GameObjects.Text;
 
+  // 무기 정보 팝업
+  private weaponPopupItems: Phaser.GameObjects.GameObject[] = [];
+
   // orbit / zone / lightning 전용 상태
   private orbitOrbs: Map<number, { graphics: Phaser.GameObjects.Graphics[]; angle: number }> = new Map();
   private orbitHitCooldowns: Map<number, number> = new Map();
@@ -994,6 +997,7 @@ export class GameScene extends Phaser.Scene {
 
     // 300ms 뒤 씬 일시정지 + LevelUpScene 오버레이 실행
     this.time.delayedCall(300, () => {
+      this.closeWeaponPopup();
       const options = this.generateLevelUpOptions();
       this.scene.pause('GameScene');
       this.scene.launch('LevelUpScene', { options });
@@ -1014,7 +1018,7 @@ export class GameScene extends Phaser.Scene {
             type: 'newPokemon',
             pokemonId: w.pokemonId,
             label: w.name,
-            description: `새로운 포켓몬! ${w.type} 타입 공격력 ${w.damage}`,
+            description: w.description ?? `새로운 포켓몬! ${w.type} 타입`,
             levelTo: 1,
           });
         }
@@ -1031,7 +1035,7 @@ export class GameScene extends Phaser.Scene {
           type: 'upgradePokemon',
           pokemonId: w.pokemonId,
           label: base.name,
-          description: getUpgradeDescription(base, nextLv),
+          description: getUpgradeDescription(base, curLv, nextLv),
           levelFrom: curLv,
           levelTo: nextLv,
         });
@@ -1153,6 +1157,115 @@ export class GameScene extends Phaser.Scene {
       const delta = newVal - oldVal;
       (stats as any)[key] += delta;
     }
+  }
+
+  // ===== 무기 정보 팝업 =====
+  private showWeaponPopup(slotIdx: number) {
+    // 기존 팝업 닫기
+    this.closeWeaponPopup();
+
+    const weapon = this.weapons[slotIdx];
+    if (!weapon) return;
+
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const PW = W - 40;
+    const PH = 220;
+    const CX = W / 2;
+    const CY = H / 2 - 20;
+    const D  = 200;
+
+    const behavior = weapon.behavior ?? 'projectile';
+    const behaviorLabel: Record<string, string> = {
+      projectile: '투사체', melee: '근접', beam: '빔',
+      orbit: '궤도', zone: '장판', lightning: '번개',
+    };
+    const typeColor = TYPE_COLORS[weapon.type] ?? 0x888888;
+    const typeHex   = `#${typeColor.toString(16).padStart(6, '0')}`;
+
+    const push = (...items: Phaser.GameObjects.GameObject[]) =>
+      items.forEach(item => this.weaponPopupItems.push(item));
+
+    // 어두운 오버레이 (클릭하면 닫기)
+    const overlay = this.add.rectangle(CX, CY, W, H, 0x000000, 0.55)
+      .setScrollFactor(0).setDepth(D).setInteractive();
+    overlay.on('pointerdown', () => this.closeWeaponPopup());
+    push(overlay);
+
+    // 팝업 배경
+    push(this.add.rectangle(CX, CY, PW + 6, PH + 6, typeColor, 0.4)
+      .setScrollFactor(0).setDepth(D + 1));
+    push(this.add.rectangle(CX, CY, PW, PH, 0x111827)
+      .setScrollFactor(0).setDepth(D + 2));
+
+    // 포켓몬 스프라이트
+    const sprKey = `pokemon_${String(weapon.pokemonId).padStart(3, '0')}`;
+    const LEFT = CX - PW / 2 + 16;
+    if (this.textures.exists(sprKey)) {
+      push(this.add.image(LEFT + 28, CY - 40, sprKey)
+        .setDisplaySize(56, 56).setScrollFactor(0).setDepth(D + 3));
+    }
+
+    const TX = LEFT + 64;
+
+    // 이름 + 레벨
+    push(this.add.text(TX, CY - 68, `${weapon.name}`, {
+      fontSize: '20px', color: '#ffffff', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3, padding: { top: 4 },
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
+
+    push(this.add.text(TX, CY - 46, `Lv.${this.weaponLevels[slotIdx] ?? 1}`, {
+      fontSize: '13px', color: '#aaddff', fontStyle: 'bold',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
+
+    // 타입 + behavior 배지
+    push(this.add.text(TX, CY - 28, `  ${weapon.type.toUpperCase()}  `, {
+      fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
+      backgroundColor: typeHex, padding: { x: 4, y: 3 },
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
+
+    push(this.add.text(TX + 80, CY - 28, `  ${behaviorLabel[behavior]}  `, {
+      fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
+      backgroundColor: '#334455', padding: { x: 4, y: 3 },
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
+
+    // 구분선
+    push(this.add.graphics().lineStyle(1, typeColor, 0.5)
+      .lineBetween(LEFT, CY - 10, CX + PW / 2 - 16, CY - 10)
+      .setScrollFactor(0).setDepth(D + 3));
+
+    // 설명
+    push(this.add.text(LEFT, CY + 4, weapon.description ?? '', {
+      fontSize: '13px', color: '#ccddcc', lineSpacing: 6,
+      wordWrap: { width: PW - 32 },
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
+
+    // 스탯 라인
+    const statParts: string[] = [
+      `공격력 ${weapon.damage}`,
+      `쿨다운 ${(weapon.cooldown / 1000).toFixed(1)}s`,
+    ];
+    switch (behavior) {
+      case 'melee':     statParts.push(`범위 ${weapon.meleeRange ?? 120}px`); break;
+      case 'beam':      statParts.push(`길이 ${weapon.beamLength ?? 270}px`); break;
+      case 'orbit':     statParts.push(`구체 ×${weapon.orbitCount ?? 1}`); break;
+      case 'zone':      statParts.push(`반경 ${weapon.zoneRadius ?? 180}px`); break;
+      case 'lightning': statParts.push(`체인 ${weapon.lightningChainCount ?? 3}회`); break;
+      default:          statParts.push(`투사체 ×${weapon.projectileCount}`); break;
+    }
+    push(this.add.text(LEFT, CY + 68, statParts.join('  /  '), {
+      fontSize: '12px', color: '#88aacc',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
+
+    // 닫기 안내
+    push(this.add.text(CX, CY + PH / 2 - 14, '탭하면 닫힙니다', {
+      fontSize: '11px', color: '#555566',
+    }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D + 3));
+  }
+
+  private closeWeaponPopup() {
+    this.weaponPopupItems.forEach(item => item.destroy());
+    this.weaponPopupItems = [];
   }
 
   // ===== 슬롯 UI 갱신 =====
@@ -1693,7 +1806,12 @@ export class GameScene extends Phaser.Scene {
       this.add.rectangle(sx, ROW_P_Y, SLOT_W, SLOT_H, 0x181810)
         .setScrollFactor(0).setDepth(D + 2);
       const bg = this.add.rectangle(sx, ROW_P_Y, SLOT_W - 2, SLOT_H - 2, 0x8cb890)
-        .setScrollFactor(0).setDepth(D + 3);
+        .setScrollFactor(0).setDepth(D + 3)
+        .setInteractive({ useHandCursor: true });
+      const slotIdx = i;
+      bg.on('pointerdown', () => {
+        if (this.weapons[slotIdx]) this.showWeaponPopup(slotIdx);
+      });
       this.pokemonSlotBgs.push(bg);
       // 포켓몬 스프라이트 이미지 (처음엔 숨김)
       const img = this.add.image(sx, ROW_P_Y - 2, 'pokemon_001')

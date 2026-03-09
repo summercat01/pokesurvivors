@@ -115,9 +115,10 @@ export class LevelUpScene extends Phaser.Scene {
 
     // ── 설명 텍스트 ──
     this.add.text(textX, cy + 14, opt.description, {
-      fontSize: '12px',
+      fontSize: '11px',
       color: '#aaaaaa',
-      wordWrap: { width: CARD_W - STRIPE_W - 90 },
+      wordWrap: { width: CARD_W - STRIPE_W - 60 },
+      lineSpacing: 3,
     }).setOrigin(0, 0.5);
 
     // ── 호버 / 탭 인터랙션 ──
