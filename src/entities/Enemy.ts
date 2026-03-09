@@ -13,6 +13,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   /** @deprecated pokemonTypes[0] 사용 권장 */
   get pokemonType(): PokemonType { return this.pokemonTypes[0]; }
   goldValue: number;
+  contactDamage?: number;  // 설정 시 접촉 데미지로 사용 (기본값: 게임씬 수식)
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -27,6 +28,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       pokemonTypes?: PokemonType[];
       pokemonType?: PokemonType;   // 단일 타입 하위 호환
       goldValue?: number;
+      contactDamage?: number;
     }
   ) {
     super(scene, x, y, texture);
@@ -42,7 +44,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.isElite = config.isElite ?? false;
     this.pokemonTypes = config.pokemonTypes
       ?? (config.pokemonType ? [config.pokemonType] : ['normal']);
-    this.goldValue = config.goldValue ?? (this.isBoss ? 5 : 1);
+    this.goldValue    = config.goldValue ?? (this.isBoss ? 5 : 1);
+    this.contactDamage = config.contactDamage;
 
     this.setScale(this.isBoss ? 1.6 : this.isElite ? 1.0 : 0.75);
     this.setCollideWorldBounds(true);

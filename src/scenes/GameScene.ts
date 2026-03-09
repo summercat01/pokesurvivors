@@ -88,6 +88,7 @@ export class GameScene extends Phaser.Scene {
   private waveNumber: number = 0;
   private spawnTimer: number = 0;
   private readonly MAX_ENEMIES = 60;
+  private darkraiSpawned: boolean = false;
 
   // 콤보
   private comboCount: number = 0;
@@ -134,9 +135,10 @@ export class GameScene extends Phaser.Scene {
     this.gold         = 0;
     this.killCount    = 0;
     this.isGameOver   = false;
-    this.waveTimer    = 0;
-    this.waveNumber   = 0;
-    this.spawnTimer   = 0;
+    this.waveTimer      = 0;
+    this.waveNumber     = 0;
+    this.spawnTimer     = 0;
+    this.darkraiSpawned = false;
     this.comboCount   = 0;
     this.comboTimer   = 0;
     this.reachedKillMilestones = new Set();
@@ -829,7 +831,8 @@ export class GameScene extends Phaser.Scene {
 
   private onPlayerHitEnemy(_player: any, _enemy: any) {
     const player = _player as Player;
-    const dmg    = 5 + this.waveNumber * 2;
+    const enemy  = _enemy as Enemy;
+    const dmg    = enemy.contactDamage ?? (5 + this.waveNumber * 2);
     const actual = player.takeDamage(dmg);
     if (actual <= 0) return;
 
@@ -1402,13 +1405,19 @@ export class GameScene extends Phaser.Scene {
 
   // ===== 웨이브 =====
   private spawnWave() {
-    const count = 5 + this.waveNumber * 3;
-    for (let i = 0; i < count; i++) {
-      this.time.delayedCall(i * 200, () => this.spawnEnemy());
+    // 15웨이브(15분) — 다크라이 등장, 일반 스폰 없음
+    if (this.waveNumber === 15) {
+      this.time.delayedCall(1000, () => this.spawnDarkrai());
+      return;
     }
 
-    // 5웨이브마다 보스 소환
-    if (this.waveNumber > 0 && this.waveNumber % 5 === 0) {
+    const count = 6 + this.waveNumber * 3;
+    for (let i = 0; i < count; i++) {
+      this.time.delayedCall(i * 220, () => this.spawnEnemy());
+    }
+
+    // 5웨이브(5분) → 카비곤, 10웨이브(10분) → 강크칸
+    if (this.waveNumber === 5 || this.waveNumber === 10) {
       this.time.delayedCall(1500, () => this.spawnBoss());
     }
   }
@@ -1436,22 +1445,55 @@ export class GameScene extends Phaser.Scene {
 
   private spawnEnemy() {
     const { x, y } = this.getSpawnPosition();
-    // 웨이브에 따라 적 포켓몬 풀 확장 (진화형 포함)
-    const basePool   = ['001', '004', '007'];
-    const stage1Pool = ['002', '005', '008'];
-    const stage2Pool = ['003', '006', '009'];
-    let pool = [...basePool];
-    if (this.waveNumber >= 2) pool = [...pool, ...stage1Pool];
-    if (this.waveNumber >= 4) pool = [...pool, ...stage2Pool];
-    const id = pool[Phaser.Math.Between(0, pool.length - 1)];
-    const numId = parseInt(id, 10);
-    const pokeData = POKEMON_DATA[numId];
-    const isElite = this.waveNumber > 0 && Math.random() < 0.05;
-    const enemy = new Enemy(this, x, y, `pokemon_${id}`, {
-      hp:          (20 + this.waveNumber * 5) * (isElite ? 3 : 1),
-      moveSpeed:   Math.min(60 + this.waveNumber * 5, 180) * (isElite ? 1.2 : 1),
-      exp:         2  + this.waveNumber,
-      pokemonTypes: pokeData?.types ?? ['normal'],
+
+    // ── Stage 1 노말 타입 포켓몬 풀 (웨이브별 확장) ──
+    type PoolEntry = { id: string; types: PokemonType[] };
+    const POOL: PoolEntry[] = [
+      // Wave 0+
+      { id: '019', types: ['normal'] },           // 라타타
+      { id: '016', types: ['normal', 'flying'] }, // 구구
+      { id: '052', types: ['normal'] },           // 나옹
+      // Wave 1+
+      ...(this.waveNumber >= 1 ? [
+        { id: '021', types: ['normal', 'flying'] as PokemonType[] }, // 깨비참
+        { id: '039', types: ['normal'] as PokemonType[] },           // 푸린
+      ] : []),
+      // Wave 2+
+      ...(this.waveNumber >= 2 ? [
+        { id: '020', types: ['normal'] as PokemonType[] },           // 라이츄 (라타이트)
+        { id: '017', types: ['normal', 'flying'] as PokemonType[] }, // 피죤
+        { id: '053', types: ['normal'] as PokemonType[] },           // 페르시온
+      ] : []),
+      // Wave 3+
+      ...(this.waveNumber >= 3 ? [
+        { id: '022', types: ['normal', 'flying'] as PokemonType[] }, // 깃털왕관
+        { id: '035', types: ['normal'] as PokemonType[] },           // 삐삐
+        { id: '084', types: ['normal', 'flying'] as PokemonType[] }, // 두두
+      ] : []),
+      // Wave 4+
+      ...(this.waveNumber >= 4 ? [
+        { id: '036', types: ['normal'] as PokemonType[] },           // 픽시
+        { id: '040', types: ['normal'] as PokemonType[] },           // 푸크린
+        { id: '085', types: ['normal', 'flying'] as PokemonType[] }, // 두트리오
+        { id: '133', types: ['normal'] as PokemonType[] },           // 이브이
+      ] : []),
+      // Wave 7+
+      ...(this.waveNumber >= 7 ? [
+        { id: '108', types: ['normal'] as PokemonType[] },           // 내루미
+        { id: '113', types: ['normal'] as PokemonType[] },           // 럭키
+        { id: '128', types: ['normal'] as PokemonType[] },           // 켄타로스
+        { id: '137', types: ['normal'] as PokemonType[] },           // 폴리곤
+      ] : []),
+    ];
+
+    const entry   = POOL[Phaser.Math.Between(0, POOL.length - 1)];
+    const isElite = this.waveNumber >= 1 && Math.random() < 0.06;
+
+    const enemy = new Enemy(this, x, y, `pokemon_${entry.id}`, {
+      hp:          Math.round((25 + this.waveNumber * 10) * (isElite ? 3 : 1)),
+      moveSpeed:   Math.min(55 + this.waveNumber * 5, 160) * (isElite ? 1.2 : 1),
+      exp:         2 + this.waveNumber,
+      pokemonTypes: entry.types,
       isElite,
       goldValue:   isElite ? 5 : 1,
     });
@@ -1461,39 +1503,74 @@ export class GameScene extends Phaser.Scene {
 
   private spawnBoss() {
     const { x, y } = this.getSpawnPosition();
-    // 웨이브별 보스 포켓몬 (진화형 사용)
-    const bossIds = ['003', '006', '009', '065', '068', '094', '130', '131', '143', '149'];
-    const bossId  = bossIds[(Math.floor(this.waveNumber / 5) - 1) % bossIds.length];
-    const bossNumId  = parseInt(bossId, 10);
-    const bossData   = POKEMON_DATA[bossNumId];
-    this.currentBossName = bossData?.name ?? `BOSS ${bossId}`;
+
+    // Wave 5 → 카비곤(143),  Wave 10 → 강크칸(115)
+    const isWave5 = this.waveNumber === 5;
+    const bossId  = isWave5 ? '143' : '115';
+    this.currentBossName = isWave5 ? '카비곤' : '강크칸';
+
     const boss = new Enemy(this, x, y, `pokemon_${bossId}`, {
-      hp:          200 + this.waveNumber * 30,
-      moveSpeed:   45  + this.waveNumber * 3,
-      exp:         20  + this.waveNumber * 3,
-      isBoss:      true,
-      pokemonTypes: bossData?.types ?? ['normal'],
-      goldValue:   15 + this.waveNumber,
+      hp:        isWave5 ? 500 : 1200,
+      moveSpeed: isWave5 ? 35  : 55,
+      exp:       isWave5 ? 40  : 90,
+      isBoss:    true,
+      pokemonTypes: ['normal'],
+      goldValue: isWave5 ? 25  : 55,
     });
     this.enemies.add(boss);
     this.cameras.main.ignore(boss);
     this.currentBoss = boss;
     this.bossHpRatioDisplayed = 1;
 
-    // 보스 HP바 표시
     this.bossHpBarBg.setVisible(true);
     this.bossHpBar.setVisible(true);
     this.bossHpLabel.setVisible(true);
 
-    // 보스 등장 연출: 카메라 진동 + 얼림
     this.gameCam.shake(600, 0.015);
     this.time.delayedCall(300, () => this.showBossAlert(bossId));
   }
 
+  private spawnDarkrai() {
+    if (this.darkraiSpawned) return;
+    this.darkraiSpawned = true;
+
+    const { x, y } = this.getSpawnPosition();
+    this.currentBossName = '다크라이';
+
+    const darkrai = new Enemy(this, x, y, 'pokemon_491', {
+      hp:           99999,
+      moveSpeed:    85,
+      exp:          0,
+      isBoss:       true,
+      pokemonTypes: ['dark'],
+      goldValue:    0,
+      contactDamage: 9999,
+    });
+    // 보랏빛 섬뜩한 글로우
+    darkrai.postFX.clear();
+    darkrai.postFX.addGlow(0x330066, 4, 0, false, 0.2, 8);
+    darkrai.setTint(0xcc88ff);
+    darkrai.setScale(2.0);
+
+    this.enemies.add(darkrai);
+    this.cameras.main.ignore(darkrai);
+    this.currentBoss = darkrai;
+    this.bossHpRatioDisplayed = 1;
+
+    this.bossHpBarBg.setVisible(true);
+    this.bossHpBar.setVisible(true);
+    this.bossHpLabel.setVisible(true);
+
+    this.gameCam.shake(1000, 0.025);
+    this.showDarkraiAlert();
+  }
+
   private showWaveAnnouncement() {
+    if (this.waveNumber === 15) return; // 다크라이 웨이브는 별도 연출
+
     const W  = this.scale.width;
     const cy = 70 + (this.scale.height - 70 - 132) / 2;
-    const isBossWave = this.waveNumber % 5 === 0;
+    const isBossWave = this.waveNumber === 5 || this.waveNumber === 10;
     const displayWave = this.waveNumber + 1;
     const label = isBossWave
       ? `WAVE ${displayWave}  ★ BOSS WAVE ★`
@@ -1533,6 +1610,52 @@ export class GameScene extends Phaser.Scene {
       duration: 600,
       delay: 1800,
       onComplete: () => { bg.destroy(); txt.destroy(); },
+    });
+  }
+
+  private showDarkraiAlert() {
+    const W  = this.scale.width;
+    const cy = 70 + (this.scale.height - 70 - 132) / 2;
+
+    // 전체 화면 암전 플래시
+    const flash = this.add.rectangle(W / 2, this.scale.height / 2, W, this.scale.height, 0x000000, 0)
+      .setScrollFactor(0).setDepth(95);
+    this.gameCam.ignore(flash);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0.85,
+      duration: 400,
+      yoyo: true,
+      hold: 600,
+      onComplete: () => flash.destroy(),
+    });
+
+    const bg = this.add.rectangle(W / 2, cy, W, 80, 0x110022, 0.95)
+      .setScrollFactor(0).setDepth(96);
+    const title = this.add.text(W / 2, cy - 18, '⚠  다크라이가 나타났다!  ⚠', {
+      fontSize: '20px', color: '#cc88ff', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 5,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(97).setAlpha(0);
+    const sub = this.add.text(W / 2, cy + 14, '도망쳐라, 트레이너!', {
+      fontSize: '14px', color: '#ff8888',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(97).setAlpha(0);
+    this.gameCam.ignore([bg, title, sub]);
+
+    this.tweens.add({
+      targets: [title, sub],
+      alpha: 1,
+      duration: 300,
+      yoyo: true,
+      hold: 2000,
+      onComplete: () => { title.destroy(); sub.destroy(); },
+    });
+    this.tweens.add({
+      targets: bg,
+      alpha: 0,
+      duration: 400,
+      delay: 2300,
+      onComplete: () => bg.destroy(),
     });
   }
 
