@@ -159,38 +159,6 @@ export class OakGuideScene extends Phaser.Scene {
       if (!targets.includes(this.nextBtn)) this.advance();
     });
 
-    // ── 저작권 & 개발자 ──
-    this.add.rectangle(CX, H - 58, W, 112, 0x000000, 0.6);
-    this.add.text(CX, H - 108,
-      'Pokémon and all related names are trademarks of Nintendo / Creatures Inc. / GAME FREAK inc.\n이 게임은 닌텐도와 무관한 비영리 팬 게임입니다.', {
-        fontSize: '15px', color: '#aabbaa', align: 'center',
-        lineSpacing: 6,
-        wordWrap: { width: W - 24 },
-      }).setOrigin(0.5, 0);
-
-    const GAP = 8;
-    const ICON_SIZE = 18;
-    const devTxt = this.add.text(0, 0, 'Developed by  SummerCat', {
-      fontSize: '15px', color: '#88bbff', fontStyle: 'bold',
-      padding: { top: 4 },
-    }).setOrigin(0.5);
-    const totalW = devTxt.width + GAP + ICON_SIZE;
-    devTxt.setPosition(CX - (GAP + ICON_SIZE) / 2, H - 16);
-
-    const iconX = CX - totalW / 2 + devTxt.width + GAP + ICON_SIZE / 2;
-    if (this.textures.exists('icon_github')) {
-      this.add.image(iconX, H - 16, 'icon_github').setDisplaySize(ICON_SIZE, ICON_SIZE);
-    } else {
-      this.add.text(iconX, H - 16, '🐙', { fontSize: '15px' }).setOrigin(0.5);
-    }
-
-    // 전체 영역 히트박스
-    const devHit = this.add.rectangle(CX, H - 16, totalW + 16, 28, 0xffffff, 0)
-      .setInteractive({ useHandCursor: true });
-    devHit.on('pointerover', () => devTxt.setStyle({ fontSize: '15px', color: '#bbddff', fontStyle: 'bold' }));
-    devHit.on('pointerout',  () => devTxt.setStyle({ fontSize: '15px', color: '#88bbff', fontStyle: 'bold' }));
-    devHit.on('pointerdown', () => window.open('https://github.com/summercat01', '_blank'));
-
     this.showStep(0);
   }
 
