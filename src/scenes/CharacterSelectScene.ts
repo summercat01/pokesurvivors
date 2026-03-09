@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { ALL_WEAPONS, TYPE_COLORS } from '../data/weapons';
-import { POKEMON_DATA } from '../data/pokemonData';
 
 const CHARACTERS = [
   {
@@ -8,7 +7,7 @@ const CHARACTERS = [
     subtitle: '포켓몬 트레이너',
     trainerSprKey: 'trainer',
     weaponIndex: 0,
-    pokemonSprKey: 'pokemon_001',
+    pokemonSprKey: 'pokemon_143',
     traitColor: 0x44bb44,
   },
   {
@@ -16,7 +15,7 @@ const CHARACTERS = [
     subtitle: '포켓몬 트레이너',
     trainerSprKey: 'trainer',
     weaponIndex: 1,
-    pokemonSprKey: 'pokemon_004',
+    pokemonSprKey: 'pokemon_115',
     traitColor: 0xee5522,
   },
   {
@@ -98,9 +97,9 @@ export class CharacterSelectScene extends Phaser.Scene {
     cardW: number, cardH: number,
   ) {
     const weapon     = ALL_WEAPONS[char.weaponIndex];
-    const pokeTypes  = POKEMON_DATA[weapon.pokemonId]?.types ?? [weapon.type];
-    const typeColor  = TYPE_COLORS[pokeTypes[0]] ?? 0x888888;          // 1타입 (트레이너 쪽)
-    const typeColor2 = TYPE_COLORS[pokeTypes[1] ?? pokeTypes[0]] ?? typeColor; // 2타입 (포켓몬 쪽)
+    const pokeTypes  = [weapon.type];
+    const typeColor  = TYPE_COLORS[weapon.type] ?? 0x888888;
+    const typeColor2 = typeColor;
 
     const STRIPE_W  = 130;
     const cardLeft  = cx - cardW / 2;
