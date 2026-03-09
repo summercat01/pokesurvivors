@@ -113,6 +113,11 @@ export class GameScene extends Phaser.Scene {
   private enemyHpGraphics!: Phaser.GameObjects.Graphics;
   private bossArrow!: Phaser.GameObjects.Text;
 
+  // orbit / zone / lightning 전용 상태
+  private orbitOrbs: Map<number, { graphics: Phaser.GameObjects.Graphics[]; angle: number }> = new Map();
+  private orbitHitCooldowns: Map<number, number> = new Map();
+  private zoneGraphics: Map<number, { graphic: Phaser.GameObjects.Graphics; damageTimer: number }> = new Map();
+
   constructor() {
     super({ key: 'GameScene' });
   }
@@ -137,6 +142,14 @@ export class GameScene extends Phaser.Scene {
     this.weaponCooldowns = [];
     this.weaponLevels    = [];
     this.equippedPassives = new Map();
+
+    // orbit/zone 그래픽 정리 (재시작 시)
+    this.orbitOrbs?.forEach(s => s.graphics.forEach(g => g.destroy()));
+    this.orbitOrbs = new Map();
+    this.zoneGraphics?.forEach(s => s.graphic.destroy());
+    this.zoneGraphics = new Map();
+    this.orbitHitCooldowns = new Map();
+
     this.isLevelingUp = false;
     this.needsLevelUp = false;
     this.isPaused     = false;
@@ -248,6 +261,11 @@ export class GameScene extends Phaser.Scene {
       this
     );
 
+    // orbit 시작 무기 구체 생성 (카메라 설정 이후에 실행)
+    this.weapons.forEach((w, idx) => {
+      if ((w.behavior ?? 'projectile') === 'orbit') this.createOrbitOrbs(w, idx);
+    });
+
     // 게임 시작 (캐릭터 선택은 CharacterSelectScene에서 완료)
     this.spawnWave();
     this.cameras.main.fadeIn(400, 0, 0, 0);
@@ -302,6 +320,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.updateWeapons(delta);
+    this.tickOrbitCooldowns(delta);
     this.applySeparation();
     this.renderEnemyHpBars();
     this.updateCombo(delta);
@@ -368,17 +387,28 @@ export class GameScene extends Phaser.Scene {
   // ===== 무기 자동 공격 =====
   private updateWeapons(delta: number) {
     this.weapons.forEach((weapon, idx) => {
+      const behavior = weapon.behavior ?? 'projectile';
+
+      // orbit/zone: 매 프레임 업데이트 (쿨다운 게이트 없음)
+      if (behavior === 'orbit') { this.updateOrbit(weapon, idx, delta); return; }
+      if (behavior === 'zone')  { this.updateZone(weapon, idx, delta);  return; }
+
       this.weaponCooldowns[idx] -= delta;
       if (this.weaponCooldowns[idx] <= 0) {
-        const cdr = Math.min(this.player.stats.cooldownReduction, 0.75); // 최대 75%
-        const cooldown = weapon.cooldown * (1 - cdr);
-        this.weaponCooldowns[idx] = cooldown;
-        this.fireWeapon(weapon);
+        const cdr = Math.min(this.player.stats.cooldownReduction, 0.75);
+        this.weaponCooldowns[idx] = weapon.cooldown * (1 - cdr);
+        switch (behavior) {
+          case 'melee':     this.fireMelee(weapon);     break;
+          case 'beam':      this.fireBeam(weapon);      break;
+          case 'lightning': this.fireLightning(weapon); break;
+          default:          this.fireProjectile(weapon); break;
+        }
       }
     });
   }
 
-  private fireWeapon(weapon: WeaponConfig) {
+  // ── 투사체 발사 (기존 fireWeapon 이름 변경) ──
+  private fireProjectile(weapon: WeaponConfig) {
     const target = this.getNearestEnemy();
     if (!target) return;
 
@@ -394,17 +424,13 @@ export class GameScene extends Phaser.Scene {
       const angleOffset = count > 1 ? (i / (count - 1) - 0.5) * spread : 0;
       const angle       = baseAngle + angleOffset;
 
-      // 플레이어 스탯 적용 (기본값: projectileSpeed=300, projectileRange=1.0, projectileDuration=2s)
       const speedMult = this.player.stats.projectileSpeed / 300;
       const speed    = Math.round(weapon.projectileSpeed * speedMult);
       const baseDur  = weapon.duration + (this.player.stats.projectileDuration - 2) * 1000;
       const duration = Math.round(baseDur * this.player.stats.projectileRange);
       const damage   = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
 
-      // 고스트/바위 타입은 관통 (ghost=3회, rock=1회)
-      const pierce = weapon.type === 'ghost' ? 3
-                   : weapon.type === 'rock'  ? 1
-                   : 0;
+      const pierce = 0;
 
       const proj = new Projectile(
         this,
@@ -423,6 +449,335 @@ export class GameScene extends Phaser.Scene {
         Math.cos(angle) * speed,
         Math.sin(angle) * speed
       );
+    }
+  }
+
+  // ── 공통 데미지 적용 ──
+  private applyDamageToEnemy(
+    enemy: Enemy,
+    baseDmg: number,
+    attackType: PokemonType,
+    knockbackSrc?: { x: number; y: number },
+    kbMult: number = 1,
+  ) {
+    if (!enemy.active || enemy.isDead()) return;
+
+    const isCrit = Math.random() < this.player.stats.critChance;
+    const superEff = enemy.pokemonTypes.some(t => isSuperEffective(attackType, t));
+    let dmg = isCrit
+      ? Math.floor(baseDmg * this.player.stats.critDamage)
+      : baseDmg;
+    if (superEff) dmg = Math.floor(dmg * 1.5);
+
+    enemy.takeDamage(dmg);
+
+    if (knockbackSrc && enemy.active && !enemy.isDead()) {
+      const kbAngle = Phaser.Math.Angle.Between(knockbackSrc.x, knockbackSrc.y, enemy.x, enemy.y);
+      const kb = this.player.stats.knockback * kbMult;
+      const body = enemy.body as Phaser.Physics.Arcade.Body;
+      body.velocity.x += Math.cos(kbAngle) * kb;
+      body.velocity.y += Math.sin(kbAngle) * kb;
+    }
+
+    const color = isCrit ? '#ffdd00' : superEff ? '#ff8800' : '#ffffff';
+    const label = isCrit ? `${dmg}!` : superEff ? `${dmg}▲` : `${dmg}`;
+    const dmgText = this.add.text(enemy.x, enemy.y - 20, label, {
+      fontSize: isCrit ? '16px' : superEff ? '15px' : '13px',
+      color,
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setDepth(20);
+    this.cameras.main.ignore(dmgText);
+    this.tweens.add({
+      targets: dmgText,
+      y: dmgText.y - 25,
+      alpha: 0,
+      duration: 700,
+      onComplete: () => dmgText.destroy(),
+    });
+
+    if (enemy.isDead()) this.onEnemyDeath(enemy);
+  }
+
+  // ── 근접 공격 ──
+  private fireMelee(weapon: WeaponConfig) {
+    const px = this.player.x;
+    const py = this.player.y;
+    const range = (weapon.meleeRange ?? 120) * (this.player.stats.projectileRange ?? 1);
+    const halfAngle = (weapon.meleeAngle ?? Math.PI) / 2;
+
+    const target = this.getNearestEnemy();
+    const baseAngle = target
+      ? Phaser.Math.Angle.Between(px, py, target.x, target.y)
+      : -Math.PI / 2;
+
+    const color = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const gfx = this.add.graphics();
+    this.cameras.main.ignore(gfx);
+
+    gfx.fillStyle(color, 0.40);
+    gfx.beginPath();
+    gfx.moveTo(px, py);
+    const steps = 16;
+    for (let i = 0; i <= steps; i++) {
+      const a = baseAngle - halfAngle + (i / steps) * halfAngle * 2;
+      gfx.lineTo(px + Math.cos(a) * range, py + Math.sin(a) * range);
+    }
+    gfx.closePath();
+    gfx.fillPath();
+    gfx.lineStyle(2, color, 0.85);
+    gfx.strokePath();
+
+    this.tweens.add({
+      targets: gfx,
+      alpha: 0,
+      duration: 220,
+      onComplete: () => gfx.destroy(),
+    });
+
+    const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    this.enemies.getChildren().forEach(obj => {
+      const enemy = obj as Enemy;
+      if (!enemy.active) return;
+      const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
+      if (dist > range) return;
+      const angle = Phaser.Math.Angle.Between(px, py, enemy.x, enemy.y);
+      const diff = Phaser.Math.Angle.Wrap(angle - baseAngle);
+      if (Math.abs(diff) > halfAngle) return;
+      this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py });
+    });
+  }
+
+  // ── 빔 공격 ──
+  private fireBeam(weapon: WeaponConfig) {
+    const px = this.player.x;
+    const py = this.player.y;
+
+    const target = this.getNearestEnemy();
+    const angle = target
+      ? Phaser.Math.Angle.Between(px, py, target.x, target.y)
+      : -Math.PI / 2;
+
+    const length  = (weapon.beamLength ?? 260) * (this.player.stats.projectileRange ?? 1);
+    const halfW   = (weapon.beamWidth ?? 26) / 2;
+    const cos     = Math.cos(angle);
+    const sin     = Math.sin(angle);
+
+    const color = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const gfx = this.add.graphics();
+    this.cameras.main.ignore(gfx);
+
+    // 빔 사각형 (회전된 좌표로 그리기)
+    const corners: [number, number][] = [
+      [0, -halfW], [length, -halfW], [length, halfW], [0, halfW],
+    ].map(([lx, ly]) => [px + cos * lx - sin * ly, py + sin * lx + cos * ly]) as [number, number][];
+
+    gfx.fillStyle(color, 0.45);
+    gfx.beginPath();
+    gfx.moveTo(corners[0][0], corners[0][1]);
+    corners.slice(1).forEach(([x, y]) => gfx.lineTo(x, y));
+    gfx.closePath();
+    gfx.fillPath();
+
+    gfx.lineStyle(3, color, 0.90);
+    gfx.strokePath();
+
+    // 코어 빔 (밝은 내부)
+    const innerHalfW = halfW * 0.4;
+    const inner: [number, number][] = [
+      [0, -innerHalfW], [length, -innerHalfW], [length, innerHalfW], [0, innerHalfW],
+    ].map(([lx, ly]) => [px + cos * lx - sin * ly, py + sin * lx + cos * ly]) as [number, number][];
+    gfx.fillStyle(0xffffff, 0.55);
+    gfx.beginPath();
+    gfx.moveTo(inner[0][0], inner[0][1]);
+    inner.slice(1).forEach(([x, y]) => gfx.lineTo(x, y));
+    gfx.closePath();
+    gfx.fillPath();
+
+    this.tweens.add({
+      targets: gfx,
+      alpha: 0,
+      duration: 280,
+      onComplete: () => gfx.destroy(),
+    });
+
+    const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    this.enemies.getChildren().forEach(obj => {
+      const enemy = obj as Enemy;
+      if (!enemy.active) return;
+      const dx = enemy.x - px;
+      const dy = enemy.y - py;
+      const along = dx * cos + dy * sin;
+      const perp  = Math.abs(-dx * sin + dy * cos);
+      if (along < 0 || along > length) return;
+      if (perp > halfW + 14) return;
+      this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, 0.5);
+    });
+  }
+
+  // ── 번개 체인 ──
+  private fireLightning(weapon: WeaponConfig) {
+    const chainCount = weapon.lightningChainCount ?? 3;
+    const chainRange = weapon.lightningRange ?? 200;
+    const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+
+    const hit: Enemy[] = [];
+    let fromX = this.player.x;
+    let fromY = this.player.y;
+
+    for (let chain = 0; chain < chainCount; chain++) {
+      let nearest: Enemy | null = null;
+      let minDist = chainRange;
+      this.enemies.getChildren().forEach(obj => {
+        const e = obj as Enemy;
+        if (!e.active || hit.includes(e)) return;
+        const d = Phaser.Math.Distance.Between(fromX, fromY, e.x, e.y);
+        if (d < minDist) { minDist = d; nearest = e; }
+      });
+      if (!nearest) break;
+      hit.push(nearest);
+      fromX = (nearest as Enemy).x;
+      fromY = (nearest as Enemy).y;
+    }
+
+    if (hit.length === 0) return;
+
+    const color = TYPE_COLORS[weapon.type] ?? 0xffdd00;
+    const gfx = this.add.graphics();
+    this.cameras.main.ignore(gfx);
+
+    let lx = this.player.x;
+    let ly = this.player.y;
+    hit.forEach(e => {
+      const mx = (lx + e.x) / 2 + Phaser.Math.Between(-18, 18);
+      const my = (ly + e.y) / 2 + Phaser.Math.Between(-18, 18);
+      gfx.lineStyle(3, color, 0.9);
+      gfx.beginPath();
+      gfx.moveTo(lx, ly);
+      gfx.lineTo(mx, my);
+      gfx.lineTo(e.x, e.y);
+      gfx.strokePath();
+      // 내부 흰색 선
+      gfx.lineStyle(1, 0xffffff, 0.7);
+      gfx.lineBetween(lx, ly, e.x, e.y);
+      lx = e.x;
+      ly = e.y;
+    });
+
+    this.tweens.add({
+      targets: gfx,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => gfx.destroy(),
+    });
+
+    hit.forEach((e, i) => {
+      const dmgMult = Math.pow(0.8, i);
+      this.applyDamageToEnemy(e, Math.floor(damage * dmgMult), weapon.type, { x: this.player.x, y: this.player.y });
+    });
+  }
+
+  // ── 궤도 구체 생성 ──
+  private createOrbitOrbs(weapon: WeaponConfig, slotIdx: number) {
+    const existing = this.orbitOrbs.get(slotIdx);
+    if (existing) existing.graphics.forEach(g => g.destroy());
+
+    const count = weapon.orbitCount ?? 1;
+    const color = TYPE_COLORS[weapon.type] ?? 0xff44ff;
+    const graphics: Phaser.GameObjects.Graphics[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const g = this.add.graphics();
+      this.cameras.main.ignore(g);
+      g.fillStyle(0xffffff, 0.9);
+      g.fillCircle(0, 0, 9);
+      g.fillStyle(color, 1);
+      g.fillCircle(0, 0, 7);
+      graphics.push(g);
+    }
+
+    this.orbitOrbs.set(slotIdx, { graphics, angle: this.orbitOrbs.get(slotIdx)?.angle ?? 0 });
+  }
+
+  // ── 궤도 업데이트 (매 프레임) ──
+  private updateOrbit(weapon: WeaponConfig, slotIdx: number, delta: number) {
+    let orbData = this.orbitOrbs.get(slotIdx);
+    if (!orbData) {
+      this.createOrbitOrbs(weapon, slotIdx);
+      orbData = this.orbitOrbs.get(slotIdx)!;
+    }
+
+    const speed  = weapon.orbitSpeed ?? 2.0;
+    orbData.angle += speed * (delta / 1000);
+
+    const radius = (weapon.orbitRadius ?? 110) * (this.player.stats.projectileRange ?? 1);
+    const count  = orbData.graphics.length;
+    const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+
+    orbData.graphics.forEach((g, i) => {
+      const a  = orbData!.angle + (i / count) * Math.PI * 2;
+      const ox = this.player.x + Math.cos(a) * radius;
+      const oy = this.player.y + Math.sin(a) * radius;
+      g.setPosition(ox, oy);
+
+      this.enemies.getChildren().forEach(obj => {
+        const enemy = obj as Enemy;
+        if (!enemy.active) return;
+        const dist = Phaser.Math.Distance.Between(ox, oy, enemy.x, enemy.y);
+        if (dist > 22) return;
+
+        const enemyId = (enemy.getData('uid') as number) ?? Math.round(enemy.x * 1000 + enemy.y);
+        const cdKey = slotIdx * 1000000 + enemyId;
+        if ((this.orbitHitCooldowns.get(cdKey) ?? 0) > 0) return;
+
+        this.applyDamageToEnemy(enemy, damage, weapon.type, { x: ox, y: oy });
+        this.orbitHitCooldowns.set(cdKey, 600);
+      });
+    });
+  }
+
+  // ── 궤도 쿨다운 틱 ──
+  private tickOrbitCooldowns(delta: number) {
+    this.orbitHitCooldowns.forEach((val, key) => {
+      const next = val - delta;
+      if (next <= 0) this.orbitHitCooldowns.delete(key);
+      else this.orbitHitCooldowns.set(key, next);
+    });
+  }
+
+  // ── 장판 업데이트 (매 프레임) ──
+  private updateZone(weapon: WeaponConfig, slotIdx: number, delta: number) {
+    let zoneData = this.zoneGraphics.get(slotIdx);
+    if (!zoneData) {
+      const g = this.add.graphics();
+      this.cameras.main.ignore(g);
+      zoneData = { graphic: g, damageTimer: 0 };
+      this.zoneGraphics.set(slotIdx, zoneData);
+    }
+
+    const radius = (weapon.zoneRadius ?? 180) * (this.player.stats.projectileRange ?? 1);
+    const color  = TYPE_COLORS[weapon.type] ?? 0x888888;
+    const px = this.player.x;
+    const py = this.player.y;
+
+    zoneData.graphic.clear();
+    zoneData.graphic.fillStyle(color, 0.12);
+    zoneData.graphic.fillCircle(px, py, radius);
+    zoneData.graphic.lineStyle(2, color, 0.55);
+    zoneData.graphic.strokeCircle(px, py, radius);
+
+    const interval = weapon.zoneDamageInterval ?? 1000;
+    zoneData.damageTimer += delta;
+    if (zoneData.damageTimer >= interval) {
+      zoneData.damageTimer -= interval;
+      const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+      this.enemies.getChildren().forEach(obj => {
+        const enemy = obj as Enemy;
+        if (!enemy.active) return;
+        const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
+        if (dist > radius) return;
+        this.applyDamageToEnemy(enemy, damage, weapon.type, undefined, 0);
+      });
     }
   }
 
@@ -459,52 +814,14 @@ export class GameScene extends Phaser.Scene {
     if (proj.hitEnemies.has(uid)) return;
     proj.hitEnemies.add(uid);
 
-    const isCrit  = Math.random() < this.player.stats.critChance;
-    // 타입 상성 체크 (투사체의 타입키에서 추출)
-    const projType  = (proj.texture.key.replace('proj_', '') as any);
-    const superEff  = enemy.pokemonTypes.some(t => isSuperEffective(projType, t));
-    let dmg = isCrit
-      ? Math.floor(proj.damage * this.player.stats.critDamage)
-      : proj.damage;
-    if (superEff) dmg = Math.floor(dmg * 1.5);
+    const projType = proj.texture.key.replace('proj_', '') as PokemonType;
+    this.applyDamageToEnemy(enemy, proj.damage, projType, { x: this.player.x, y: this.player.y });
 
-    enemy.takeDamage(dmg);
-
-    // 관통 처리 (pierce > 0 이면 최대 pierce번 추가 적 통과)
     if (proj.pierce > 0) {
       proj.pierce--;
-      // 관통 시 투사체 유지 (destroy 안 함)
     } else {
       proj.destroy();
     }
-
-    // 넉백: 플레이어 → 적 방향으로 밀어냄
-    if (enemy.active && !enemy.isDead()) {
-      const kbAngle = Phaser.Math.Angle.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-      const kb = this.player.stats.knockback;
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
-      body.velocity.x += Math.cos(kbAngle) * kb;
-      body.velocity.y += Math.sin(kbAngle) * kb;
-    }
-
-    const color = isCrit ? '#ffdd00' : superEff ? '#ff8800' : '#ffffff';
-    const label = isCrit ? `${dmg}!` : superEff ? `${dmg}▲` : `${dmg}`;
-    const dmgText = this.add.text(enemy.x, enemy.y - 20, label, {
-      fontSize: isCrit ? '16px' : superEff ? '15px' : '13px',
-      color,
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setDepth(20);
-    this.cameras.main.ignore(dmgText);
-    this.tweens.add({
-      targets: dmgText,
-      y: dmgText.y - 25,
-      alpha: 0,
-      duration: 700,
-      onComplete: () => dmgText.destroy(),
-    });
-
-    if (enemy.isDead()) this.onEnemyDeath(enemy);
   }
 
   private onPlayerHitEnemy(_player: any, _enemy: any) {
@@ -764,19 +1081,24 @@ export class GameScene extends Phaser.Scene {
   applyLevelUpChoice(option: LevelUpOption) {
     switch (option.type) {
       case 'newPokemon': {
-        const base = getWeaponByPokemonId(option.pokemonId!)!;
-        this.weapons.push(getUpgradedWeapon(base, 1));
+        const base    = getWeaponByPokemonId(option.pokemonId!)!;
+        const newWeap = getUpgradedWeapon(base, 1);
+        const newIdx  = this.weapons.length;
+        this.weapons.push(newWeap);
         this.weaponCooldowns.push(0);
         this.weaponLevels.push(1);
+        if ((newWeap.behavior ?? 'projectile') === 'orbit') this.createOrbitOrbs(newWeap, newIdx);
         break;
       }
       case 'upgradePokemon': {
         const idx = this.weapons.findIndex(w => w.pokemonId === option.pokemonId);
         if (idx >= 0) {
-          const newLv = option.levelTo ?? this.weaponLevels[idx] + 1;
-          const base  = getWeaponByPokemonId(option.pokemonId!) ?? this.weapons[idx];
-          this.weapons[idx]      = getUpgradedWeapon(base, newLv);
+          const newLv   = option.levelTo ?? this.weaponLevels[idx] + 1;
+          const base    = getWeaponByPokemonId(option.pokemonId!) ?? this.weapons[idx];
+          const upgraded = getUpgradedWeapon(base, newLv);
+          this.weapons[idx]      = upgraded;
           this.weaponLevels[idx] = newLv;
+          if ((upgraded.behavior ?? 'projectile') === 'orbit') this.createOrbitOrbs(upgraded, idx);
         }
         break;
       }

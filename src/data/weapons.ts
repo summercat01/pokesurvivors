@@ -1,5 +1,7 @@
 import type { PokemonType } from '../types';
 
+export type WeaponBehavior = 'projectile' | 'melee' | 'beam' | 'orbit' | 'zone' | 'lightning';
+
 export interface WeaponConfig {
   pokemonId: number;
   name: string;
@@ -11,6 +13,23 @@ export interface WeaponConfig {
   duration: number;       // 투사체 유지 시간 (밀리초)
   textureKey: string;     // 투사체 텍스처 키
   spreadAngle: number;    // 다중 투사체일 때 퍼짐 각도 (라디안)
+  behavior?: WeaponBehavior;
+  // melee
+  meleeRange?: number;    // 사거리 px
+  meleeAngle?: number;    // 부채꼴 각도 radian (2π = 360°)
+  // beam
+  beamWidth?: number;     // 빔 반폭 px
+  beamLength?: number;    // 빔 길이 px
+  // orbit
+  orbitRadius?: number;   // 궤도 반지름 px
+  orbitSpeed?: number;    // 회전 속도 rad/s
+  orbitCount?: number;    // 구체 개수
+  // zone
+  zoneRadius?: number;    // 장판 반지름 px
+  zoneDamageInterval?: number; // 장판 데미지 간격 ms
+  // lightning
+  lightningChainCount?: number; // 체인 횟수
+  lightningRange?: number;      // 체인 최대 거리 px
 }
 
 // ===== 무기 상수 =====
@@ -22,6 +41,7 @@ export const MAX_PASSIVE_SLOTS = 6;
 const LV_DAMAGE_MULT:   readonly number[] = [1.0, 1.3, 1.7, 2.2, 3.0];
 const LV_COOLDOWN_MULT: readonly number[] = [1.0, 0.90, 0.82, 0.75, 0.65];
 const LV_COUNT_BONUS:   readonly number[] = [0,   0,    1,    1,    2];
+const LV_RANGE_BONUS:   readonly number[] = [0,   20,   40,   65,   100]; // melee/zone/beam 범위 성장 px
 
 // ===== 전체 무기 풀 (레벨 1 기준치) =====
 export const ALL_WEAPONS: WeaponConfig[] = [
@@ -29,25 +49,31 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 1,
     name: '이상해씨',
     type: 'grass',
-    damage: 8,
-    cooldown: 1200,
-    projectileSpeed: 280,
+    damage: 12,
+    cooldown: 1000,
+    projectileSpeed: 0,
     projectileCount: 1,
-    duration: 1800,
+    duration: 0,
     textureKey: 'proj_grass',
     spreadAngle: 0,
+    behavior: 'melee',
+    meleeRange: 130,
+    meleeAngle: Math.PI * 0.75, // 135° 부채꼴
   },
   {
     pokemonId: 4,
     name: '파이리',
     type: 'fire',
-    damage: 12,
-    cooldown: 1600,
-    projectileSpeed: 340,
-    projectileCount: 3,
-    duration: 1200,
+    damage: 18,
+    cooldown: 1400,
+    projectileSpeed: 0,
+    projectileCount: 1,
+    duration: 0,
     textureKey: 'proj_fire',
-    spreadAngle: 0.45,
+    spreadAngle: 0,
+    behavior: 'beam',
+    beamWidth: 26,
+    beamLength: 270,
   },
   {
     pokemonId: 7,
@@ -60,78 +86,98 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     duration: 3500,
     textureKey: 'proj_water',
     spreadAngle: 0,
+    behavior: 'projectile',
   },
   {
     pokemonId: 25,
     name: '피카츄',
     type: 'electric',
-    damage: 6,
-    cooldown: 550,
-    projectileSpeed: 460,
+    damage: 10,
+    cooldown: 650,
+    projectileSpeed: 0,
     projectileCount: 1,
-    duration: 700,
+    duration: 0,
     textureKey: 'proj_electric',
     spreadAngle: 0,
+    behavior: 'lightning',
+    lightningChainCount: 3,
+    lightningRange: 200,
   },
   {
     pokemonId: 54,
     name: '고라파덕',
     type: 'psychic',
-    damage: 15,
-    cooldown: 2200,
-    projectileSpeed: 170,
+    damage: 18,
+    cooldown: 1500,
+    projectileSpeed: 0,
     projectileCount: 1,
-    duration: 4200,
+    duration: 0,
     textureKey: 'proj_psychic',
     spreadAngle: 0,
+    behavior: 'orbit',
+    orbitRadius: 110,
+    orbitSpeed: 2.2,
+    orbitCount: 1,
   },
   {
     pokemonId: 74,
     name: '꼬마돌',
     type: 'rock',
-    damage: 20,
+    damage: 28,
     cooldown: 2000,
-    projectileSpeed: 220,
+    projectileSpeed: 0,
     projectileCount: 1,
-    duration: 2500,
+    duration: 0,
     textureKey: 'proj_rock',
     spreadAngle: 0,
+    behavior: 'beam',
+    beamWidth: 55,
+    beamLength: 185,
   },
   {
     pokemonId: 41,
     name: '주뱃',
     type: 'flying',
-    damage: 5,
-    cooldown: 400,
-    projectileSpeed: 500,
-    projectileCount: 2,
-    duration: 600,
+    damage: 8,
+    cooldown: 1600,
+    projectileSpeed: 0,
+    projectileCount: 1,
+    duration: 0,
     textureKey: 'proj_flying',
-    spreadAngle: 0.3,
+    spreadAngle: 0,
+    behavior: 'zone',
+    zoneRadius: 145,
+    zoneDamageInterval: 900,
   },
   {
     pokemonId: 92,
     name: '고오스',
     type: 'ghost',
-    damage: 18,
-    cooldown: 1800,
-    projectileSpeed: 130,
+    damage: 14,
+    cooldown: 2200,
+    projectileSpeed: 0,
     projectileCount: 1,
-    duration: 5000,
+    duration: 0,
     textureKey: 'proj_ghost',
     spreadAngle: 0,
+    behavior: 'zone',
+    zoneRadius: 210,
+    zoneDamageInterval: 1400,
   },
   {
     pokemonId: 66,
     name: '알통몬',
     type: 'fighting',
-    damage: 14,
-    cooldown: 700,
-    projectileSpeed: 380,
+    damage: 22,
+    cooldown: 900,
+    projectileSpeed: 0,
     projectileCount: 1,
-    duration: 900,
+    duration: 0,
     textureKey: 'proj_fighting',
     spreadAngle: 0,
+    behavior: 'melee',
+    meleeRange: 95,
+    meleeAngle: Math.PI * 2, // 360° 강타
   },
 ];
 
@@ -146,18 +192,44 @@ export function getWeaponByPokemonId(id: number): WeaponConfig | undefined {
 /** 레벨 적용된 WeaponConfig 반환 (level: 1~MAX_WEAPON_LEVEL) */
 export function getUpgradedWeapon(base: WeaponConfig, level: number): WeaponConfig {
   const l = Math.max(1, Math.min(level, MAX_WEAPON_LEVEL)) - 1; // 0-index
+  const behavior = base.behavior ?? 'projectile';
+  const rangeBonus = LV_RANGE_BONUS[l];
+
   return {
     ...base,
-    damage:         Math.round(base.damage * LV_DAMAGE_MULT[l]),
-    cooldown:       Math.round(base.cooldown * LV_COOLDOWN_MULT[l]),
-    projectileCount: base.projectileCount + LV_COUNT_BONUS[l],
+    damage:   Math.round(base.damage * LV_DAMAGE_MULT[l]),
+    cooldown: Math.round(base.cooldown * LV_COOLDOWN_MULT[l]),
+    // behavior별 스케일링
+    projectileCount:      behavior === 'projectile' ? base.projectileCount + LV_COUNT_BONUS[l] : base.projectileCount,
+    meleeRange:           base.meleeRange  != null  ? base.meleeRange  + rangeBonus : undefined,
+    beamLength:           base.beamLength  != null  ? base.beamLength  + rangeBonus : undefined,
+    beamWidth:            base.beamWidth   != null  ? base.beamWidth   + Math.round(rangeBonus * 0.2) : undefined,
+    zoneRadius:           base.zoneRadius  != null  ? base.zoneRadius  + rangeBonus : undefined,
+    orbitCount:           base.orbitCount  != null  ? base.orbitCount  + LV_COUNT_BONUS[l] : undefined,
+    lightningChainCount:  base.lightningChainCount != null ? base.lightningChainCount + LV_COUNT_BONUS[l] : undefined,
   };
 }
 
 /** 레벨업 후 스탯 설명 문자열 */
 export function getUpgradeDescription(base: WeaponConfig, toLevel: number): string {
   const upgraded = getUpgradedWeapon(base, toLevel);
-  return `공격력 ${upgraded.damage} / 쿨다운 ${(upgraded.cooldown / 1000).toFixed(1)}s / 투사체 ×${upgraded.projectileCount}`;
+  const behavior = base.behavior ?? 'projectile';
+  const dmgStr = `공격력 ${upgraded.damage}`;
+  const cdStr  = `쿨다운 ${(upgraded.cooldown / 1000).toFixed(1)}s`;
+  switch (behavior) {
+    case 'orbit':
+      return `${dmgStr} / ${cdStr} / 구체 ×${upgraded.orbitCount ?? 1}`;
+    case 'lightning':
+      return `${dmgStr} / ${cdStr} / 체인 ${upgraded.lightningChainCount ?? 3}회`;
+    case 'melee':
+      return `${dmgStr} / ${cdStr} / 범위 ${upgraded.meleeRange ?? 120}px`;
+    case 'zone':
+      return `${dmgStr} / ${cdStr} / 반경 ${upgraded.zoneRadius ?? 180}px`;
+    case 'beam':
+      return `${dmgStr} / ${cdStr} / 길이 ${upgraded.beamLength ?? 270}px`;
+    default:
+      return `${dmgStr} / ${cdStr} / 투사체 ×${upgraded.projectileCount}`;
+  }
 }
 
 // ===== 타입 상성 (공격 타입 → 약점 타입 목록) =====
