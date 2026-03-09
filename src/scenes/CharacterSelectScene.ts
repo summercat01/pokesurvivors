@@ -7,7 +7,7 @@ const CHARACTERS = [
     subtitle: '포켓몬 트레이너',
     trainerSprKey: 'trainer',
     weaponIndex: 0,
-    pokemonSprKey: 'pokemon_143',
+    pokemonSprKey: 'pokemon_001',
     traitColor: 0x44bb44,
   },
   {
@@ -15,7 +15,7 @@ const CHARACTERS = [
     subtitle: '포켓몬 트레이너',
     trainerSprKey: 'trainer',
     weaponIndex: 1,
-    pokemonSprKey: 'pokemon_115',
+    pokemonSprKey: 'pokemon_004',
     traitColor: 0xee5522,
   },
   {
