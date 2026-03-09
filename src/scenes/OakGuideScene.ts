@@ -31,6 +31,8 @@ const DIALOGS: DialogStep[] = [
 export class OakGuideScene extends Phaser.Scene {
   private step = 0;
   private dialogText!: Phaser.GameObjects.Text;
+  private prevBtn!: Phaser.GameObjects.Rectangle;
+  private prevTxt!: Phaser.GameObjects.Text;
   private nextBtn!: Phaser.GameObjects.Rectangle;
   private nextTxt!: Phaser.GameObjects.Text;
   private stepDots: Phaser.GameObjects.Arc[] = [];
@@ -38,6 +40,10 @@ export class OakGuideScene extends Phaser.Scene {
   private fullText = '';
   private typeTimer?: Phaser.Time.TimerEvent;
   private inputBlocked = false;
+  private dontShowAgain = false;
+  private checkBox!: Phaser.GameObjects.Rectangle;
+  private disclaimerText!: Phaser.GameObjects.Text;
+  private checkMark!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: 'OakGuideScene' });
@@ -66,9 +72,9 @@ export class OakGuideScene extends Phaser.Scene {
 
     // ── 오박사 초상화 ──
     const PORTRAIT_CX = CX;
-    const PORTRAIT_CY = 220;
-    const PORTRAIT_W  = 160;
-    const PORTRAIT_H  = 200;
+    const PORTRAIT_CY = 195;
+    const PORTRAIT_W  = 150;
+    const PORTRAIT_H  = 170;
 
     // 초상화 배경
     this.add.rectangle(PORTRAIT_CX, PORTRAIT_CY, PORTRAIT_W + 8, PORTRAIT_H + 8, 0x44cc66, 0.2);
@@ -134,30 +140,66 @@ export class OakGuideScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // 대화 텍스트
-    this.dialogText = this.add.text(BOX_L + 16, BOX_TOP + 18, '', {
+    this.dialogText = this.add.text(BOX_L + 16, BOX_TOP + 34, '', {
       fontSize: '15px',
       color: '#181810',
       lineSpacing: 8,
       wordWrap: { width: BOX_W - 32 },
+      padding: { top: 8 },
     });
 
-    // ── 다음 버튼 ──
+    // ── 버튼 행 ──
     const BTN_Y = BOX_TOP + BOX_H - 28;
-    this.nextBtn = this.add.rectangle(CX + 52, BTN_Y, 120, 30, 0x44aa44)
+    const CB_Y  = BTN_Y - 38;
+
+    // 이전 버튼
+    this.prevBtn = this.add.rectangle(CX - 66, BTN_Y, 110, 30, 0x445544)
       .setInteractive({ useHandCursor: true });
-    this.nextTxt = this.add.text(CX + 52, BTN_Y, '다음 ▶', {
+    this.prevTxt = this.add.text(CX - 66, BTN_Y, '◀ 이전', {
+      fontSize: '14px', color: '#aabbaa', fontStyle: 'bold',
+      padding: { top: 4 },
+    }).setOrigin(0.5);
+    this.prevBtn.on('pointerover', () => { if (this.step > 0) this.prevBtn.setFillStyle(0x556655); });
+    this.prevBtn.on('pointerout',  () => { if (this.step > 0) this.prevBtn.setFillStyle(0x445544); });
+    this.prevBtn.on('pointerdown', () => this.goBack());
+
+    // 다음 버튼
+    this.nextBtn = this.add.rectangle(CX + 66, BTN_Y, 110, 30, 0x44aa44)
+      .setInteractive({ useHandCursor: true });
+    this.nextTxt = this.add.text(CX + 66, BTN_Y, '다음 ▶', {
       fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
       padding: { top: 4 },
     }).setOrigin(0.5);
-
     this.nextBtn.on('pointerover', () => this.nextBtn.setFillStyle(0x55cc55));
-    this.nextBtn.on('pointerout',  () => this.nextBtn.setFillStyle(0x44aa44));
+    this.nextBtn.on('pointerout',  () => this.nextBtn.setFillStyle(this.step === DIALOGS.length - 1 ? 0xcc4422 : 0x44aa44));
     this.nextBtn.on('pointerdown', () => this.advance());
 
-    // 화면 탭으로 진행 (버튼 외 영역)
-    this.input.on('pointerdown', (_ptr: Phaser.Input.Pointer, targets: Phaser.GameObjects.GameObject[]) => {
-      if (!targets.includes(this.nextBtn)) this.advance();
+    // ── 다시 보지 않기 체크박스 ──
+    const cbX = BOX_L + 16;
+    this.checkBox = this.add.rectangle(cbX + 9, CB_Y, 18, 18, 0xffffff)
+      .setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(2, 0x44aa44).strokeRect(cbX, CB_Y - 9, 18, 18);
+    this.checkMark = this.add.text(cbX + 9, CB_Y, '', {
+      fontSize: '13px', color: '#44aa44', fontStyle: 'bold',
+      padding: { top: 1 },
+    }).setOrigin(0.5);
+    this.add.text(cbX + 26, CB_Y, '다시 보지 않기', {
+      fontSize: '13px', color: '#555544',
+      padding: { top: 4 },
+    }).setOrigin(0, 0.5);
+
+    this.checkBox.on('pointerdown', () => {
+      this.dontShowAgain = !this.dontShowAgain;
+      this.checkMark.setText(this.dontShowAgain ? '✓' : '');
+      this.checkBox.setFillStyle(this.dontShowAgain ? 0xcceecc : 0xffffff);
     });
+
+    // ── 법적 고지 (마지막 스텝에만 표시) ──
+    this.disclaimerText = this.add.text(CX, CB_Y - 28, '본 게임은 포켓몬 팬 게임으로, 어떠한 수익도 창출하지 않으며\n닌텐도 / 포켓몬컴퍼니 / GAME FREAK과 무관합니다.', {
+      fontSize: '11px', color: '#888877', align: 'center',
+      lineSpacing: 4,
+      wordWrap: { width: BOX_W - 32 },
+    }).setOrigin(0.5, 1).setVisible(false);
 
     this.showStep(0);
   }
@@ -186,14 +228,32 @@ export class OakGuideScene extends Phaser.Scene {
       },
     });
 
-    // 버튼 텍스트
+    // 다음 버튼
     const isLast = index === DIALOGS.length - 1;
     this.nextTxt.setText(isLast ? '시작! ▶' : '다음 ▶');
     this.nextBtn.setFillStyle(isLast ? 0xcc4422 : 0x44aa44);
+    this.disclaimerText.setVisible(isLast);
+
+    // 이전 버튼 (첫 스텝이면 흐리게)
+    const isFirst = index === 0;
+    this.prevBtn.setFillStyle(isFirst ? 0x2a332a : 0x445544);
+    this.prevTxt.setColor(isFirst ? '#445544' : '#aabbaa');
+    this.prevBtn.setInteractive(isFirst ? false : { useHandCursor: true });
 
     // 연속 입력 방지 (200ms 차단)
     this.inputBlocked = true;
     this.time.delayedCall(200, () => { this.inputBlocked = false; });
+  }
+
+  private goBack() {
+    if (this.inputBlocked || this.step === 0) return;
+    if (this.isTyping) {
+      this.typeTimer?.remove();
+      this.dialogText.setText(this.fullText);
+      this.isTyping = false;
+      return;
+    }
+    this.showStep(this.step - 1);
   }
 
   private advance() {
@@ -210,7 +270,9 @@ export class OakGuideScene extends Phaser.Scene {
     if (this.step < DIALOGS.length - 1) {
       this.showStep(this.step + 1);
     } else {
-      localStorage.setItem('guideShown', '1');
+      if (this.dontShowAgain) {
+        localStorage.setItem('guideShown', '1');
+      }
       this.cameras.main.fadeOut(200, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.stop('OakGuideScene');
