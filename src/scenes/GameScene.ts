@@ -950,9 +950,10 @@ export class GameScene extends Phaser.Scene {
   // ── 충격파 (expanding ring) ──
   private fireNova(weapon: WeaponConfig) {
     const px = this.player.x, py = this.player.y;
-    const maxR   = (weapon.meleeRange ?? 170) * (this.player.stats.projectileRange ?? 1);
-    const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
-    const color  = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const maxR      = (weapon.meleeRange ?? 170) * (this.player.stats.projectileRange ?? 1);
+    const damage    = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    const color     = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const sourceName = weapon.name; // tween 클로저용 캡처
     const hitSet = new Set<Enemy>();
     const gfx = this.add.graphics();
     this.cameras.main.ignore(gfx);
@@ -975,7 +976,9 @@ export class GameScene extends Phaser.Scene {
           const d = Phaser.Math.Distance.Between(px, py, e.x, e.y);
           if (d <= r + 16 && d >= r - 32) {
             hitSet.add(e);
+            this.currentDamageSource = sourceName;
             this.applyDamageToEnemy(e, damage, weapon.type, { x: px, y: py });
+            this.currentDamageSource = '';
           }
         });
       },
