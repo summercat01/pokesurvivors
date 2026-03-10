@@ -82,6 +82,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('LoginScene');
+    const session = localStorage.getItem('pkmn_session');
+    this.scene.start(session ? 'TitleScene' : 'LoginScene');
   }
 }

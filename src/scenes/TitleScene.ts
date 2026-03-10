@@ -140,7 +140,7 @@ export class TitleScene extends Phaser.Scene {
     const badgeX = this.scale.width - 50;
     const badgeY = 240;
     this.add.rectangle(badgeX, badgeY, 40, 18, 0x3377cc).setDepth(10);
-    this.add.text(badgeX, badgeY, 'v0.2', {
+    this.add.text(badgeX, badgeY, `v${__APP_VERSION__}`, {
       fontSize: '11px',
       color: '#ffffff',
       fontStyle: 'bold',
