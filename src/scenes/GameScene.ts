@@ -28,7 +28,7 @@ export class GameScene extends Phaser.Scene {
   private gameTime: number = 0;
   private exp: number = 0;
   private level: number = 1;
-  private expToNext: number = 100;
+  private expToNext: number = 20;
   private gold: number = 0;
   killCount: number = 0;
   private isGameOver: boolean = false;
@@ -146,7 +146,7 @@ export class GameScene extends Phaser.Scene {
     this.gameTime     = 0;
     this.exp          = 0;
     this.level        = 1;
-    this.expToNext    = 100;
+    this.expToNext    = 20;
     this.gold         = 0;
     this.killCount    = 0;
     this.isGameOver   = false;
@@ -1368,7 +1368,7 @@ export class GameScene extends Phaser.Scene {
     if (this.exp >= this.expToNext && !this.isLevelingUp) {
       this.exp      -= this.expToNext;
       this.level++;
-      this.expToNext = Math.floor(this.expToNext * 1.07);
+      this.expToNext = Math.floor(this.expToNext * 1.10);
       // 레벨 마일스톤
       for (const m of this.LEVEL_MILESTONES) {
         if (this.level >= m && !this.reachedLevelMilestones.has(m)) {
@@ -1530,7 +1530,7 @@ export class GameScene extends Phaser.Scene {
     if (this.exp >= this.expToNext) {
       this.exp      -= this.expToNext;
       this.level++;
-      this.expToNext = Math.floor(this.expToNext * 1.07);
+      this.expToNext = Math.floor(this.expToNext * 1.10);
       this.needsLevelUp = true;
     }
   }
