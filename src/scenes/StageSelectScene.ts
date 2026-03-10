@@ -97,28 +97,34 @@ export class StageSelectScene extends Phaser.Scene {
     container.setMask(mask);
 
     const CARD_W = W - 32;
-    STAGES.forEach((stage, i) => {
-      const cy = i * CARD_STRIDE + CARD_H / 2;
-      this.createStageCard(stage, CX, cy, CARD_W, CARD_H, container);
-    });
-
     // ── 드래그 스크롤 ──
     let lastY      = 0;
     let isDragging = false;
-    let scrollY    = 0; // container.y offset from SCROLL_TOP (negative = scrolled down)
+    let scrollY    = 0;
+    let hasDragged = false;
+    const DRAG_THRESHOLD = 8;
+
+    STAGES.forEach((stage, i) => {
+      const cy = i * CARD_STRIDE + CARD_H / 2;
+      this.createStageCard(stage, CX, cy, CARD_W, CARD_H, container, () => hasDragged);
+    });
 
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
       if (ptr.y < SCROLL_TOP || ptr.y > SCROLL_BOT) return;
       lastY      = ptr.y;
       isDragging = true;
+      hasDragged = false;
     });
 
     this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
       if (!isDragging) return;
       const dy = ptr.y - lastY;
       lastY     = ptr.y;
-      scrollY   = Phaser.Math.Clamp(scrollY + dy, -maxScroll, 0);
-      container.y = SCROLL_TOP + scrollY;
+      if (Math.abs(dy) > DRAG_THRESHOLD || hasDragged) {
+        hasDragged = true;
+        scrollY = Phaser.Math.Clamp(scrollY + dy, -maxScroll, 0);
+        container.y = SCROLL_TOP + scrollY;
+      }
     });
 
     this.input.on('pointerup',   () => { isDragging = false; });
@@ -131,6 +137,7 @@ export class StageSelectScene extends Phaser.Scene {
     stage: StageConfig, cx: number, cy: number,
     cardW: number, cardH: number,
     container: Phaser.GameObjects.Container,
+    getHasDragged: () => boolean,
   ) {
     const cardLeft = cx - cardW / 2;
     const cardTop  = cy - cardH / 2;
@@ -234,7 +241,8 @@ export class StageSelectScene extends Phaser.Scene {
       outline.lineStyle(2, typeColor, 0.6);
       outline.strokeRect(cardLeft, cardTop, cardW, cardH);
     });
-    cardBg.on('pointerdown', () => {
+    cardBg.on('pointerup', () => {
+      if (getHasDragged()) return;
       this.cameras.main.fadeOut(250, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('CharacterSelectScene', { stageId: stage.id });
