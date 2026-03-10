@@ -54,6 +54,10 @@ export class BootScene extends Phaser.Scene {
       '007': 'squirtle',   '008': 'wartortle',   '009': 'blastoise',
       '025': 'pikachu',    '054': 'psyduck',     '074': 'geodude',
       '041': 'zubat',      '092': 'gastly',      '066': 'machop',
+      // 무기 기본진화 교체분
+      '032': 'nidoran-m',  '063': 'abra',        '172': 'pichu',
+      '173': 'igglybuff',  '220': 'swinub',      '246': 'larvitar',
+      '396': 'starly',
       // Stage 1 일반 적 — Gen1 노말
       '016': 'pidgey',     '017': 'pidgeotto',   '018': 'pidgeot',
       '019': 'rattata',    '020': 'raticate',

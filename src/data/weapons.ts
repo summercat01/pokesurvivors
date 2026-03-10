@@ -58,8 +58,8 @@ const LV_RANGE_BONUS:   readonly number[] = [0,   20,   40,   65,   100]; // mel
 // ===== 전체 무기 풀 (레벨 1 기준치) =====
 export const ALL_WEAPONS: WeaponConfig[] = [
   {
-    pokemonId: 1,
-    name: '이상해씨',
+    pokemonId: 387,
+    name: '나무지기',
     type: 'grass',
     description: '전방 135° 범위의 덩굴채찍으로\n주변 적을 후려칩니다.',
     damage: 22,
@@ -91,8 +91,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     rotateSpeed: 1.2,
   },
   {
-    pokemonId: 7,
-    name: '꼬부기',
+    pokemonId: 393,
+    name: '팽도리',
     type: 'water',
     description: '물 투사체를 발사합니다.\n느리지만 꾸준히 적을 압박합니다.',
     damage: 22,
@@ -105,8 +105,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     behavior: 'projectile',
   },
   {
-    pokemonId: 25,
-    name: '피카츄',
+    pokemonId: 172,
+    name: '피츄',
     type: 'electric',
     description: '가장 가까운 적부터 번개를\n최대 3마리까지 연쇄시킵니다.',
     damage: 18,
@@ -122,8 +122,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     chainCountPerLevel: 0,
   },
   {
-    pokemonId: 54,
-    name: '고라파덕',
+    pokemonId: 63,
+    name: '캐이시',
     type: 'psychic',
     description: '에스퍼 구체가 주위를 공전하며\n닿는 적에게 지속 피해를 줍니다.',
     damage: 18,
@@ -139,8 +139,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     orbitCount: 1,
   },
   {
-    pokemonId: 74,
-    name: '꼬마돌',
+    pokemonId: 246,
+    name: '애버라스',
     type: 'rock',
     description: '바위를 굴려 착탄 지점에서\n범위 폭발을 일으킵니다.',
     damage: 35,
@@ -154,8 +154,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     explosionRadius: 65,
   },
   {
-    pokemonId: 41,
-    name: '주뱃',
+    pokemonId: 396,
+    name: '찌르꼬',
     type: 'flying',
     description: '초음파를 부채꼴로 3발 발사합니다.\n빠른 속도로 전방의 적을 공격합니다.',
     damage: 12,
@@ -169,7 +169,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   },
   {
     pokemonId: 92,
-    name: '고오스',
+    name: '고스',
     type: 'ghost',
     description: '저주받은 영혼이 적을 집요하게\n추적해 공격합니다.',
     damage: 22,
@@ -198,8 +198,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     meleeRange: 120,
   },
   {
-    pokemonId: 50,
-    name: '디그다',
+    pokemonId: 74,
+    name: '꼬마돌',
     type: 'ground',
     description: '발밑 지진으로 주변의 모든 적을\n동시에 강타합니다.',
     damage: 35,
@@ -214,8 +214,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     meleeAngle: Math.PI * 2,
   },
   {
-    pokemonId: 46,
-    name: '파라스',
+    pokemonId: 265,
+    name: '개무소',
     type: 'bug',
     description: '포자 함정을 주변에 설치합니다.\n적이 밟으면 폭발하며 범위 피해를 줍니다.',
     damage: 38,
@@ -229,8 +229,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     meleeRange: 45,
   },
   {
-    pokemonId: 124,
-    name: '루주라',
+    pokemonId: 220,
+    name: '꾸꾸리',
     type: 'ice',
     description: '얼음 덩어리 3개가 무작위 위치에\n떨어져 범위 피해를 줍니다.',
     damage: 30,
@@ -264,8 +264,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     chainCountPerLevel: 1,
   },
   {
-    pokemonId: 109,
-    name: '또가스',
+    pokemonId: 32,
+    name: '니드런♂',
     type: 'poison',
     description: '독가스 장판을 주변에 생성합니다.\n범위 내 모든 적에게 지속 피해를 줍니다.',
     damage: 6,
@@ -280,8 +280,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     zoneDamageInterval: 600,
   },
   {
-    pokemonId: 39,
-    name: '푸린',
+    pokemonId: 173,
+    name: '푸푸린',
     type: 'normal',
     description: '노래 에너지가 8방향으로 퍼져나갑니다.\n전방위 동시 공격으로 모든 적을 노립니다.',
     damage: 12,
@@ -295,7 +295,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   },
   {
     pokemonId: 374,
-    name: '메탕구',
+    name: '메탕',
     type: 'steel',
     description: '강철 방패를 앞으로 밀어붙입니다.\n범위는 짧지만 강력한 넉백을 줍니다.',
     damage: 30,
@@ -328,7 +328,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
 ];
 
 // 하위 호환성 alias
-export const BULBASAUR_WEAPON = ALL_WEAPONS[0];
+export const STARTER_WEAPON = ALL_WEAPONS[0];
 
 // ===== 유틸 함수 =====
 export function getWeaponByPokemonId(id: number): WeaponConfig | undefined {
