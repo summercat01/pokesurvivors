@@ -48,6 +48,10 @@ export class LevelUpScene extends Phaser.Scene {
 
   // ─────────────────────────────────────────
   private createCard(opt: LevelUpOption, cx: number, cy: number) {
+    if (opt.type === 'goldBonus') {
+      this.createGoldCard(cx, cy);
+      return;
+    }
     const typeColor = this.resolveTypeColor(opt);
     const isNew     = opt.type === 'newPokemon' || opt.type === 'newPassive';
     const sprKey    = this.resolveSprite(opt);
@@ -128,6 +132,43 @@ export class LevelUpScene extends Phaser.Scene {
     cardBg.on('pointerdown', () => {
       const gameScene = this.scene.get('GameScene') as unknown as GameScene;
       gameScene.applyLevelUpChoice(opt);
+      this.scene.stop('LevelUpScene');
+      this.scene.resume('GameScene');
+    });
+  }
+
+  // ─────────────────────────────────────────
+  private createGoldCard(cx: number, cy: number) {
+    const GOLD = 0xf0a800;
+
+    this.add.rectangle(cx + 2, cy + 3, CARD_W + 4, CARD_H + 4, 0x000000, 0.5);
+
+    const cardBg = this.add.rectangle(cx, cy, CARD_W, CARD_H, 0x1a1a2e)
+      .setInteractive({ useHandCursor: true });
+
+    const outline = this.add.graphics();
+    outline.lineStyle(2, GOLD, 0.8);
+    outline.strokeRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H);
+
+    const STRIPE_W = 80;
+    const stripeX  = cx - CARD_W / 2 + STRIPE_W / 2;
+    this.add.rectangle(stripeX, cy, STRIPE_W, CARD_H, GOLD, 0.85);
+    this.add.text(stripeX, cy, '💰', { fontSize: '36px' }).setOrigin(0.5);
+
+    const textX = cx - CARD_W / 2 + STRIPE_W + 12;
+    this.add.text(textX, cy - 14, '+50 골드', {
+      fontSize: '22px', color: '#ffdd00', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0, 0.5);
+    this.add.text(textX, cy + 18, '골드 50개를 획득합니다.', {
+      fontSize: '12px', color: '#aaaaaa',
+    }).setOrigin(0, 0.5);
+
+    cardBg.on('pointerover', () => { cardBg.setFillStyle(0x2e2e10); outline.clear(); outline.lineStyle(2, GOLD, 1); outline.strokeRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H); });
+    cardBg.on('pointerout',  () => { cardBg.setFillStyle(0x1a1a2e); outline.clear(); outline.lineStyle(2, GOLD, 0.8); outline.strokeRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H); });
+    cardBg.on('pointerdown', () => {
+      const gameScene = this.scene.get('GameScene') as unknown as GameScene;
+      gameScene.applyLevelUpChoice({ type: 'goldBonus', label: '', description: '' });
       this.scene.stop('LevelUpScene');
       this.scene.resume('GameScene');
     });

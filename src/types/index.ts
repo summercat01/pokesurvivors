@@ -54,7 +54,7 @@ export interface EnemyData {
 }
 
 // ===== 레벨업 선택지 =====
-export type LevelUpOptionType = 'newPokemon' | 'upgradePokemon' | 'newPassive' | 'upgradePassive';
+export type LevelUpOptionType = 'newPokemon' | 'upgradePokemon' | 'newPassive' | 'upgradePassive' | 'goldBonus';
 
 export interface LevelUpOption {
   type: LevelUpOptionType;

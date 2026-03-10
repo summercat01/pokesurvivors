@@ -1370,7 +1370,7 @@ export class GameScene extends Phaser.Scene {
     if (this.exp >= this.expToNext && !this.isLevelingUp) {
       this.exp      -= this.expToNext;
       this.level++;
-      this.expToNext = Math.floor(this.expToNext * 1.10);
+      this.expToNext = Math.floor(this.expToNext * 1.20);
       // 레벨 마일스톤
       for (const m of this.LEVEL_MILESTONES) {
         if (this.level >= m && !this.reachedLevelMilestones.has(m)) {
@@ -1481,7 +1481,17 @@ export class GameScene extends Phaser.Scene {
 
     // 셔플 후 최대 3개
     Phaser.Utils.Array.Shuffle(pool);
-    return pool.slice(0, 3);
+    const result = pool.slice(0, 3);
+
+    // 선택지가 3개 미만이면 +50골드로 채움
+    while (result.length < 3) {
+      result.push({
+        type: 'goldBonus',
+        label: '+50 골드',
+        description: '골드 50개를 획득합니다.',
+      });
+    }
+    return result;
   }
 
   // ===== 레벨업 선택 적용 (LevelUpScene에서 호출) =====
@@ -1523,6 +1533,11 @@ export class GameScene extends Phaser.Scene {
         this.applyPassiveBonus(type, oldLv, newLv);
         break;
       }
+      case 'goldBonus': {
+        this.gold += 50;
+        this.goldText.setText(`★  ${this.gold} G`);
+        break;
+      }
     }
 
     this.updateSlotUI();
@@ -1532,7 +1547,7 @@ export class GameScene extends Phaser.Scene {
     if (this.exp >= this.expToNext) {
       this.exp      -= this.expToNext;
       this.level++;
-      this.expToNext = Math.floor(this.expToNext * 1.10);
+      this.expToNext = Math.floor(this.expToNext * 1.20);
       this.needsLevelUp = true;
     }
   }
