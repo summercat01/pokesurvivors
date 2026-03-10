@@ -7,7 +7,6 @@ const CHARACTERS = [
     subtitle: '포켓몬 트레이너',
     trainerSprKey: 'trainer',
     weaponIndex: 0,
-    pokemonSprKey: 'pokemon_001',
     traitColor: 0x44bb44,
   },
   {
@@ -15,7 +14,6 @@ const CHARACTERS = [
     subtitle: '포켓몬 트레이너',
     trainerSprKey: 'trainer',
     weaponIndex: 1,
-    pokemonSprKey: 'pokemon_004',
     traitColor: 0xee5522,
   },
   {
@@ -23,7 +21,6 @@ const CHARACTERS = [
     subtitle: '포켓몬 트레이너',
     trainerSprKey: 'trainer',
     weaponIndex: 2,
-    pokemonSprKey: 'pokemon_007',
     traitColor: 0x3399ee,
   },
 ];
@@ -171,7 +168,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     const pokeCX = cardLeft + STRIPE_W * 0.68;
     const pokeCY = cardTop  + cardH   * 0.70;
 
-    if (this.textures.exists(char.pokemonSprKey)) {
+    const pokemonSprKey = `pokemon_${String(weapon.pokemonId).padStart(3, '0')}`;
+    if (this.textures.exists(pokemonSprKey)) {
       const maskGfx2 = this.make.graphics({ x: 0, y: 0 });
       maskGfx2.fillStyle(0xffffff);
       maskGfx2.fillTriangle(
@@ -179,7 +177,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         stripeRight, cardBot,
         cardLeft,    cardBot,
       );
-      const pokeImg = this.add.image(pokeCX, pokeCY, char.pokemonSprKey)
+      const pokeImg = this.add.image(pokeCX, pokeCY, pokemonSprKey)
         .setDisplaySize(64, 64).setDepth(4);
       pokeImg.setMask(maskGfx2.createGeometryMask());
     }
