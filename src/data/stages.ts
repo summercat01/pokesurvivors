@@ -91,7 +91,7 @@ export const STAGE_DATA: StageData[] = [
       { id: '241', types: ['normal'] },
       { id: '432', types: ['normal'] },
     ],
-    boss10: { id: '143', name: '잠만보',  types: ['normal'],            hp: 5000,  moveSpeed: 35, exp: 60,  goldValue: 40  },
+    boss10: { id: '040', name: '푸크린',  types: ['normal'],            hp: 5000,  moveSpeed: 45, exp: 60,  goldValue: 40  },
     boss20: { id: '115', name: '캥카',    types: ['normal'],            hp: 10000, moveSpeed: 55, exp: 150, goldValue: 100 },
   },
 
@@ -157,7 +157,7 @@ export const STAGE_DATA: StageData[] = [
       { id: '402', types: ['bug'] },
       { id: '416', types: ['bug', 'flying'] },
     ],
-    boss10: { id: '127', name: '쁘사이저',   types: ['bug'],             hp: 5000,  moveSpeed: 55, exp: 60,  goldValue: 40  },
+    boss10: { id: '267', name: '뷰티플라이', types: ['bug'],             hp: 5000,  moveSpeed: 45, exp: 60,  goldValue: 40  },
     boss20: { id: '214', name: '헤라크로스', types: ['bug', 'fighting'], hp: 10000, moveSpeed: 65, exp: 150, goldValue: 100 },
   },
   // ══════════════════════════════════════════
@@ -227,7 +227,7 @@ export const STAGE_DATA: StageData[] = [
       { id: '407', types: ['grass', 'poison'] },  // 로즈레이드
       { id: '465', types: ['grass'] },            // 덩쿠림보
     ],
-    boss10: { id: '003', name: '이상해꽃', types: ['grass', 'poison'], hp: 5000, moveSpeed: 40, exp: 60,  goldValue: 40  },
+    boss10: { id: '254', name: '나무킹',   types: ['grass'],           hp: 5000, moveSpeed: 50, exp: 60,  goldValue: 40  },
     boss20: { id: '389', name: '토대부기', types: ['grass', 'ground'], hp: 10000, moveSpeed: 35, exp: 150, goldValue: 100 },
   },
   // ══════════════════════════════════════════
@@ -284,7 +284,7 @@ export const STAGE_DATA: StageData[] = [
       { id: '392', types: ['fire', 'fighting'] },
       { id: '467', types: ['fire'] },
     ],
-    boss10: { id: '059', name: '윈디',   types: ['fire'],           hp: 5000,  moveSpeed: 65, exp: 60,  goldValue: 40  },
+    boss10: { id: '006', name: '리자몽', types: ['fire', 'flying'], hp: 5000,  moveSpeed: 55, exp: 60,  goldValue: 40  },
     boss20: { id: '006', name: '리자몽', types: ['fire', 'flying'], hp: 10000, moveSpeed: 60, exp: 150, goldValue: 100 },
   },
   // ══════════════════════════════════════════
@@ -359,7 +359,7 @@ export const STAGE_DATA: StageData[] = [
       { id: '350', types: ['water'] },
       { id: '395', types: ['water', 'steel'] },
     ],
-    boss10: { id: '130', name: '갸라도스', types: ['water', 'flying'], hp: 5000,  moveSpeed: 50, exp: 60,  goldValue: 40  },
+    boss10: { id: '395', name: '엠페르트', types: ['water', 'steel'],  hp: 5000,  moveSpeed: 45, exp: 60,  goldValue: 40  },
     boss20: { id: '009', name: '거북왕',   types: ['water'],           hp: 10000, moveSpeed: 45, exp: 150, goldValue: 100 },
   },
 ];

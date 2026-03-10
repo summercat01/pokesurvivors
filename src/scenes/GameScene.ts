@@ -1812,7 +1812,7 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(i * 160, () => this.spawnEnemy());
     }
 
-    // 10웨이브(5분) → 잠만보, 20웨이브(10분) → 캥카
+    // 10웨이브(10분) → 스테이지별 보스, 20웨이브(20분) → 스테이지별 보스
     if (this.waveNumber === 10 || this.waveNumber === 20) {
       this.time.delayedCall(1500, () => this.spawnBoss());
     }
