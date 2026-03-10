@@ -19,6 +19,8 @@ export interface BossConfig {
 export interface StageData {
   id: number;
   stageType: PokemonType;
+  /** 적 HP / 보스 HP 배율. Stage 1=1.0 기준, 스테이지당 +0.2 */
+  difficulty: number;
   enemyPool: EnemyPoolEntry[];
   elitePool: Array<{ id: string; types: PokemonType[] }>;
   boss10: BossConfig;
@@ -32,6 +34,7 @@ export const STAGE_DATA: StageData[] = [
   {
     id: 1,
     stageType: 'normal',
+    difficulty: 1.0,
     enemyPool: [
       // Wave 0+
       { id: '019', types: ['normal'],            minWave: 0 }, // 라타타
@@ -98,6 +101,7 @@ export const STAGE_DATA: StageData[] = [
   {
     id: 2,
     stageType: 'bug',
+    difficulty: 1.2,
     enemyPool: [
       // Wave 0+
       { id: '010', types: ['bug'],             minWave: 0 }, // 캐터피

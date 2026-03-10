@@ -1830,9 +1830,10 @@ export class GameScene extends Phaser.Scene {
 
     const pool  = getActiveEnemyPool(this.stageId, this.waveNumber);
     const entry = pool[Phaser.Math.Between(0, pool.length - 1)];
+    const diff  = getStageData(this.stageId).difficulty;
 
     const enemy = new Enemy(this, x, y, `pokemon_${entry.id}`, {
-      hp:           Math.round(60 + this.waveNumber * 22),
+      hp:           Math.round((60 + this.waveNumber * 22) * diff),
       moveSpeed:    Math.min(55 + this.waveNumber * 5, 160),
       exp:          2 + this.waveNumber,
       pokemonTypes: entry.types,
@@ -1847,8 +1848,9 @@ export class GameScene extends Phaser.Scene {
     const { x, y } = this.getSpawnPosition();
     const pool  = getElitePool(this.stageId);
     const entry = pool[Phaser.Math.Between(0, pool.length - 1)];
+    const diff  = getStageData(this.stageId).difficulty;
     const elite = new Enemy(this, x, y, `pokemon_${entry.id}`, {
-      hp:           Math.round((200 + this.waveNumber * 50) * 1),
+      hp:           Math.round((200 + this.waveNumber * 50) * diff),
       moveSpeed:    Math.min(65 + this.waveNumber * 4, 150),
       exp:          10 + this.waveNumber * 2,
       pokemonTypes: entry.types,
