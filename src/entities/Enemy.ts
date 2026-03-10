@@ -2,7 +2,10 @@ import Phaser from 'phaser';
 import { Player } from './Player';
 import type { PokemonType } from '../types';
 
+let _uidCounter = 0;
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
+  readonly uid: number = ++_uidCounter;
   hp: number;
   maxHp: number;
   moveSpeed: number;

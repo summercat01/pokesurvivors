@@ -831,8 +831,7 @@ export class GameScene extends Phaser.Scene {
         const dist = Phaser.Math.Distance.Between(ox, oy, enemy.x, enemy.y);
         if (dist > 22) return;
 
-        const enemyId = (enemy.getData('uid') as number) ?? Math.round(enemy.x * 1000 + enemy.y);
-        const cdKey = slotIdx * 1000000 + enemyId;
+        const cdKey = slotIdx * 1000000 + enemy.uid;
         if ((this.orbitHitCooldowns.get(cdKey) ?? 0) > 0) return;
 
         this.applyDamageToEnemy(enemy, damage, weapon.type, { x: ox, y: oy });
@@ -900,7 +899,7 @@ export class GameScene extends Phaser.Scene {
       const along = dx * cos + dy * sin;
       if (along < 0 || along > length) return;
       if (Math.abs(-dx * sin + dy * cos) > halfW + 15) return;
-      const cdKey = slotIdx * 1000000 + (enemy.getData('uid') ?? 0);
+      const cdKey = slotIdx * 1000000 + enemy.uid;
       if ((this.rotatingBeamHitCooldowns.get(cdKey) ?? 0) > 0) return;
       this.rotatingBeamHitCooldowns.set(cdKey, 600);
       this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, 0.3);
