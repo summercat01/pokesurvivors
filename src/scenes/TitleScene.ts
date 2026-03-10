@@ -2,12 +2,25 @@ import Phaser from 'phaser';
 import { getCurrentUser, getNickname, signOut } from '../lib/auth';
 import { loadUserRecord } from '../lib/userDB';
 
-// 배경에 돌아다닐 포켓몬 스프라이트 키 목록
+// 배경에 돌아다닐 포켓몬 스프라이트 키 목록 (17개 무기 포켓몬)
 const BG_POKEMON = [
-  'pokemon_001', 'pokemon_002', 'pokemon_003',
-  'pokemon_004', 'pokemon_005', 'pokemon_006',
-  'pokemon_007', 'pokemon_008', 'pokemon_009',
-  'pokemon_025', 'pokemon_054',
+  'pokemon_174', // 푸푸린 (노말)
+  'pokemon_004', // 파이리 (불꽃)
+  'pokemon_393', // 팽도리 (물)
+  'pokemon_252', // 나무지기 (풀)
+  'pokemon_265', // 개무소 (벌레)
+  'pokemon_172', // 피츄 (전기)
+  'pokemon_066', // 알통몬 (격투)
+  'pokemon_246', // 애버라스 (바위)
+  'pokemon_074', // 꼬마돌 (땅)
+  'pokemon_220', // 꾸꾸리 (얼음)
+  'pokemon_032', // 니드런♂ (독)
+  'pokemon_396', // 찌르꼬 (비행)
+  'pokemon_063', // 캐이시 (에스퍼)
+  'pokemon_092', // 고오스 (고스트)
+  'pokemon_374', // 메탕 (강철)
+  'pokemon_443', // 딥상어동 (드래곤)
+  'pokemon_261', // 포챠나 (악)
 ];
 
 export class TitleScene extends Phaser.Scene {
@@ -63,7 +76,7 @@ export class TitleScene extends Phaser.Scene {
   // 배경 포켓몬 (슬슬 돌아다님)
   // ─────────────────────────────────────────────
   private createWanderingPokemon() {
-    const COUNT = 8;
+    const COUNT = BG_POKEMON.length;
     for (let i = 0; i < COUNT; i++) {
       const key = BG_POKEMON[i % BG_POKEMON.length];
       const x   = Phaser.Math.Between(30, this.scale.width - 30);
