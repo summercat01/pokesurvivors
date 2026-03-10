@@ -160,6 +160,76 @@ export const STAGE_DATA: StageData[] = [
     boss10: { id: '127', name: '쁘사이저',   types: ['bug'],             hp: 5000,  moveSpeed: 55, exp: 60,  goldValue: 40  },
     boss20: { id: '214', name: '헤라크로스', types: ['bug', 'fighting'], hp: 10000, moveSpeed: 65, exp: 150, goldValue: 100 },
   },
+  // ══════════════════════════════════════════
+  // STAGE 3 — 풀
+  // ══════════════════════════════════════════
+  {
+    id: 3,
+    stageType: 'grass',
+    difficulty: 1.4,
+    enemyPool: [
+      // Wave 0+
+      { id: '043', types: ['grass', 'poison'],  minWave: 0 }, // 뚜벅초
+      { id: '069', types: ['grass', 'poison'],  minWave: 0 }, // 모다피
+      { id: '187', types: ['grass', 'flying'],  minWave: 0 }, // 통통코
+      { id: '191', types: ['grass'],            minWave: 0 }, // 해너츠
+      { id: '273', types: ['grass'],            minWave: 0 }, // 씨앗꼬
+      { id: '387', types: ['grass'],            minWave: 0 }, // 이상해씨(4세대) 나무꼬마
+      { id: '406', types: ['grass', 'poison'],  minWave: 0 }, // 꽃봉오리
+      { id: '420', types: ['grass'],            minWave: 0 }, // 체리꼬
+      // Wave 1+
+      { id: '044', types: ['grass', 'poison'],  minWave: 1 }, // 냄새꼬
+      { id: '070', types: ['grass', 'poison'],  minWave: 1 }, // 우츠동
+      { id: '188', types: ['grass', 'flying'],  minWave: 1 }, // 두코
+      { id: '252', types: ['grass'],            minWave: 1 }, // 나무도마뱀
+      { id: '274', types: ['grass', 'dark'],    minWave: 1 }, // 잎새코
+      { id: '315', types: ['grass', 'poison'],  minWave: 1 }, // 로즈레이드 전단계
+      { id: '388', types: ['grass'],            minWave: 1 }, // 하야시가메
+      // Wave 2+
+      { id: '102', types: ['grass', 'psychic'], minWave: 2 }, // 아라리
+      { id: '152', types: ['grass'],            minWave: 2 }, // 치코리타
+      { id: '192', types: ['grass'],            minWave: 2 }, // 해루미
+      { id: '253', types: ['grass'],            minWave: 2 }, // 잎새도마뱀
+      { id: '270', types: ['grass', 'water'],   minWave: 2 }, // 연꽃몬
+      { id: '421', types: ['grass'],            minWave: 2 }, // 체리꼬마
+      // Wave 3+
+      { id: '114', types: ['grass'],            minWave: 3 }, // 덩쿠리
+      { id: '189', types: ['grass', 'flying'],  minWave: 3 }, // 솜솜코
+      { id: '271', types: ['grass', 'water'],   minWave: 3 }, // 연꽃마
+      { id: '331', types: ['grass'],            minWave: 3 }, // 선인왕
+      { id: '459', types: ['grass', 'ice'],     minWave: 3 }, // 눈쓰개
+      // Wave 4+
+      { id: '045', types: ['grass', 'poison'],  minWave: 4 }, // 라플레시아
+      { id: '153', types: ['grass'],            minWave: 4 }, // 베이리프
+      { id: '275', types: ['grass', 'dark'],    minWave: 4 }, // 다크나이
+      { id: '357', types: ['grass', 'flying'],  minWave: 4 }, // 트로피우스
+      { id: '407', types: ['grass', 'poison'],  minWave: 4 }, // 로즈레이드
+      // Wave 7+
+      { id: '071', types: ['grass', 'poison'],  minWave: 7 }, // 우츠보트
+      { id: '103', types: ['grass', 'psychic'], minWave: 7 }, // 나시
+      { id: '254', types: ['grass'],            minWave: 7 }, // 나무킹
+      { id: '272', types: ['grass', 'water'],   minWave: 7 }, // 루디콜로
+      { id: '332', types: ['grass', 'dark'],    minWave: 7 }, // 선인장왕
+      { id: '460', types: ['grass', 'ice'],     minWave: 7 }, // 눈설왕
+      { id: '465', types: ['grass'],            minWave: 7 }, // 덩쿠림보
+      { id: '470', types: ['grass'],            minWave: 7 }, // 리피아
+    ],
+    elitePool: [
+      { id: '045', types: ['grass', 'poison'] },  // 라플레시아
+      { id: '071', types: ['grass', 'poison'] },  // 우츠보트
+      { id: '103', types: ['grass', 'psychic'] }, // 나시
+      { id: '114', types: ['grass'] },            // 덩쿠리
+      { id: '189', types: ['grass', 'flying'] },  // 솜솜코
+      { id: '254', types: ['grass'] },            // 나무킹
+      { id: '272', types: ['grass', 'water'] },   // 루디콜로
+      { id: '357', types: ['grass', 'flying'] },  // 트로피우스
+      { id: '389', types: ['grass', 'ground'] },  // 토대부기
+      { id: '407', types: ['grass', 'poison'] },  // 로즈레이드
+      { id: '465', types: ['grass'] },            // 덩쿠림보
+    ],
+    boss10: { id: '003', name: '이상해꽃', types: ['grass', 'poison'], hp: 5000, moveSpeed: 40, exp: 60,  goldValue: 40  },
+    boss20: { id: '389', name: '토대부기', types: ['grass', 'ground'], hp: 10000, moveSpeed: 35, exp: 150, goldValue: 100 },
+  },
 ];
 
 export function getStageData(stageId: number): StageData {

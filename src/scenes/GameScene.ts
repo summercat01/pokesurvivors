@@ -1868,7 +1868,7 @@ export class GameScene extends Phaser.Scene {
     this.currentBossName = bossConfig.name;
 
     const boss = new Enemy(this, x, y, `pokemon_${bossConfig.id}`, {
-      hp:           bossConfig.hp,
+      hp:           Math.round(bossConfig.hp * stage.difficulty),
       moveSpeed:    bossConfig.moveSpeed,
       exp:          bossConfig.exp,
       isBoss:       true,

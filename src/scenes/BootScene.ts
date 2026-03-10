@@ -107,6 +107,27 @@ export class BootScene extends Phaser.Scene {
       '401': 'kricketot', '402': 'kricketune',
       '412': 'burmy',     '413': 'wormadam',  '414': 'mothim',
       '415': 'combee',    '416': 'vespiquen',
+      // Stage 3 — Gen1 풀
+      '043': 'oddish',    '044': 'gloom',     '045': 'vileplume',
+      '069': 'bellsprout','070': 'weepinbell','071': 'victreebel',
+      '102': 'exeggcute', '103': 'exeggutor', '114': 'tangela',
+      // Stage 3 — Gen2 풀
+      '152': 'chikorita', '153': 'bayleef',
+      '187': 'hoppip',    '188': 'skiploom',  '189': 'jumpluff',
+      '191': 'sunkern',   '192': 'sunflora',
+      // Stage 3 — Gen3 풀
+      '252': 'treecko',   '253': 'grovyle',   '254': 'sceptile',
+      '270': 'lotad',     '271': 'lombre',    '272': 'ludicolo',
+      '273': 'seedot',    '274': 'nuzleaf',   '275': 'shiftry',
+      '315': 'roselia',
+      '331': 'cacnea',    '332': 'cacturne',
+      '357': 'tropius',
+      // Stage 3 — Gen4 풀
+      '387': 'turtwig',   '388': 'grotle',    '389': 'torterra',
+      '406': 'budew',     '407': 'roserade',
+      '420': 'cherubi',   '421': 'cherrim',
+      '459': 'snover',    '460': 'abomasnow',
+      '465': 'tangrowth', '470': 'leafeon',
     };
     Object.entries(POKEMON_NAMES).forEach(([id, name]) => {
       this.load.image(`pokemon_${id}`, `/pokemon_gen4_sprites/${id}_${name}.png`);
