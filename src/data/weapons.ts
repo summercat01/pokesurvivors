@@ -344,7 +344,7 @@ export function getUpgradedWeapon(base: WeaponConfig, level: number): WeaponConf
     cooldown: Math.round(base.cooldown * LV_COOLDOWN_MULT[l]),
     // behavior별 스케일링
     projectileCount:      behavior === 'projectile' ? base.projectileCount + LV_COUNT_BONUS[l] : base.projectileCount,
-    meleeRange:           base.meleeRange  != null  ? base.meleeRange  + rangeBonus : undefined,
+    meleeRange:           base.meleeRange  != null  ? base.meleeRange  + (behavior === 'trap' ? Math.round(rangeBonus * 0.35) : rangeBonus) : undefined,
     beamLength:           base.beamLength  != null  ? base.beamLength  + rangeBonus : undefined,
     beamWidth:            base.beamWidth   != null  ? base.beamWidth   + Math.round(rangeBonus * 0.2) : undefined,
     zoneRadius:           base.zoneRadius  != null  ? base.zoneRadius  + rangeBonus : undefined,
