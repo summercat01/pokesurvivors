@@ -69,6 +69,12 @@ export class BootScene extends Phaser.Scene {
       '143': 'snorlax',
       // 다크라이 (15분 사신)
       '491': 'darkrai',
+      // 새 무기 포켓몬 (9개 추가)
+      '015': 'beedrill',  '046': 'paras',     '050': 'diglett',
+      '095': 'onix',      '109': 'koffing',   '124': 'jynx',
+      '127': 'pinsir',    '443': 'gible',
+      // 악/강철 무기 포켓몬
+      '261': 'poochyena', '374': 'beldum',
     };
     Object.entries(POKEMON_NAMES).forEach(([id, name]) => {
       this.load.image(`pokemon_${id}`, `/pokemon_gen4_sprites/${id}_${name}.png`);
@@ -76,6 +82,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    this.scene.start('TitleScene');
+    this.scene.start('LoginScene');
   }
 }

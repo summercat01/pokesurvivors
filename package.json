@@ -1,7 +1,7 @@
 {
   "name": "pokemon-survivors",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
     "phaser": "^3.88.2"
   },
   "devDependencies": {

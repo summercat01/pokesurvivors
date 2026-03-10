@@ -1,6 +1,6 @@
 import type { PokemonType } from '../types';
 
-export type WeaponBehavior = 'projectile' | 'melee' | 'beam' | 'orbit' | 'zone' | 'lightning';
+export type WeaponBehavior = 'projectile' | 'melee' | 'beam' | 'orbit' | 'zone' | 'lightning' | 'homing' | 'explosion' | 'rotating_beam' | 'falling' | 'nova' | 'boomerang' | 'scatter' | 'trap';
 
 export interface WeaponConfig {
   pokemonId: number;
@@ -14,6 +14,7 @@ export interface WeaponConfig {
   duration: number;       // 투사체 유지 시간 (밀리초)
   textureKey: string;     // 투사체 텍스처 키
   spreadAngle: number;    // 다중 투사체일 때 퍼짐 각도 (라디안)
+  pierce?: number;      // 관통 횟수
   behavior?: WeaponBehavior;
   // melee
   meleeRange?: number;    // 사거리 px
@@ -31,6 +32,15 @@ export interface WeaponConfig {
   // lightning
   lightningChainCount?: number; // 체인 횟수
   lightningRange?: number;      // 체인 최대 거리 px
+  // explosion
+  explosionRadius?: number;     // 폭발 반지름 px
+  // 넉백 배율 (기본값은 behavior별 상수)
+  knockbackMult?: number;
+  // rotating_beam
+  rotateSpeed?: number;         // 회전 속도 rad/s
+  // falling
+  fallingCount?: number;        // 낙하 개수
+  fallingRadius?: number;       // 낙하 범위 반지름 px
 }
 
 // ===== 무기 상수 =====
@@ -51,43 +61,44 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     name: '이상해씨',
     type: 'grass',
     description: '전방 135° 범위의 덩굴채찍으로\n주변 적을 후려칩니다.',
-    damage: 12,
-    cooldown: 1000,
+    damage: 22,
+    cooldown: 1800,
     projectileSpeed: 0,
     projectileCount: 1,
     duration: 0,
     textureKey: 'proj_grass',
     spreadAngle: 0,
     behavior: 'melee',
-    meleeRange: 130,
+    meleeRange: 90,
     meleeAngle: Math.PI * 0.75,
   },
   {
     pokemonId: 4,
     name: '파이리',
     type: 'fire',
-    description: '전방에 화염 빔을 방사합니다.\n범위 내 모든 적에게 피해를 줍니다.',
-    damage: 18,
-    cooldown: 1400,
+    description: '화염방사가 플레이어 주위를\n360° 회전하며 적을 태웁니다.',
+    damage: 28,
+    cooldown: 2200,
     projectileSpeed: 0,
     projectileCount: 1,
     duration: 0,
     textureKey: 'proj_fire',
     spreadAngle: 0,
-    behavior: 'beam',
+    behavior: 'rotating_beam',
     beamWidth: 26,
-    beamLength: 270,
+    beamLength: 170,
+    rotateSpeed: 1.2,
   },
   {
     pokemonId: 7,
     name: '꼬부기',
     type: 'water',
     description: '물 투사체를 발사합니다.\n느리지만 꾸준히 적을 압박합니다.',
-    damage: 10,
-    cooldown: 1000,
+    damage: 22,
+    cooldown: 1600,
     projectileSpeed: 200,
     projectileCount: 1,
-    duration: 3500,
+    duration: 2000,
     textureKey: 'proj_water',
     spreadAngle: 0,
     behavior: 'projectile',
@@ -97,8 +108,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     name: '피카츄',
     type: 'electric',
     description: '가장 가까운 적부터 번개를\n최대 3마리까지 연쇄시킵니다.',
-    damage: 10,
-    cooldown: 650,
+    damage: 18,
+    cooldown: 1400,
     projectileSpeed: 0,
     projectileCount: 1,
     duration: 0,
@@ -106,7 +117,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     spreadAngle: 0,
     behavior: 'lightning',
     lightningChainCount: 3,
-    lightningRange: 200,
+    lightningRange: 150,
   },
   {
     pokemonId: 54,
@@ -121,7 +132,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_psychic',
     spreadAngle: 0,
     behavior: 'orbit',
-    orbitRadius: 110,
+    orbitRadius: 80,
     orbitSpeed: 2.2,
     orbitCount: 1,
   },
@@ -129,28 +140,27 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 74,
     name: '꼬마돌',
     type: 'rock',
-    description: '넓고 짧은 바위 빔을 굴립니다.\n전방의 여러 적을 한번에 공격합니다.',
-    damage: 28,
-    cooldown: 2000,
-    projectileSpeed: 0,
+    description: '바위를 굴려 착탄 지점에서\n범위 폭발을 일으킵니다.',
+    damage: 35,
+    cooldown: 2800,
+    projectileSpeed: 180,
     projectileCount: 1,
-    duration: 0,
+    duration: 2200,
     textureKey: 'proj_rock',
     spreadAngle: 0,
-    behavior: 'beam',
-    beamWidth: 55,
-    beamLength: 185,
+    behavior: 'explosion',
+    explosionRadius: 65,
   },
   {
     pokemonId: 41,
     name: '주뱃',
     type: 'flying',
     description: '초음파를 부채꼴로 3발 발사합니다.\n빠른 속도로 전방의 적을 공격합니다.',
-    damage: 7,
-    cooldown: 900,
+    damage: 12,
+    cooldown: 1600,
     projectileSpeed: 520,
     projectileCount: 3,
-    duration: 700,
+    duration: 500,
     textureKey: 'proj_flying',
     spreadAngle: 1.4,
     behavior: 'projectile',
@@ -159,33 +169,158 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     pokemonId: 92,
     name: '고오스',
     type: 'ghost',
-    description: '주변에 독기를 발산해 범위 내\n모든 적에게 지속 피해를 줍니다.',
-    damage: 14,
-    cooldown: 2200,
-    projectileSpeed: 0,
+    description: '저주받은 영혼이 적을 집요하게\n추적해 공격합니다.',
+    damage: 22,
+    cooldown: 1800,
+    projectileSpeed: 150,
     projectileCount: 1,
-    duration: 0,
+    duration: 4000,
     textureKey: 'proj_ghost',
     spreadAngle: 0,
-    behavior: 'zone',
-    zoneRadius: 110,
-    zoneDamageInterval: 1400,
+    behavior: 'homing',
+    pierce: 0,
   },
   {
     pokemonId: 66,
     name: '알통몬',
     type: 'fighting',
-    description: '360° 전방위 강타로 주변의\n모든 적을 동시에 공격합니다.',
-    damage: 22,
-    cooldown: 900,
+    description: '강력한 주먹 충격파를 일으킵니다.\n원형 파동이 주변 모든 적을 강타합니다.',
+    damage: 36,
+    cooldown: 2000,
     projectileSpeed: 0,
     projectileCount: 1,
     duration: 0,
     textureKey: 'proj_fighting',
     spreadAngle: 0,
+    behavior: 'nova',
+    meleeRange: 120,
+  },
+  {
+    pokemonId: 50,
+    name: '디그다',
+    type: 'ground',
+    description: '발밑 지진으로 주변의 모든 적을\n동시에 강타합니다.',
+    damage: 35,
+    cooldown: 2200,
+    projectileSpeed: 0,
+    projectileCount: 1,
+    duration: 0,
+    textureKey: 'proj_ground',
+    spreadAngle: 0,
     behavior: 'melee',
-    meleeRange: 95,
+    meleeRange: 110,
     meleeAngle: Math.PI * 2,
+  },
+  {
+    pokemonId: 46,
+    name: '파라스',
+    type: 'bug',
+    description: '포자 함정을 주변에 설치합니다.\n적이 밟으면 폭발하며 범위 피해를 줍니다.',
+    damage: 38,
+    cooldown: 3000,
+    projectileSpeed: 0,
+    projectileCount: 2,
+    duration: 0,
+    textureKey: 'proj_bug',
+    spreadAngle: 0,
+    behavior: 'trap',
+    meleeRange: 45,
+  },
+  {
+    pokemonId: 124,
+    name: '루주라',
+    type: 'ice',
+    description: '얼음 덩어리 3개가 무작위 위치에\n떨어져 범위 피해를 줍니다.',
+    damage: 30,
+    cooldown: 3000,
+    projectileSpeed: 0,
+    projectileCount: 1,
+    duration: 0,
+    textureKey: 'proj_ice',
+    spreadAngle: 0,
+    behavior: 'falling',
+    fallingCount: 3,
+    fallingRadius: 35,
+  },
+  {
+    pokemonId: 443,
+    name: '딥상어동',
+    type: 'dragon',
+    description: '용의 파동이 적을 연쇄로 튕기며\n각 지점마다 범위 폭발을 일으킵니다.',
+    damage: 55,
+    cooldown: 2600,
+    projectileSpeed: 0,
+    projectileCount: 1,
+    duration: 0,
+    textureKey: 'proj_dragon',
+    spreadAngle: 0,
+    pierce: 0,
+    behavior: 'lightning',
+    lightningChainCount: 5,
+    lightningRange: 180,
+    explosionRadius: 55,
+  },
+  {
+    pokemonId: 109,
+    name: '또가스',
+    type: 'poison',
+    description: '독가스 장판을 주변에 생성합니다.\n범위 내 모든 적에게 지속 피해를 줍니다.',
+    damage: 6,
+    cooldown: 1500,
+    projectileSpeed: 0,
+    projectileCount: 1,
+    duration: 0,
+    textureKey: 'proj_poison',
+    spreadAngle: 0,
+    behavior: 'zone',
+    zoneRadius: 75,
+    zoneDamageInterval: 600,
+  },
+  {
+    pokemonId: 39,
+    name: '푸린',
+    type: 'normal',
+    description: '노래 에너지가 8방향으로 퍼져나갑니다.\n전방위 동시 공격으로 모든 적을 노립니다.',
+    damage: 12,
+    cooldown: 2000,
+    projectileSpeed: 300,
+    projectileCount: 8,
+    duration: 650,
+    textureKey: 'proj_normal',
+    spreadAngle: 0,
+    behavior: 'scatter',
+  },
+  {
+    pokemonId: 374,
+    name: '메탕구',
+    type: 'steel',
+    description: '강철 방패를 앞으로 밀어붙입니다.\n범위는 짧지만 강력한 넉백을 줍니다.',
+    damage: 30,
+    cooldown: 1400,
+    projectileSpeed: 0,
+    projectileCount: 1,
+    duration: 0,
+    textureKey: 'proj_steel',
+    spreadAngle: 0,
+    behavior: 'beam',
+    beamWidth: 70,
+    beamLength: 110,
+    knockbackMult: 3.0,
+  },
+  {
+    pokemonId: 261,
+    name: '포챠나',
+    type: 'dark',
+    description: '예리한 발톱을 던져 적을 할퀴고\n돌아옵니다. 왕복 모두 피해를 줍니다.',
+    damage: 28,
+    cooldown: 1800,
+    projectileSpeed: 0,
+    projectileCount: 1,
+    duration: 0,
+    textureKey: 'proj_dark',
+    spreadAngle: 0,
+    behavior: 'boomerang',
+    meleeRange: 140,
   },
 ];
 
@@ -215,6 +350,10 @@ export function getUpgradedWeapon(base: WeaponConfig, level: number): WeaponConf
     zoneRadius:           base.zoneRadius  != null  ? base.zoneRadius  + rangeBonus : undefined,
     orbitCount:           base.orbitCount  != null  ? base.orbitCount  + LV_COUNT_BONUS[l] : undefined,
     lightningChainCount:  base.lightningChainCount != null ? base.lightningChainCount + LV_COUNT_BONUS[l] : undefined,
+    explosionRadius:      base.explosionRadius != null ? base.explosionRadius + rangeBonus : undefined,
+    rotateSpeed:          base.rotateSpeed != null ? +(base.rotateSpeed + l * 0.1).toFixed(2) : undefined,
+    fallingCount:         base.fallingCount != null ? base.fallingCount + LV_COUNT_BONUS[l] : undefined,
+    fallingRadius:        base.fallingRadius != null ? base.fallingRadius + Math.round(rangeBonus * 0.4) : undefined,
   };
 }
 
@@ -235,9 +374,25 @@ export function getUpgradeDescription(base: WeaponConfig, fromLevel: number, toL
     case 'melee':
       return `${dmg} / ${cd} / 범위 ${before.meleeRange ?? 120}→${after.meleeRange ?? 120}px`;
     case 'zone':
-      return `${dmg} / ${cd} / 반경 ${before.zoneRadius ?? 180}→${after.zoneRadius ?? 180}px`;
+      return `${dmg} / ${cd} / 반경 ${before.zoneRadius ?? 70}→${after.zoneRadius ?? 70}px`;
     case 'beam':
       return `${dmg} / ${cd} / 길이 ${before.beamLength ?? 270}→${after.beamLength ?? 270}px`;
+    case 'rotating_beam':
+      return `${dmg} / 회전속도 ${before.rotateSpeed?.toFixed(1) ?? 1.2}→${after.rotateSpeed?.toFixed(1) ?? 1.2}rad/s`;
+    case 'explosion':
+      return `${dmg} / ${cd} / 폭발반경 ${before.explosionRadius ?? 90}→${after.explosionRadius ?? 90}px`;
+    case 'homing':
+      return `${dmg} / ${cd}`;
+    case 'falling':
+      return `${dmg} / ${cd} / 낙하 ${before.fallingCount ?? 3}→${after.fallingCount ?? 3}개`;
+    case 'nova':
+      return `${dmg} / ${cd} / 반경 ${before.meleeRange ?? 170}→${after.meleeRange ?? 170}px`;
+    case 'boomerang':
+      return `${dmg} / ${cd} / 사거리 ${before.meleeRange ?? 200}→${after.meleeRange ?? 200}px`;
+    case 'scatter':
+      return `${dmg} / ${cd} / ${before.projectileCount ?? 8}→${after.projectileCount ?? 8}발`;
+    case 'trap':
+      return `${dmg} / ${cd} / 함정 ${before.projectileCount ?? 2}→${after.projectileCount ?? 2}개`;
     default:
       return `${dmg} / ${cd} / 투사체 ×${before.projectileCount}→×${after.projectileCount}`;
   }

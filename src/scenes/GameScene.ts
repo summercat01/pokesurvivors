@@ -10,10 +10,11 @@ import {
   isSuperEffective,
   type WeaponConfig,
 } from '../data/weapons';
-import { PASSIVE_ITEMS, getPassiveItem } from '../data/passiveItems';
+import { PASSIVE_ITEMS, getPassiveItem, formatPassiveValue } from '../data/passiveItems';
 import { POKEMON_DATA } from '../data/pokemonData';
 import { applyPermanentUpgrades } from '../data/upgrades';
 import type { LevelUpOption, PokemonType, PlayerStats } from '../types';
+import { IS_DEV_MODE } from '../main';
 
 // 퍼센트 기반 배율로 적용되는 스탯 목록
 const PERCENT_STATS = new Set(['attackPower', 'moveSpeed', 'projectileSpeed', 'knockback']);
@@ -33,7 +34,7 @@ export class GameScene extends Phaser.Scene {
   private isGameOver: boolean = false;
 
   // 무기 슬롯
-  private weapons: WeaponConfig[] = [];
+  weapons: WeaponConfig[] = [];          // dev 모드에서 DevScene이 읽음
   private weaponCooldowns: number[] = [];
   private weaponLevels: number[] = [];
 
@@ -100,7 +101,6 @@ export class GameScene extends Phaser.Scene {
   private comboCount: number = 0;
   private comboTimer: number = 0;
   private readonly COMBO_TIMEOUT = 1800; // ms
-  private comboText!: Phaser.GameObjects.Text;
 
   // 마일스톤
   private readonly KILL_MILESTONES = [10, 25, 50, 100, 200, 500];
@@ -111,9 +111,14 @@ export class GameScene extends Phaser.Scene {
   private worldH = 0;
   private bgImage!: Phaser.GameObjects.Image;
   private gameCam!: Phaser.Cameras.Scene2D.Camera;
+  private bossHpPanelItems: Phaser.GameObjects.GameObject[] = [];
+  // 무기별 누적 데미지 추적
+  private weaponDamageLog: Map<string, number> = new Map();
+  private currentDamageSource: string = '';
   private bossHpBarBg!: Phaser.GameObjects.Rectangle;
   private bossHpBar!: Phaser.GameObjects.Rectangle;
-  private bossHpLabel!: Phaser.GameObjects.Text;
+  private bossHpNameText!: Phaser.GameObjects.Text;
+  private bossHpNumText!: Phaser.GameObjects.Text;
   private currentBoss: Enemy | null = null;
   private currentBossName: string = '';
   private bossHpRatioDisplayed: number = 1;
@@ -123,10 +128,13 @@ export class GameScene extends Phaser.Scene {
   // 무기 정보 팝업
   private weaponPopupItems: Phaser.GameObjects.GameObject[] = [];
 
-  // orbit / zone / lightning 전용 상태
+  // orbit / zone / rotating_beam 전용 상태
   private orbitOrbs: Map<number, { graphics: Phaser.GameObjects.Graphics[]; angle: number }> = new Map();
   private orbitHitCooldowns: Map<number, number> = new Map();
   private zoneGraphics: Map<number, { graphic: Phaser.GameObjects.Graphics; damageTimer: number }> = new Map();
+  private rotatingBeamAngles: Map<number, number> = new Map();
+  private rotatingBeamGfx: Map<number, Phaser.GameObjects.Graphics> = new Map();
+  private rotatingBeamHitCooldowns: Map<number, number> = new Map();
 
   constructor() {
     super({ key: 'GameScene' });
@@ -150,6 +158,9 @@ export class GameScene extends Phaser.Scene {
     this.bossRollTarget   = null;
     this.bossIndicatorGfx?.destroy();
     this.bossIndicatorGfx = null;
+    this.currentBoss = null;
+    this.weaponDamageLog = new Map();
+    this.currentDamageSource = '';
     this.comboCount   = 0;
     this.comboTimer   = 0;
     this.reachedKillMilestones = new Set();
@@ -165,6 +176,10 @@ export class GameScene extends Phaser.Scene {
     this.zoneGraphics?.forEach(s => s.graphic.destroy());
     this.zoneGraphics = new Map();
     this.orbitHitCooldowns = new Map();
+    this.rotatingBeamGfx?.forEach(g => g.destroy());
+    this.rotatingBeamGfx = new Map();
+    this.rotatingBeamAngles = new Map();
+    this.rotatingBeamHitCooldowns = new Map();
 
     this.isLevelingUp = false;
     this.needsLevelUp = false;
@@ -236,9 +251,15 @@ export class GameScene extends Phaser.Scene {
     this.gameCam.startFollow(this.player, true, 0.1, 0.1);
     this.gameCam.ignore(this.children.list.slice(worldObjCount));
 
-    // pause UI는 카메라 설정 이후 생성 → gameCam이 무시하지 않으므로
-    // depth 200으로 게임 월드 위에 렌더링됨 (cameras.main도 렌더링)
-    this.createPauseUI();
+    // gameCam.ignore 이후 생성 → gameCam이 렌더링 → 게임 영역(y=70~712)에서도 보임
+    this.createHudOverlay();  // 골드/웨이브/킬/콤보/보스HP
+    this.createPauseUI();     // 일시정지 오버레이 (depth 200)
+
+    // 개발자 모드
+    if (IS_DEV_MODE) {
+      if (this.scene.isActive('DevScene')) this.scene.stop('DevScene');
+      this.scene.launch('DevScene');
+    }
 
     // 맵 경계선 (world space, cameras.main에서 제외)
     const borderGraphics = this.add.graphics();
@@ -337,6 +358,8 @@ export class GameScene extends Phaser.Scene {
 
     this.updateWeapons(delta);
     this.tickOrbitCooldowns(delta);
+    this.tickRotatingBeamCooldowns(delta);
+    this.steerHomingProjectiles();
     this.updateBossPattern(delta);
     this.applySeparation();
     this.renderEnemyHpBars();
@@ -405,23 +428,31 @@ export class GameScene extends Phaser.Scene {
   private updateWeapons(delta: number) {
     this.weapons.forEach((weapon, idx) => {
       const behavior = weapon.behavior ?? 'projectile';
+      this.currentDamageSource = weapon.name;
 
-      // orbit/zone: 매 프레임 업데이트 (쿨다운 게이트 없음)
-      if (behavior === 'orbit') { this.updateOrbit(weapon, idx, delta); return; }
-      if (behavior === 'zone')  { this.updateZone(weapon, idx, delta);  return; }
+      // 매 프레임 업데이트 (쿨다운 게이트 없음)
+      if (behavior === 'orbit')         { this.updateOrbit(weapon, idx, delta);        return; }
+      if (behavior === 'zone')          { this.updateZone(weapon, idx, delta);         return; }
+      if (behavior === 'rotating_beam') { this.updateRotatingBeam(weapon, idx, delta); return; }
 
       this.weaponCooldowns[idx] -= delta;
       if (this.weaponCooldowns[idx] <= 0) {
         const cdr = Math.min(this.player.stats.cooldownReduction, 0.75);
         this.weaponCooldowns[idx] = weapon.cooldown * (1 - cdr);
         switch (behavior) {
-          case 'melee':     this.fireMelee(weapon);     break;
-          case 'beam':      this.fireBeam(weapon);      break;
-          case 'lightning': this.fireLightning(weapon); break;
-          default:          this.fireProjectile(weapon); break;
+          case 'melee':     this.fireMelee(weapon);          break;
+          case 'beam':      this.fireBeam(weapon);           break;
+          case 'lightning': this.fireLightning(weapon);      break;
+          case 'falling':   this.fireFalling(weapon);        break;
+          case 'nova':      this.fireNova(weapon);           break;
+          case 'boomerang': this.fireBoomerang(weapon);      break;
+          case 'scatter':   this.fireScatter(weapon);        break;
+          case 'trap':      this.fireTrap(weapon);           break;
+          default:          this.fireProjectile(weapon);     break;
         }
       }
     });
+    this.currentDamageSource = '';
   }
 
   // ── 투사체 발사 (기존 fireWeapon 이름 변경) ──
@@ -447,7 +478,8 @@ export class GameScene extends Phaser.Scene {
       const duration = Math.round(baseDur * this.player.stats.projectileRange);
       const damage   = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
 
-      const pierce = 0;
+      const pierce = weapon.pierce ?? 0;
+      const behavior = weapon.behavior ?? 'projectile';
 
       const proj = new Projectile(
         this,
@@ -460,6 +492,9 @@ export class GameScene extends Phaser.Scene {
         duration,
         pierce
       );
+      proj.homing = behavior === 'homing';
+      proj.explosionRadius = weapon.explosionRadius ?? 0;
+      proj.sourceName = weapon.name;
       this.projectiles.add(proj, true);
       this.cameras.main.ignore(proj);
       proj.setVelocity(
@@ -486,9 +521,17 @@ export class GameScene extends Phaser.Scene {
       : baseDmg;
     if (superEff) dmg = Math.floor(dmg * 1.5);
 
+    // 무기별 딜 누적
+    if (this.currentDamageSource) {
+      this.weaponDamageLog.set(
+        this.currentDamageSource,
+        (this.weaponDamageLog.get(this.currentDamageSource) ?? 0) + dmg
+      );
+    }
+
     enemy.takeDamage(dmg);
 
-    if (knockbackSrc && enemy.active && !enemy.isDead()) {
+    if (knockbackSrc && enemy.active && !enemy.isDead() && !enemy.ignoreKnockback) {
       const kbAngle = Phaser.Math.Angle.Between(knockbackSrc.x, knockbackSrc.y, enemy.x, enemy.y);
       const kb = this.player.stats.knockback * kbMult;
       const body = enemy.body as Phaser.Physics.Arcade.Body;
@@ -628,7 +671,7 @@ export class GameScene extends Phaser.Scene {
       const perp  = Math.abs(-dx * sin + dy * cos);
       if (along < 0 || along > length) return;
       if (perp > halfW + 14) return;
-      this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, 0.5);
+      this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, weapon.knockbackMult ?? 0.5);
     });
   }
 
@@ -660,6 +703,8 @@ export class GameScene extends Phaser.Scene {
     if (hit.length === 0) return;
 
     const color = TYPE_COLORS[weapon.type] ?? 0xffdd00;
+    const splashR = weapon.explosionRadius ?? 0;
+
     const gfx = this.add.graphics();
     this.cameras.main.ignore(gfx);
 
@@ -690,7 +735,39 @@ export class GameScene extends Phaser.Scene {
 
     hit.forEach((e, i) => {
       const dmgMult = Math.pow(0.8, i);
-      this.applyDamageToEnemy(e, Math.floor(damage * dmgMult), weapon.type, { x: this.player.x, y: this.player.y });
+      const chainDmg = Math.floor(damage * dmgMult);
+      this.applyDamageToEnemy(e, chainDmg, weapon.type, { x: this.player.x, y: this.player.y });
+
+      // 체인 스플래시: 각 체인 지점 주변 범위 피해
+      if (splashR > 0) {
+        const splashDmg = Math.floor(chainDmg * 0.5);
+        this.enemies.getChildren().forEach(obj => {
+          const splash = obj as Enemy;
+          if (!splash.active || hit.includes(splash)) return;
+          const d = Phaser.Math.Distance.Between(e.x, e.y, splash.x, splash.y);
+          if (d <= splashR) {
+            this.applyDamageToEnemy(splash, splashDmg, weapon.type);
+          }
+        });
+
+        // 스플래시 원형 플래시 이펙트 (적 위치에서 확산)
+        const ring = this.add.graphics();
+        this.cameras.main.ignore(ring);
+        ring.setPosition(e.x, e.y);
+        ring.fillStyle(color, 0.25);
+        ring.fillCircle(0, 0, splashR);
+        ring.lineStyle(2, color, 0.8);
+        ring.strokeCircle(0, 0, splashR);
+        this.tweens.add({
+          targets: ring,
+          alpha: 0,
+          scaleX: 1.3,
+          scaleY: 1.3,
+          duration: 350,
+          ease: 'Quad.easeOut',
+          onComplete: () => ring.destroy(),
+        });
+      }
     });
   }
 
@@ -759,6 +836,278 @@ export class GameScene extends Phaser.Scene {
       const next = val - delta;
       if (next <= 0) this.orbitHitCooldowns.delete(key);
       else this.orbitHitCooldowns.set(key, next);
+    });
+  }
+
+  private tickRotatingBeamCooldowns(delta: number) {
+    this.rotatingBeamHitCooldowns.forEach((val, key) => {
+      const next = val - delta;
+      if (next <= 0) this.rotatingBeamHitCooldowns.delete(key);
+      else this.rotatingBeamHitCooldowns.set(key, next);
+    });
+  }
+
+  // ── 회전 빔 ──
+  private updateRotatingBeam(weapon: WeaponConfig, slotIdx: number, delta: number) {
+    const prev  = this.rotatingBeamAngles.get(slotIdx) ?? 0;
+    const speed = weapon.rotateSpeed ?? 1.2;
+    const angle = prev + speed * (delta / 1000);
+    this.rotatingBeamAngles.set(slotIdx, angle);
+
+    let gfx = this.rotatingBeamGfx.get(slotIdx);
+    if (!gfx) {
+      gfx = this.add.graphics();
+      this.cameras.main.ignore(gfx);
+      this.rotatingBeamGfx.set(slotIdx, gfx);
+    }
+
+    const px = this.player.x, py = this.player.y;
+    const length = weapon.beamLength ?? 270;
+    const halfW  = weapon.beamWidth  ?? 26;
+    const cos = Math.cos(angle), sin = Math.sin(angle);
+    const color = TYPE_COLORS[weapon.type] ?? 0xffffff;
+
+    // 원 체인으로 불꽃 표현: 플레이어 쪽 굵고 끝으로 갈수록 가늘게
+    gfx.clear();
+    const STEPS = 14;
+    const startDist = 28;
+    for (let i = 0; i < STEPS; i++) {
+      const t    = i / (STEPS - 1);
+      const dist = startDist + t * (length - startDist);
+      const cx   = px + cos * dist;
+      const cy   = py + sin * dist;
+      const r    = Phaser.Math.Linear(halfW * 0.3, halfW * 1.4, t);
+      const alpha = Phaser.Math.Linear(0.85, 0.18, t);
+      gfx.fillStyle(color, alpha);
+      gfx.fillCircle(cx, cy, r);
+    }
+
+    const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    (this.enemies.getChildren() as Enemy[]).forEach(enemy => {
+      if (!enemy.active || enemy.isDead()) return;
+      const dx = enemy.x - px, dy = enemy.y - py;
+      const along = dx * cos + dy * sin;
+      if (along < 0 || along > length) return;
+      if (Math.abs(-dx * sin + dy * cos) > halfW + 15) return;
+      const cdKey = slotIdx * 1000000 + (enemy.getData('uid') ?? 0);
+      if ((this.rotatingBeamHitCooldowns.get(cdKey) ?? 0) > 0) return;
+      this.rotatingBeamHitCooldowns.set(cdKey, 600);
+      this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, 0.3);
+    });
+  }
+
+  // ── 낙하 공격 ──
+  private fireFalling(weapon: WeaponConfig) {
+    const count    = weapon.fallingCount  ?? 3;
+    const radius   = weapon.fallingRadius ?? 50;
+    const damage   = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    const color    = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const range    = 260;
+    const bounds   = this.physics.world.bounds;
+
+    for (let i = 0; i < count; i++) {
+      const tx = Phaser.Math.Clamp(
+        this.player.x + Phaser.Math.Between(-range, range),
+        bounds.x + radius, bounds.right  - radius
+      );
+      const ty = Phaser.Math.Clamp(
+        this.player.y + Phaser.Math.Between(-range, range),
+        bounds.y + radius, bounds.bottom - radius
+      );
+
+      const warn = this.add.graphics();
+      this.cameras.main.ignore(warn);
+      warn.lineStyle(2, color, 0.8);
+      warn.strokeCircle(tx, ty, radius);
+      warn.fillStyle(color, 0.18);
+      warn.fillCircle(tx, ty, radius);
+
+      this.time.delayedCall(700, () => {
+        warn.destroy();
+        const flash = this.add.graphics();
+        this.cameras.main.ignore(flash);
+        flash.fillStyle(color, 0.85);
+        flash.fillCircle(tx, ty, radius);
+        this.time.delayedCall(140, () => flash.destroy());
+        (this.enemies.getChildren() as Enemy[]).forEach(e => {
+          if (!e.active || e.isDead()) return;
+          if (Phaser.Math.Distance.Between(tx, ty, e.x, e.y) <= radius + 16) {
+            this.applyDamageToEnemy(e, damage, weapon.type, { x: tx, y: ty });
+          }
+        });
+      });
+    }
+  }
+
+  // ── 충격파 (expanding ring) ──
+  private fireNova(weapon: WeaponConfig) {
+    const px = this.player.x, py = this.player.y;
+    const maxR   = (weapon.meleeRange ?? 170) * (this.player.stats.projectileRange ?? 1);
+    const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    const color  = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const hitSet = new Set<Enemy>();
+    const gfx = this.add.graphics();
+    this.cameras.main.ignore(gfx);
+    const dummy = { r: 0 };
+    this.tweens.add({
+      targets: dummy,
+      r: maxR,
+      duration: 420,
+      ease: 'Sine.easeOut',
+      onUpdate: () => {
+        const r = dummy.r;
+        const alpha = 1 - r / maxR;
+        gfx.clear();
+        gfx.lineStyle(5, color, alpha * 0.95);
+        gfx.strokeCircle(px, py, r);
+        gfx.fillStyle(color, alpha * 0.13);
+        gfx.fillCircle(px, py, r);
+        (this.enemies.getChildren() as Enemy[]).forEach(e => {
+          if (!e.active || e.isDead() || hitSet.has(e)) return;
+          const d = Phaser.Math.Distance.Between(px, py, e.x, e.y);
+          if (d <= r + 16 && d >= r - 32) {
+            hitSet.add(e);
+            this.applyDamageToEnemy(e, damage, weapon.type, { x: px, y: py });
+          }
+        });
+      },
+      onComplete: () => gfx.destroy(),
+    });
+  }
+
+  // ── 부메랑 (go & return) ──
+  private fireBoomerang(weapon: WeaponConfig) {
+    const target = this.getNearestEnemy();
+    const angle  = target
+      ? Phaser.Math.Angle.Between(this.player.x, this.player.y, target.x, target.y)
+      : 0;
+    const range  = (weapon.meleeRange ?? 200) * (this.player.stats.projectileRange ?? 1);
+    const damage = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    const color  = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const endX   = this.player.x + Math.cos(angle) * range;
+    const endY   = this.player.y + Math.sin(angle) * range;
+    const gfx    = this.add.graphics();
+    this.cameras.main.ignore(gfx);
+    gfx.fillStyle(color, 0.92);
+    gfx.fillCircle(0, 0, 10);
+    const pos    = { x: this.player.x, y: this.player.y };
+    const hitOut = new Set<Enemy>();
+    const hitBack = new Set<Enemy>();
+    const checkHit = (hitSet: Set<Enemy>) => {
+      (this.enemies.getChildren() as Enemy[]).forEach(e => {
+        if (!e.active || e.isDead() || hitSet.has(e)) return;
+        if (Phaser.Math.Distance.Between(pos.x, pos.y, e.x, e.y) <= 22) {
+          hitSet.add(e);
+          this.applyDamageToEnemy(e, damage, weapon.type, { x: pos.x, y: pos.y });
+        }
+      });
+    };
+    this.tweens.add({
+      targets: pos, x: endX, y: endY,
+      duration: 480, ease: 'Quad.easeOut',
+      onUpdate: () => { gfx.setPosition(pos.x, pos.y); checkHit(hitOut); },
+      onComplete: () => {
+        this.tweens.add({
+          targets: pos, x: this.player.x, y: this.player.y,
+          duration: 360, ease: 'Quad.easeIn',
+          onUpdate: () => { gfx.setPosition(pos.x, pos.y); checkHit(hitBack); },
+          onComplete: () => gfx.destroy(),
+        });
+      },
+    });
+  }
+
+  // ── 전방위 산탄 ──
+  private fireScatter(weapon: WeaponConfig) {
+    const count    = weapon.projectileCount ?? 8;
+    const damage   = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    const speedMult = this.player.stats.projectileSpeed / 300;
+    const speed    = Math.round(weapon.projectileSpeed * speedMult);
+    const duration = Math.round(weapon.duration * (this.player.stats.projectileRange ?? 1));
+    const pierce   = weapon.pierce ?? 0;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const proj  = new Projectile(this, this.player.x, this.player.y, weapon.textureKey, damage, speed, angle, duration, pierce);
+      this.projectiles.add(proj, true);
+      this.cameras.main.ignore(proj);
+      proj.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+    }
+  }
+
+  // ── 함정 설치 ──
+  private fireTrap(weapon: WeaponConfig) {
+    const count   = weapon.projectileCount ?? 2;
+    const radius  = (weapon.meleeRange ?? 45) * (this.player.stats.projectileRange ?? 1);
+    const damage  = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    const color   = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const lifeMs  = 4500;
+    for (let i = 0; i < count; i++) {
+      const a  = Math.random() * Math.PI * 2;
+      const d  = Phaser.Math.Between(40, 130);
+      const tx = this.player.x + Math.cos(a) * d;
+      const ty = this.player.y + Math.sin(a) * d;
+      const gfx = this.add.graphics();
+      this.cameras.main.ignore(gfx);
+      let elapsed = 0;
+      let triggered = false;
+      const drawTrap = (alpha: number) => {
+        gfx.clear();
+        gfx.lineStyle(2, color, 0.8 * alpha);
+        gfx.strokeCircle(tx, ty, radius);
+        gfx.fillStyle(color, 0.25 * alpha);
+        gfx.fillCircle(tx, ty, radius);
+      };
+      drawTrap(1);
+      const timer = this.time.addEvent({
+        delay: 100, loop: true,
+        callback: () => {
+          elapsed += 100;
+          if (triggered || elapsed >= lifeMs) {
+            gfx.destroy(); timer.remove(); return;
+          }
+          drawTrap(1 - elapsed / lifeMs);
+          (this.enemies.getChildren() as Enemy[]).forEach(e => {
+            if (triggered || !e.active || e.isDead()) return;
+            if (Phaser.Math.Distance.Between(tx, ty, e.x, e.y) <= radius + 16) {
+              triggered = true;
+              gfx.destroy(); timer.remove();
+              const flash = this.add.graphics();
+              this.cameras.main.ignore(flash);
+              flash.fillStyle(color, 0.88);
+              flash.fillCircle(tx, ty, radius * 1.6);
+              this.time.delayedCall(150, () => flash.destroy());
+              (this.enemies.getChildren() as Enemy[]).forEach(e2 => {
+                if (!e2.active || e2.isDead()) return;
+                if (Phaser.Math.Distance.Between(tx, ty, e2.x, e2.y) <= radius + 20) {
+                  this.applyDamageToEnemy(e2, damage, weapon.type, { x: tx, y: ty });
+                }
+              });
+            }
+          });
+        },
+      });
+    }
+  }
+
+  // ── 유도탄 조종 ──
+  private steerHomingProjectiles() {
+    (this.projectiles.getChildren() as Projectile[]).forEach(proj => {
+      if (!proj.active || !proj.homing) return;
+      let nearest: Enemy | null = null;
+      let nearestDist = Infinity;
+      (this.enemies.getChildren() as Enemy[]).forEach(e => {
+        if (!e.active || e.isDead()) return;
+        const d = Phaser.Math.Distance.Between(proj.x, proj.y, e.x, e.y);
+        if (d < nearestDist) { nearestDist = d; nearest = e; }
+      });
+      if (!nearest) return;
+      const body = proj.body as Phaser.Physics.Arcade.Body;
+      const speed = Math.sqrt(body.velocity.x ** 2 + body.velocity.y ** 2);
+      const cur   = Math.atan2(body.velocity.y, body.velocity.x);
+      const target = Phaser.Math.Angle.Between(proj.x, proj.y, (nearest as Enemy).x, (nearest as Enemy).y);
+      const next  = Phaser.Math.Angle.RotateTo(cur, target, 0.07);
+      body.velocity.x = Math.cos(next) * speed;
+      body.velocity.y = Math.sin(next) * speed;
     });
   }
 
@@ -832,7 +1181,29 @@ export class GameScene extends Phaser.Scene {
     proj.hitEnemies.add(uid);
 
     const projType = proj.texture.key.replace('proj_', '') as PokemonType;
+    this.currentDamageSource = proj.sourceName;
     this.applyDamageToEnemy(enemy, proj.damage, projType, { x: this.player.x, y: this.player.y });
+
+    // 폭발 처리
+    if (proj.explosionRadius > 0) {
+      const ex = proj.x, ey = proj.y, er = proj.explosionRadius;
+      const color = TYPE_COLORS[projType] ?? 0xffffff;
+      const flash = this.add.graphics();
+      this.cameras.main.ignore(flash);
+      flash.fillStyle(color, 0.7);
+      flash.fillCircle(ex, ey, er);
+      flash.lineStyle(2, color, 1.0);
+      flash.strokeCircle(ex, ey, er);
+      this.time.delayedCall(180, () => flash.destroy());
+      (this.enemies.getChildren() as Enemy[]).forEach(e => {
+        if (!e.active || e.isDead() || e === enemy) return;
+        if (Phaser.Math.Distance.Between(ex, ey, e.x, e.y) <= er) {
+          this.applyDamageToEnemy(e, proj.damage, projType, { x: ex, y: ey });
+        }
+      });
+      proj.destroy();
+      return;
+    }
 
     if (proj.pierce > 0) {
       proj.pierce--;
@@ -912,9 +1283,7 @@ export class GameScene extends Phaser.Scene {
       this.bossRollTarget   = null;
       this.bossIndicatorGfx?.destroy();
       this.bossIndicatorGfx = null;
-      this.bossHpBarBg.setVisible(false);
-      this.bossHpBar.setVisible(false);
-      this.bossHpLabel.setVisible(false);
+      this.setBossPanelVisible(false);
       this.bossArrow.setVisible(false);
       this.showBossDefeated();
     }
@@ -934,7 +1303,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(400, 0.02);
     // UI 정리
     this.bossArrow.setVisible(false);
-    this.comboText.setVisible(false);
+    if (IS_DEV_MODE) this.scene.stop('DevScene');
 
     this.player.setTint(0xff0000);
     this.tweens.add({ targets: this.player, alpha: 0, duration: 600 });
@@ -959,7 +1328,8 @@ export class GameScene extends Phaser.Scene {
         surviveTime:  this.gameTime,
         goldEarned:   this.gold,
         totalGold:    newTotal,
-        waveNumber:   this.waveNumber + 1, // 1-indexed 표시
+        waveNumber:   this.waveNumber + 1,
+        weaponDamageLog: Object.fromEntries(this.weaponDamageLog),
       });
     });
   }
@@ -1070,7 +1440,7 @@ export class GameScene extends Phaser.Scene {
             type: 'newPassive',
             passiveType: p.type,
             label: p.name,
-            description: `${p.description} +${p.values[0]}`,
+            description: `${p.description} ${formatPassiveValue(p.statKey, p.values[0])}`,
             levelTo: 1,
           });
         }
@@ -1088,7 +1458,7 @@ export class GameScene extends Phaser.Scene {
             type: 'upgradePassive',
             passiveType: type,
             label: item.name,
-            description: `${item.description} → +${item.values[nextLv - 1]}`,
+            description: `${item.description} → ${formatPassiveValue(item.statKey, item.values[nextLv - 1])}`,
             levelFrom: curLv,
             levelTo: nextLv,
           });
@@ -1199,6 +1569,9 @@ export class GameScene extends Phaser.Scene {
     const behaviorLabel: Record<string, string> = {
       projectile: '투사체', melee: '근접', beam: '빔',
       orbit: '궤도', zone: '장판', lightning: '번개',
+      homing: '유도탄', explosion: '폭발', rotating_beam: '회전빔',
+      falling: '낙하', nova: '충격파', boomerang: '부메랑',
+      scatter: '산탄', trap: '트랩',
     };
     const typeColor = TYPE_COLORS[weapon.type] ?? 0x888888;
     const typeHex   = `#${typeColor.toString(16).padStart(6, '0')}`;
@@ -1266,12 +1639,20 @@ export class GameScene extends Phaser.Scene {
       `쿨다운 ${(weapon.cooldown / 1000).toFixed(1)}s`,
     ];
     switch (behavior) {
-      case 'melee':     statParts.push(`범위 ${weapon.meleeRange ?? 120}px`); break;
-      case 'beam':      statParts.push(`길이 ${weapon.beamLength ?? 270}px`); break;
-      case 'orbit':     statParts.push(`구체 ×${weapon.orbitCount ?? 1}`); break;
-      case 'zone':      statParts.push(`반경 ${weapon.zoneRadius ?? 180}px`); break;
-      case 'lightning': statParts.push(`체인 ${weapon.lightningChainCount ?? 3}회`); break;
-      default:          statParts.push(`투사체 ×${weapon.projectileCount}`); break;
+      case 'melee':         statParts.push(`범위 ${weapon.meleeRange ?? 120}`); break;
+      case 'beam':          statParts.push(`길이 ${weapon.beamLength ?? 270}`); break;
+      case 'orbit':         statParts.push(`구체 ×${weapon.orbitCount ?? 1}`); break;
+      case 'zone':          statParts.push(`반경 ${weapon.zoneRadius ?? 180}`); break;
+      case 'lightning':     statParts.push(`체인 ${weapon.lightningChainCount ?? 3}회${(weapon.explosionRadius ?? 0) > 0 ? ` / 스플래시 ${weapon.explosionRadius}` : ''}`); break;
+      case 'explosion':     statParts.push(`폭발 반경 ${weapon.explosionRadius ?? 90}`); break;
+      case 'rotating_beam': statParts.push(`회전속도 ${((weapon.rotateSpeed ?? 1.8) * 60).toFixed(0)}°/s`); break;
+      case 'nova':          statParts.push(`충격 범위 ${weapon.meleeRange ?? 170}`); break;
+      case 'boomerang':     statParts.push(`사거리 ${weapon.meleeRange ?? 200}`); break;
+      case 'scatter':       statParts.push(`산탄 ×${weapon.projectileCount ?? 8}`); break;
+      case 'trap':          statParts.push(`트랩 ×${weapon.fallingCount ?? 2}`); break;
+      case 'falling':       statParts.push(`낙하 ×${weapon.fallingCount ?? 3}`); break;
+      case 'homing':        statParts.push(`관통 ${weapon.pierce ?? 1}회`); break;
+      default:              statParts.push(`투사체 ×${weapon.projectileCount}`); break;
     }
     push(this.add.text(LEFT, CY + 68, statParts.join('  /  '), {
       fontSize: '12px', color: '#88aacc',
@@ -1376,48 +1757,18 @@ export class GameScene extends Phaser.Scene {
     this.comboTimer -= delta;
     if (this.comboTimer <= 0) {
       this.comboCount = 0;
-      this.comboText.setVisible(false);
     }
   }
 
   private addComboKill() {
     this.comboCount++;
     this.comboTimer = this.COMBO_TIMEOUT;
-    if (this.comboCount >= 3) {
-      const labels = ['', '', '', '3 COMBO!', '4 COMBO!', '5 COMBO!', '6 COMBO!', '7 COMBO!', '8 COMBO!', '9 COMBO!', '10+ COMBO!!'];
-      const label = this.comboCount >= 10 ? '10+ COMBO!!' : (labels[this.comboCount] ?? `${this.comboCount} COMBO!`);
-      const scale = Math.min(1 + (this.comboCount - 3) * 0.08, 1.6);
-      this.comboText.setText(label).setScale(scale).setVisible(true);
-      // 잠깐 커졌다 줄어드는 효과
-      this.tweens.killTweensOf(this.comboText);
-      this.tweens.add({
-        targets: this.comboText,
-        scaleX: scale * 1.25, scaleY: scale * 1.25,
-        duration: 80,
-        yoyo: true,
-      });
-    }
   }
 
   // ===== 적 HP바 렌더 =====
   private renderEnemyHpBars() {
+    // 일반/엘리트 HP바 미표시 — 보스는 상단 패널에서 별도 표시
     this.enemyHpGraphics.clear();
-
-    this.enemies.getChildren().forEach(obj => {
-      const enemy = obj as Enemy;
-      if (!enemy.active || enemy.isBoss) return;
-      const ratio = enemy.hp / enemy.maxHp;
-      if (ratio >= 1) return; // 풀HP면 표시 안 함
-      const bw = 30;
-      const bh = 4;
-      const bx = enemy.x - bw / 2;
-      const by = enemy.y - 30;
-      this.enemyHpGraphics.fillStyle(0x440000, 0.85);
-      this.enemyHpGraphics.fillRect(bx, by, bw, bh);
-      const hpColor = ratio > 0.5 ? 0x44cc44 : ratio > 0.25 ? 0xddcc00 : 0xdd2222;
-      this.enemyHpGraphics.fillStyle(hpColor, 1);
-      this.enemyHpGraphics.fillRect(bx, by, bw * ratio, bh);
-    });
   }
 
   // ===== 웨이브 =====
@@ -1527,7 +1878,7 @@ export class GameScene extends Phaser.Scene {
     this.currentBossName = isWave5 ? '잠만보' : '캥카';
 
     const boss = new Enemy(this, x, y, `pokemon_${bossId}`, {
-      hp:        isWave5 ? 500 : 1200,
+      hp:        isWave5 ? 1500 : 2400,
       moveSpeed: isWave5 ? 35  : 55,
       exp:       isWave5 ? 40  : 90,
       isBoss:    true,
@@ -1539,9 +1890,7 @@ export class GameScene extends Phaser.Scene {
     this.currentBoss = boss;
     this.bossHpRatioDisplayed = 1;
 
-    this.bossHpBarBg.setVisible(true);
-    this.bossHpBar.setVisible(true);
-    this.bossHpLabel.setVisible(true);
+    this.setBossPanelVisible(true);
 
     this.gameCam.shake(600, 0.015);
     this.time.delayedCall(300, () => this.showBossAlert(bossId));
@@ -1555,13 +1904,14 @@ export class GameScene extends Phaser.Scene {
     this.currentBossName = '다크라이';
 
     const darkrai = new Enemy(this, x, y, 'pokemon_491', {
-      hp:           99999,
-      moveSpeed:    85,
-      exp:          0,
-      isBoss:       true,
-      pokemonTypes: ['dark'],
-      goldValue:    0,
-      contactDamage: 9999,
+      hp:             99999,
+      moveSpeed:      175,
+      exp:            0,
+      isBoss:         true,
+      pokemonTypes:   ['dark'],
+      goldValue:      0,
+      contactDamage:  9999,
+      ignoreKnockback: true,
     });
     // 보랏빛 섬뜩한 글로우
     darkrai.postFX.clear();
@@ -1574,9 +1924,7 @@ export class GameScene extends Phaser.Scene {
     this.currentBoss = darkrai;
     this.bossHpRatioDisplayed = 1;
 
-    this.bossHpBarBg.setVisible(true);
-    this.bossHpBar.setVisible(true);
-    this.bossHpLabel.setVisible(true);
+    this.setBossPanelVisible(true);
 
     this.gameCam.shake(1000, 0.025);
     this.showDarkraiAlert();
@@ -1819,6 +2167,12 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private setBossPanelVisible(visible: boolean) {
+    this.bossHpPanelItems.forEach(item =>
+      (item as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(visible)
+    );
+  }
+
   private showBossDefeated() {
     const W  = this.scale.width;
     const cy = 70 + (this.scale.height - 70 - 132) / 2;
@@ -2026,39 +2380,8 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 4);
 
 
-    // ── 골드 카운터 (패널 바로 아래 좌측) ──
-    this.goldText = this.add.text(12, 84, '★  0 G', {
-      fontSize: '13px', color: '#ffd700',
-      stroke: '#000000', strokeThickness: 3,
-      fontStyle: 'bold',
-    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3);
-
-    this.waveText = this.add.text(W - 8, 84, 'WAVE 0', {
-      fontSize: '12px', color: '#aaaaaa', fontStyle: 'bold',
-    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(D + 3);
-
-    this.killText = this.add.text(W / 2, 84, '⚔ 0', {
-      fontSize: '12px', color: '#ddaa44', fontStyle: 'bold',
-    }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D + 3);
-
-    // 콤보 텍스트 (게임 영역 중앙 상단, 평소엔 숨김) — gameCam에서는 제외
-    this.comboText = this.add.text(W / 2, 90, '', {
-      fontSize: '20px', color: '#ffdd00', fontStyle: 'bold',
-      stroke: '#880000', strokeThickness: 4,
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(D + 10).setVisible(false);
-
-    // ── 보스 HP바 (평소엔 숨김) ──
-    const BOSS_BAR_Y = 105;
-    const BOSS_BAR_W = W - 32;
-    this.add.rectangle(W / 2, BOSS_BAR_Y, BOSS_BAR_W + 4, 14, 0x181810)
-      .setScrollFactor(0).setDepth(D);
-    this.bossHpBarBg = this.add.rectangle(W / 2, BOSS_BAR_Y, BOSS_BAR_W, 10, 0x440000)
-      .setScrollFactor(0).setDepth(D + 1).setVisible(false);
-    this.bossHpBar = this.add.rectangle(16, BOSS_BAR_Y, BOSS_BAR_W, 10, 0xdd2222)
-      .setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2).setVisible(false);
-    this.bossHpLabel = this.add.text(W / 2, BOSS_BAR_Y, '', {
-      fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
+    // ── 골드/웨이브/킬/콤보/보스HP 는 createHudOverlay()에서 생성 ──
+    // (gameCam.ignore 이후 생성해야 gameCam이 렌더링해서 보임)
 
     // ── 하단 패널: 포켓몬 6칸 + 장신구 6칸 ──
     const BOT_H   = 132;
@@ -2136,6 +2459,102 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ===== 일시정지 UI =====
+  // ===== 개발자 모드 API (DevScene에서 호출) =====
+  devAddTime() {
+    this.gameTime  += 60_000;
+    this.waveTimer += 60_000;
+  }
+  devHealPlayer() {
+    this.player.stats.hp = this.player.stats.maxHp;
+  }
+  devLevelUp() {
+    this.level++;
+    this.expToNext = Math.floor(this.expToNext * 1.3);
+    this.needsLevelUp = true;
+  }
+  devAddWeapon(pokemonId: number) {
+    if (this.weapons.length >= MAX_WEAPON_SLOTS) return;
+    if (this.weapons.some(w => w.pokemonId === pokemonId)) return;
+    this.applyLevelUpChoice({ type: 'newPokemon', pokemonId, label: '', description: '' });
+  }
+
+  // ── gameCam.ignore 이후 생성, cameras.main에서는 ignore ──
+  // gameCam 뷰포트가 screen y=70에서 시작하므로
+  // raw_y = 원하는 screen_y - 70 으로 계산해야 정확한 위치에 표시됨
+  private createHudOverlay() {
+    const D      = 150;
+    const W      = this.scale.width;
+    const VP_TOP = 70;   // gameCam 뷰포트 screen y 시작
+
+    // 골드 / 킬카운트 / 웨이브 — screen y=79 (상단 패널에서 5px 아래)
+    const ROW_Y = 79 - VP_TOP;  // raw = 9
+    this.goldText = this.add.text(12, ROW_Y, '★  0 G', {
+      fontSize: '12px', color: '#ffd700',
+      stroke: '#000000', strokeThickness: 3, fontStyle: 'bold',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D);
+
+    this.killText = this.add.text(W / 2, ROW_Y, '⚔ 0', {
+      fontSize: '12px', color: '#ddaa44', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D);
+
+    this.waveText = this.add.text(W - 8, ROW_Y, 'WAVE 0', {
+      fontSize: '12px', color: '#aaaaaa', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(D);
+
+    // 보스 HP 패널 — 골드/킬/웨이브(screen y=79, 높이~12px) 에서 5px 아래 = screen y=96
+    const SCREEN_BOSS_TOP = 96;
+    const BOSS_PNL_H      = 44;
+    const BT = SCREEN_BOSS_TOP - VP_TOP;          // raw top = 12
+    const BC = BT + BOSS_PNL_H / 2;               // raw center = 34
+    const BOSS_BAR_W = W - 48;
+    const BOSS_BAR_H = 12;
+    const BAR_LEFT   = 24;
+
+    const pnlBg = this.add.rectangle(W / 2, BC, W, BOSS_PNL_H, 0x0a0a0a, 0.88)
+      .setScrollFactor(0).setDepth(D - 1).setVisible(false);
+    const pnlBorder = this.add.rectangle(W / 2, BT + BOSS_PNL_H, W, 2, 0xdd2222, 0.6)
+      .setScrollFactor(0).setDepth(D).setVisible(false);
+
+    const bossLabel = this.add.text(24, BT + 9, '☠  BOSS', {
+      fontSize: '10px', color: '#ff4444', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 1).setVisible(false);
+
+    this.bossHpNameText = this.add.text(24, BT + 9, '', {
+      fontSize: '13px', color: '#ffffff', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 1).setVisible(false);
+
+    this.bossHpNumText = this.add.text(W - 24, BT + 9, '', {
+      fontSize: '11px', color: '#ffbbbb',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(D + 1).setVisible(false);
+
+    const barY = BT + 30;
+    const barTrack = this.add.rectangle(BAR_LEFT + BOSS_BAR_W / 2, barY, BOSS_BAR_W + 2, BOSS_BAR_H + 4, 0x1a1a1a)
+      .setScrollFactor(0).setDepth(D).setVisible(false);
+    this.bossHpBarBg = this.add.rectangle(BAR_LEFT + BOSS_BAR_W / 2, barY, BOSS_BAR_W, BOSS_BAR_H, 0x550000)
+      .setScrollFactor(0).setDepth(D + 1).setVisible(false);
+    this.bossHpBar = this.add.rectangle(BAR_LEFT, barY, BOSS_BAR_W, BOSS_BAR_H, 0xee2222)
+      .setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2).setVisible(false);
+
+    this.bossHpPanelItems = [
+      pnlBg, pnlBorder, bossLabel, barTrack,
+      this.bossHpNameText, this.bossHpNumText,
+      this.bossHpBarBg, this.bossHpBar,
+    ];
+
+    // cameras.main은 이 아이템들을 무시 → gameCam만 렌더링 (위치 중복 방지)
+    this.cameras.main.ignore([
+      this.goldText, this.killText, this.waveText,
+      pnlBg, pnlBorder, bossLabel, barTrack,
+      this.bossHpNameText, this.bossHpNumText,
+      this.bossHpBarBg, this.bossHpBar,
+    ]);
+  }
+
   private createPauseUI() {
     const D     = 200;
     const BTN_W = 240;
@@ -2144,7 +2563,7 @@ export class GameScene extends Phaser.Scene {
     const CX    = W / 2;
     const TOP_H = 70;
     const BOT_H = 132;
-    const CY    = TOP_H + (this.scale.height - TOP_H - BOT_H) / 2; // 게임 영역 세로 중앙
+    const CY    = TOP_H + (this.scale.height - TOP_H - BOT_H) / 2 - 30; // 게임 영역 세로 중앙 (위로 올림)
 
     // ── 일시정지 버튼 (상단 패널 우측) ──
     const PAUSE_BTN_X  = W - 23;
@@ -2187,7 +2606,7 @@ export class GameScene extends Phaser.Scene {
 
     // 패널 크기: 화면 폭 거의 풀로 사용
     const PW  = W - 24;          // 패널 너비 (좌우 12px 여백)
-    const PH  = 530;             // 패널 높이 (포켓몬 슬롯 섹션 포함)
+    const PH  = 530;             // 패널 높이 (버튼 나란히 배치)
     const PL  = CX - PW / 2;    // 패널 왼쪽 x
     const PT  = CY - PH / 2;    // 패널 위쪽 y
 
@@ -2331,50 +2750,86 @@ export class GameScene extends Phaser.Scene {
       this.pauseOverlayItems.push(lv);
     }
 
-    // ── 버튼 섹션 ──
-    const BTN_TOP = POKE_TOP + 28 + POKE_SLOT_H + 14;
-    const BTN_H2  = 48;
-    const BTN_W2  = PW - 20;
+    // ── 딜 순위 섹션 ──
+    const DMG_TOP = POKE_TOP + 28 + POKE_SLOT_H + 12;
+
+    addOverlay(this.add.text(COL_L, DMG_TOP + 10, '무기 딜 순위', {
+      fontSize: '11px', color: '#8888aa',
+    }).setOrigin(0, 0.5));
+    addOverlay(this.add.graphics().lineStyle(1, 0x444466)
+      .lineBetween(COL_L, DMG_TOP + 20, COL_L + PW - 20, DMG_TOP + 20));
+
+    // 최대 3개 무기 딜 순위 (동적 텍스트)
+    const dmgRankTexts: Phaser.GameObjects.Text[] = [];
+    const RANK_MEDALS = ['🥇', '🥈', '🥉'];
+    for (let r = 0; r < 3; r++) {
+      const ry = DMG_TOP + 30 + r * 20;
+      const txt = this.add.text(COL_L, ry, '', {
+        fontSize: '13px', color: '#ccccee',
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
+      dmgRankTexts.push(txt);
+      this.pauseOverlayItems.push(txt);
+    }
+
+    // ── 버튼 섹션 (나란히 배치) ──
+    const BTN_TOP  = DMG_TOP + 30 + 3 * 20 + 8;
+    const BTN_H2   = 48;
+    const BTN_GAP  = 8;
+    const BTN_W2   = (PW - 20 - BTN_GAP) / 2;
+    const BTN_Y    = BTN_TOP + BTN_H2 / 2;
+    const resumeX  = COL_L + BTN_W2 / 2;
+    const titleX   = COL_L + BTN_W2 + BTN_GAP + BTN_W2 / 2;
 
     // 계속하기 버튼
-    const resumeBg = this.add.rectangle(CX, BTN_TOP + BTN_H2 / 2, BTN_W2, BTN_H2, 0xeeeee0)
+    const resumeBg = this.add.rectangle(resumeX, BTN_Y, BTN_W2, BTN_H2, 0xeeeee0)
       .setScrollFactor(0).setDepth(D + 2).setVisible(false)
       .setInteractive({ useHandCursor: true });
     this.pauseOverlayItems.push(resumeBg);
-    addOverlay(this.add.rectangle(COL_L + 6, BTN_TOP + BTN_H2 / 2, 8, BTN_H2 - 4, 0x44cc66));
-    const resumeTxt = this.add.text(CX, BTN_TOP + BTN_H2 / 2, '▶  계속하기', {
-      fontSize: '18px', color: '#181810', fontStyle: 'bold',
+    const resumeTxt = this.add.text(resumeX, BTN_Y, '▶  계속하기', {
+      fontSize: '16px', color: '#181810', fontStyle: 'bold',
       padding: { top: 6 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
     this.pauseOverlayItems.push(resumeTxt);
 
-    resumeBg.on('pointerover',  () => { resumeBg.setFillStyle(0xd8d8c8); resumeTxt.setStyle({ color: '#003399', fontSize: '18px', fontStyle: 'bold' }); });
-    resumeBg.on('pointerout',   () => { resumeBg.setFillStyle(0xeeeee0); resumeTxt.setStyle({ color: '#181810', fontSize: '18px', fontStyle: 'bold' }); });
+    resumeBg.on('pointerover',  () => { resumeBg.setFillStyle(0xd8d8c8); resumeTxt.setStyle({ color: '#003399', fontSize: '16px', fontStyle: 'bold' }); });
+    resumeBg.on('pointerout',   () => { resumeBg.setFillStyle(0xeeeee0); resumeTxt.setStyle({ color: '#181810', fontSize: '16px', fontStyle: 'bold' }); });
     resumeBg.on('pointerdown',  () => this.resumeGame());
 
-    // 타이틀로 버튼
-    const titleY = BTN_TOP + BTN_H2 + 12 + BTN_H2 / 2;
-    const titleBg = this.add.rectangle(CX, titleY, BTN_W2, BTN_H2, 0xeeeee0)
+    // 메인으로 버튼
+    const titleBg = this.add.rectangle(titleX, BTN_Y, BTN_W2, BTN_H2, 0xeeeee0)
       .setScrollFactor(0).setDepth(D + 2).setVisible(false)
       .setInteractive({ useHandCursor: true });
     this.pauseOverlayItems.push(titleBg);
-    const titleTxt = this.add.text(CX, titleY, '⌂  타이틀로', {
-      fontSize: '18px', color: '#181810', fontStyle: 'bold',
+    const titleTxt = this.add.text(titleX, BTN_Y, '⌂  메인으로', {
+      fontSize: '16px', color: '#181810', fontStyle: 'bold',
       padding: { top: 6 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
     this.pauseOverlayItems.push(titleTxt);
 
-    titleBg.on('pointerover',  () => { titleBg.setFillStyle(0xd8d8c8); titleTxt.setStyle({ color: '#003399', fontSize: '18px', fontStyle: 'bold' }); });
-    titleBg.on('pointerout',   () => { titleBg.setFillStyle(0xeeeee0); titleTxt.setStyle({ color: '#181810', fontSize: '18px', fontStyle: 'bold' }); });
+    titleBg.on('pointerover',  () => { titleBg.setFillStyle(0xd8d8c8); titleTxt.setStyle({ color: '#003399', fontSize: '16px', fontStyle: 'bold' }); });
+    titleBg.on('pointerout',   () => { titleBg.setFillStyle(0xeeeee0); titleTxt.setStyle({ color: '#181810', fontSize: '16px', fontStyle: 'bold' }); });
     titleBg.on('pointerdown',  () => {
       const prevTotal = parseInt(localStorage.getItem('totalGold') ?? '0', 10);
       localStorage.setItem('totalGold', String(prevTotal + this.gold));
       this.scene.start('TitleScene');
     });
 
-    // 일시정지 열릴 때 스탯 + 슬롯 갱신
+    // 일시정지 열릴 때 스탯 + 슬롯 + 딜 순위 갱신
     this.events.on('pause-opened', () => {
       statValueTexts.forEach(({ text, fn }) => text.setText(fn()));
+
+      // 딜 순위 갱신
+      const sorted = [...this.weaponDamageLog.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+      dmgRankTexts.forEach((txt, r) => {
+        if (r < sorted.length) {
+          const [name, dmg] = sorted[r];
+          txt.setText(`${RANK_MEDALS[r]}  ${name}   ${dmg.toLocaleString()}`);
+        } else {
+          txt.setText('');
+        }
+      });
 
       for (let i = 0; i < 6; i++) {
         const w = this.weapons[i];
@@ -2463,11 +2918,13 @@ export class GameScene extends Phaser.Scene {
       const ratio = this.currentBoss.hp / this.currentBoss.maxHp;
       // 부드러운 HP 바 감소 (보간)
       this.bossHpRatioDisplayed = Phaser.Math.Linear(this.bossHpRatioDisplayed, ratio, 0.12);
-      this.bossHpBar.width = (this.scale.width - 32) * this.bossHpRatioDisplayed;
+      const BOSS_BAR_FULL = this.scale.width - 48;
+      this.bossHpBar.width = BOSS_BAR_FULL * this.bossHpRatioDisplayed;
       // 보스 HP 낮을 때 색상 변화
-      const barColor = ratio < 0.3 ? 0xff6600 : 0xdd2222;
+      const barColor = ratio < 0.3 ? 0xff6600 : ratio < 0.6 ? 0xdd8800 : 0xee2222;
       this.bossHpBar.setFillStyle(barColor);
-      this.bossHpLabel.setText(`${this.currentBossName}  ${this.currentBoss.hp} / ${this.currentBoss.maxHp}`);
+      this.bossHpNameText.setText(this.currentBossName);
+      this.bossHpNumText.setText(`${this.currentBoss.hp.toLocaleString()} / ${this.currentBoss.maxHp.toLocaleString()}`);
       this.updateBossArrow();
     } else {
       this.bossArrow.setVisible(false);

@@ -4,6 +4,8 @@ import {
   getUpgradeLevel, setUpgradeLevel,
   getTotalGold, setTotalGold,
 } from '../data/upgrades';
+import { getCurrentUser } from '../lib/auth';
+import { pushLocalToCloud } from '../lib/userDB';
 
 // ── 카드 그리드 상수 ──
 const COLS      = 4;
@@ -305,6 +307,9 @@ export class UpgradeScene extends Phaser.Scene {
 
     setTotalGold(gold - cost);
     setUpgradeLevel(upg.id, curLevel + 1);
+
+    const user = getCurrentUser();
+    if (user) pushLocalToCloud(user.id).catch(() => {});
 
     // 구매 플래시 연출 후 씬 재시작
     this.cameras.main.flash(130, 255, 220, 80);

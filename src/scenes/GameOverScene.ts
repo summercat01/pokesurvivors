@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { getCurrentUser } from '../lib/auth';
+import { pushLocalToCloud } from '../lib/userDB';
 
 interface GameOverData {
   level: number;
@@ -7,6 +9,7 @@ interface GameOverData {
   goldEarned: number;
   totalGold:  number;
   waveNumber: number;
+  weaponDamageLog?: Record<string, number>;
 }
 
 export class GameOverScene extends Phaser.Scene {
@@ -17,7 +20,7 @@ export class GameOverScene extends Phaser.Scene {
   create(data: GameOverData) {
     const W = this.scale.width;
     const H = this.scale.height;
-    const { level, killCount, surviveTime, goldEarned, totalGold, waveNumber } = data;
+    const { level, killCount, surviveTime, goldEarned, totalGold, waveNumber, weaponDamageLog } = data;
 
     // 베스트 기록 읽기 (triggerGameOver에서 이미 갱신됨)
     const bestWave  = parseInt(localStorage.getItem('bestWave')  ?? '0', 10);
@@ -52,8 +55,8 @@ export class GameOverScene extends Phaser.Scene {
     this.tweens.add({ targets: msgText, alpha: 1, duration: 400, delay: 200 });
 
     // ── 결과 패널 (항목 5개) ──
-    const panelY = H * 0.52;
-    this.add.rectangle(W / 2, panelY, W - 20, 300, 0xf8f8d0)
+    const panelY = H * 0.50;
+    this.add.rectangle(W / 2, panelY, W - 20, 360, 0xf8f8d0)
       .setStrokeStyle(4, 0x383030);
     this.add.text(W / 2, panelY - 130, '— 결과 —', {
       fontSize: '16px', color: '#383030', fontStyle: 'bold',
@@ -84,8 +87,29 @@ export class GameOverScene extends Phaser.Scene {
       }
     });
 
+    // ── 무기 딜 순위 (패널 하단) ──
+    const dmgRankY = panelY + 112;
+    this.add.rectangle(W / 2, dmgRankY, W - 60, 1, 0x888888, 0.5);
+    this.add.text(30, dmgRankY + 8, '무기 딜 순위', {
+      fontSize: '11px', color: '#888888',
+    }).setOrigin(0, 0);
+
+    if (weaponDamageLog) {
+      const sorted = Object.entries(weaponDamageLog).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      const medals = ['🥇', '🥈', '🥉'];
+      sorted.forEach(([name, dmg], i) => {
+        const ry = dmgRankY + 24 + i * 20;
+        this.add.text(36, ry, `${medals[i]}  ${name}`, {
+          fontSize: '13px', color: '#303030', fontStyle: 'bold',
+        }).setOrigin(0, 0.5);
+        this.add.text(W - 30, ry, dmg.toLocaleString(), {
+          fontSize: '13px', color: '#303030', fontStyle: 'bold',
+        }).setOrigin(1, 0.5);
+      });
+    }
+
     // ── 누적 골드 표시 (패널 하단) ──
-    const totalGoldY = panelY + 132;
+    const totalGoldY = panelY + 148;
     this.add.rectangle(W / 2, totalGoldY, W - 60, 2, 0xc8b860);
     this.add.text(W / 2, totalGoldY + 18, `보유 골드   ★  ${totalGold} G`, {
       fontSize: '14px', color: '#9a7a10', fontStyle: 'bold',
@@ -123,5 +147,11 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     this.cameras.main.fadeIn(500, 24, 16, 40);
+
+    // 로그인 상태면 클라우드에 기록 동기화
+    const user = getCurrentUser();
+    if (user) {
+      pushLocalToCloud(user.id).catch(e => console.warn('[GameOver] cloud sync failed:', e));
+    }
   }
 }

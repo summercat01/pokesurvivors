@@ -4,6 +4,9 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
   damage: number;
   pierce: number;           // 관통 횟수 (0 = 관통 없음)
   hitEnemies: Set<number>;  // 이미 맞춘 적 ID (관통 시 재히트 방지)
+  homing: boolean = false;          // 유도탄 여부
+  explosionRadius: number = 0;      // 폭발 반지름 (0 = 폭발 없음)
+  sourceName: string = '';          // 딜 추적용 무기 이름
   private lifeTimer: number;
   private maxLife: number;
 

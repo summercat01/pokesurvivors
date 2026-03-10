@@ -134,3 +134,18 @@ export const PASSIVE_ITEMS: PassiveStatBonus[] = [
 
 export const getPassiveItem = (type: PokemonType) =>
   PASSIVE_ITEMS.find(p => p.type === type);
+
+// 퍼센트로 표시할 statKey 목록 (소수점 배율 → ×100하여 % 표기)
+const PERCENT_DISPLAY_STATS = new Set([
+  'expGain', 'attackPower', 'projectileRange', 'projectileSpeed',
+  'cooldownReduction', 'critDamage', 'moveSpeed', 'knockback',
+  'evasion', 'critChance', 'goldGain',
+]);
+
+/** 패시브 수치를 UI 표시용 문자열로 변환 */
+export function formatPassiveValue(statKey: string, value: number): string {
+  if (PERCENT_DISPLAY_STATS.has(statKey)) {
+    return `+${Math.round(value * 100)}%`;
+  }
+  return `+${value}`;
+}

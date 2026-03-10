@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { getCurrentUser, getNickname, signOut } from '../lib/auth';
+import { loadUserRecord } from '../lib/userDB';
 
 // 배경에 돌아다닐 포켓몬 스프라이트 키 목록
 const BG_POKEMON = [
@@ -19,6 +21,7 @@ export class TitleScene extends Phaser.Scene {
     this.createLogo();
     this.createButtons();
     this.createFooter();
+    this.createUserBadge();
 
     // BGM 재생
     this.playBGM();
@@ -276,6 +279,57 @@ export class TitleScene extends Phaser.Scene {
       hold: 800,
       onComplete: () => txt.destroy(),
     });
+  }
+
+  // ─────────────────────────────────────────────
+  // 유저 배지 (우상단)
+  // ─────────────────────────────────────────────
+  private createUserBadge() {
+    const W    = this.scale.width;
+    const user = getCurrentUser();
+
+    if (user) {
+      // 로그인 상태: 닉네임 표시 + 로그아웃 버튼
+      const nickname = getNickname();
+      const label    = nickname.length > 14 ? nickname.slice(0, 13) + '…' : nickname;
+      const nameTxt = this.add.text(W - 100, 20, `👤 ${label}`, {
+        fontSize: '10px', color: '#aaccee',
+      }).setOrigin(0, 0.5).setDepth(31);
+
+      const badgeBg = this.add.rectangle(W - 70, 20, 130, 28, 0x112233, 0.85)
+        .setDepth(30);
+      const emailTxt = nameTxt;  // alias for logout block below
+
+      const logoutBg = this.add.rectangle(W - 18, 20, 28, 22, 0x441122, 0.9)
+        .setDepth(31).setInteractive({ useHandCursor: true });
+      const logoutTxt = this.add.text(W - 18, 20, '⏻', {
+        fontSize: '12px', color: '#ff8888',
+      }).setOrigin(0.5).setDepth(32);
+
+      logoutBg.on('pointerover', () => { logoutBg.setFillStyle(0x661133); logoutTxt.setColor('#ffaaaa'); });
+      logoutBg.on('pointerout',  () => { logoutBg.setFillStyle(0x441122); logoutTxt.setColor('#ff8888'); });
+      logoutBg.on('pointerdown', async () => {
+        await signOut();
+        this.cameras.main.fadeOut(200, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('LoginScene'));
+      });
+
+      void [badgeBg, emailTxt, logoutTxt];
+    } else {
+      // 게스트 상태: 로그인 버튼
+      const loginBg = this.add.rectangle(W - 38, 20, 68, 26, 0x223355, 0.9)
+        .setDepth(30).setInteractive({ useHandCursor: true });
+      const loginTxt = this.add.text(W - 38, 20, '🔑 로그인', {
+        fontSize: '10px', color: '#88bbee',
+      }).setOrigin(0.5).setDepth(31);
+
+      loginBg.on('pointerover', () => { loginBg.setFillStyle(0x335577); loginTxt.setColor('#bbddff'); });
+      loginBg.on('pointerout',  () => { loginBg.setFillStyle(0x223355); loginTxt.setColor('#88bbee'); });
+      loginBg.on('pointerdown', () => {
+        this.cameras.main.fadeOut(200, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('LoginScene'));
+      });
+    }
   }
 
   // ─────────────────────────────────────────────
