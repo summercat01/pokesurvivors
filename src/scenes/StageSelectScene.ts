@@ -18,7 +18,7 @@ const STAGES: StageConfig[] = [
   { id:  3, name: '풀밭 지대',   subtitle: 'Grass Fields',   enemyTypes: ['grass'],                bgColor: 0x1a4a10, locked: false, bgPokemon: ['pokemon_254', 'pokemon_003', 'pokemon_389'] },
   { id:  4, name: '불꽃 산지',   subtitle: 'Fire Mountain',  enemyTypes: ['fire'],                 bgColor: 0x8a2010, locked: false, bgPokemon: ['pokemon_006', 'pokemon_059', 'pokemon_157'] },
   { id:  5, name: '수로 지대',   subtitle: 'Water Route',    enemyTypes: ['water'],                bgColor: 0x1a3a8a, locked: false, bgPokemon: ['pokemon_395', 'pokemon_130', 'pokemon_009'] },
-  { id:  6, name: '전기 평원',   subtitle: 'Electric Plains', enemyTypes: ['electric'],            bgColor: 0x7a6010, locked: false, bgPokemon: ['pokemon_026', 'pokemon_405', 'pokemon_181'] },
+  { id:  6, name: '전기 평원',   subtitle: 'Electric Plains', enemyTypes: ['electric'],            bgColor: 0x7a6010, locked: false, bgPokemon: ['pokemon_026', 'pokemon_466', 'pokemon_181'] },
   { id:  7, name: '구름 위',     subtitle: 'Sky Ruins',      enemyTypes: ['flying'],               bgColor: 0x3a6a9a, locked: true,  bgPokemon: [] },
   { id:  8, name: '독 늪지',     subtitle: 'Poison Marsh',   enemyTypes: ['poison'],               bgColor: 0x5a1a7a, locked: true,  bgPokemon: [] },
   { id:  9, name: '사막 지대',   subtitle: 'Desert Sands',   enemyTypes: ['ground'],               bgColor: 0x8a5a10, locked: true,  bgPokemon: [] },
