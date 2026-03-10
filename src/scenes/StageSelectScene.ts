@@ -13,8 +13,8 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  { id:  1, name: '태초마을',    subtitle: 'Pallet Town',    enemyTypes: ['normal'],               bgColor: 0x2a5c1a, locked: false, bgPokemon: ['pokemon_143', 'pokemon_115', 'pokemon_039'] },
-  { id:  2, name: '벌레숲',      subtitle: 'Bug Forest',     enemyTypes: ['bug'],                  bgColor: 0x2d5c1a, locked: false, bgPokemon: ['pokemon_214', 'pokemon_127', 'pokemon_012'] },
+  { id:  1, name: '태초마을',    subtitle: 'Pallet Town',    enemyTypes: ['normal'],               bgColor: 0x2a5c1a, locked: false, bgPokemon: ['pokemon_040', 'pokemon_143', 'pokemon_039'] },
+  { id:  2, name: '벌레숲',      subtitle: 'Bug Forest',     enemyTypes: ['bug'],                  bgColor: 0x2d5c1a, locked: false, bgPokemon: ['pokemon_267', 'pokemon_127', 'pokemon_012'] },
   { id:  3, name: '풀밭 지대',   subtitle: 'Grass Fields',   enemyTypes: ['grass'],                bgColor: 0x1a4a10, locked: false, bgPokemon: ['pokemon_003', 'pokemon_389', 'pokemon_254'] },
   { id:  4, name: '불꽃 산지',   subtitle: 'Fire Mountain',  enemyTypes: ['fire'],                 bgColor: 0x8a2010, locked: false, bgPokemon: ['pokemon_006', 'pokemon_059', 'pokemon_157'] },
   { id:  5, name: '수로 지대',   subtitle: 'Water Route',    enemyTypes: ['water'],                bgColor: 0x1a3a8a, locked: false, bgPokemon: ['pokemon_130', 'pokemon_009', 'pokemon_395'] },
