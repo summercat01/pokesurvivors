@@ -169,7 +169,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   },
   {
     pokemonId: 92,
-    name: '고스',
+    name: '고오스',
     type: 'ghost',
     description: '저주받은 영혼이 적을 집요하게\n추적해 공격합니다.',
     damage: 22,
