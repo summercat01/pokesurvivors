@@ -1905,34 +1905,68 @@ export class GameScene extends Phaser.Scene {
     if (this.darkraiSpawned) return;
     this.darkraiSpawned = true;
 
-    const { x, y } = this.getSpawnPosition();
-    this.currentBossName = '다크라이';
+    // ── 1. 기존 모든 적 제거 ──
+    this.enemies.getChildren().slice().forEach(e => (e as Enemy).destroy());
 
-    const darkrai = new Enemy(this, x, y, 'pokemon_491', {
-      hp:             99999,
-      moveSpeed:      175,
-      exp:            0,
-      isBoss:         true,
-      pokemonTypes:   ['dark'],
-      goldValue:      0,
-      contactDamage:  9999,
-      ignoreKnockback: true,
+    // ── 2. 맵 흑백 전환 ──
+    const cm = this.gameCam.postFX.addColorMatrix();
+    cm.grayscale(0, false);
+    this.tweens.add({
+      targets: { v: 0 },
+      v: 1,
+      duration: 1800,
+      ease: 'Sine.easeIn',
+      onUpdate: (tween) => {
+        cm.grayscale(tween.getValue() as number, false);
+      },
     });
-    // 보랏빛 섬뜩한 글로우
-    darkrai.postFX.clear();
-    darkrai.postFX.addGlow(0x330066, 4, 0, false, 0.2, 8);
-    darkrai.setTint(0xcc88ff);
-    darkrai.setScale(2.0);
 
-    this.enemies.add(darkrai);
-    this.cameras.main.ignore(darkrai);
-    this.currentBoss = darkrai;
-    this.bossHpRatioDisplayed = 1;
+    // ── 3. 화면 암전 후 다크라이 등장 ──
+    this.cameras.main.flash(400, 0, 0, 0, true);
+    this.gameCam.flash(400, 0, 0, 0, true);
 
-    this.setBossPanelVisible(true);
+    this.time.delayedCall(600, () => {
+      this.currentBossName = '다크라이';
 
-    this.gameCam.shake(1000, 0.025);
-    this.showDarkraiAlert();
+      // 플레이어 바로 위 쪽에서 등장
+      const spawnX = this.player.x;
+      const spawnY = this.player.y - 300;
+
+      const darkrai = new Enemy(this, spawnX, spawnY, 'pokemon_491', {
+        hp:              999999,
+        moveSpeed:       210,
+        exp:             0,
+        isBoss:          true,
+        pokemonTypes:    ['dark'],
+        goldValue:       0,
+        contactDamage:   30000,
+        ignoreKnockback: true,
+      });
+
+      darkrai.postFX.clear();
+      darkrai.postFX.addGlow(0x330066, 6, 0, false, 0.2, 10);
+      darkrai.setTint(0xcc88ff);
+      darkrai.setScale(2.5);
+      darkrai.setAlpha(0);
+
+      this.enemies.add(darkrai);
+      this.cameras.main.ignore(darkrai);
+      this.currentBoss = darkrai;
+      this.bossHpRatioDisplayed = 1;
+
+      // 페이드인 + 낙하 연출
+      this.tweens.add({
+        targets: darkrai,
+        alpha: 1,
+        y: spawnY + 200,
+        duration: 800,
+        ease: 'Back.easeOut',
+      });
+
+      this.setBossPanelVisible(true);
+      this.gameCam.shake(1200, 0.03);
+      this.showDarkraiAlert();
+    });
   }
 
   // ===== 보스 패턴 =====
