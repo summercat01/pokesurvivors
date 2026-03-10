@@ -287,6 +287,81 @@ export const STAGE_DATA: StageData[] = [
     boss10: { id: '059', name: '윈디',   types: ['fire'],           hp: 5000,  moveSpeed: 65, exp: 60,  goldValue: 40  },
     boss20: { id: '006', name: '리자몽', types: ['fire', 'flying'], hp: 10000, moveSpeed: 60, exp: 150, goldValue: 100 },
   },
+  // ══════════════════════════════════════════
+  // STAGE 5 — 물
+  // ══════════════════════════════════════════
+  {
+    id: 5,
+    stageType: 'water',
+    difficulty: 1.8,
+    enemyPool: [
+      // Wave 0+
+      { id: '007', types: ['water'],            minWave: 0 }, // 꼬부기
+      { id: '060', types: ['water'],            minWave: 0 }, // 발챙이
+      { id: '072', types: ['water', 'poison'],  minWave: 0 }, // 왕눈해
+      { id: '116', types: ['water'],            minWave: 0 }, // 쏙독새
+      { id: '129', types: ['water'],            minWave: 0 }, // 잉어킹
+      { id: '158', types: ['water'],            minWave: 0 }, // 리아코
+      { id: '258', types: ['water'],            minWave: 0 }, // 물짱이
+      { id: '393', types: ['water'],            minWave: 0 }, // 팽도리
+      // Wave 1+
+      { id: '008', types: ['water'],            minWave: 1 }, // 어니부기
+      { id: '086', types: ['water'],            minWave: 1 }, // 쥬쥬
+      { id: '118', types: ['water'],            minWave: 1 }, // 콘치
+      { id: '159', types: ['water'],            minWave: 1 }, // 엘리게이
+      { id: '183', types: ['water'],            minWave: 1 }, // 마릴
+      { id: '259', types: ['water', 'ground'],  minWave: 1 }, // 늪짱이
+      { id: '394', types: ['water'],            minWave: 1 }, // 팽태자
+      { id: '418', types: ['water'],            minWave: 1 }, // 브이젤
+      // Wave 2+
+      { id: '054', types: ['water', 'psychic'], minWave: 2 }, // 고라파덕
+      { id: '090', types: ['water'],            minWave: 2 }, // 셀러
+      { id: '098', types: ['water'],            minWave: 2 }, // 크랩
+      { id: '194', types: ['water', 'ground'],  minWave: 2 }, // 우파
+      { id: '278', types: ['water', 'flying'],  minWave: 2 }, // 갈모매
+      { id: '341', types: ['water'],            minWave: 2 }, // 가재군
+      { id: '422', types: ['water', 'ground'],  minWave: 2 }, // 깝질무
+      // Wave 3+
+      { id: '055', types: ['water', 'psychic'], minWave: 3 }, // 골덕
+      { id: '061', types: ['water'],            minWave: 3 }, // 슈륙챙이
+      { id: '073', types: ['water', 'poison'],  minWave: 3 }, // 독파리
+      { id: '117', types: ['water'],            minWave: 3 }, // 아쿠스타
+      { id: '170', types: ['water', 'electric'],minWave: 3 }, // 랜턴(전단계)
+      { id: '279', types: ['water', 'flying'],  minWave: 3 }, // 페리퍼
+      { id: '419', types: ['water'],            minWave: 3 }, // 플로젤
+      // Wave 4+
+      { id: '079', types: ['water', 'psychic'], minWave: 4 }, // 야돈
+      { id: '087', types: ['water', 'ice'],     minWave: 4 }, // 쥬레곤
+      { id: '091', types: ['water', 'ice'],     minWave: 4 }, // 파르셀
+      { id: '184', types: ['water'],            minWave: 4 }, // 마릴리
+      { id: '342', types: ['water', 'dark'],    minWave: 4 }, // 샤크니아
+      { id: '363', types: ['water', 'ice'],     minWave: 4 }, // 구슬눈
+      // Wave 7+
+      { id: '062', types: ['water', 'fighting'],minWave: 7 }, // 강챙이
+      { id: '134', types: ['water'],            minWave: 7 }, // 샤워스
+      { id: '160', types: ['water'],            minWave: 7 }, // 장크로다일
+      { id: '260', types: ['water', 'ground'],  minWave: 7 }, // 대짱이
+      { id: '350', types: ['water'],            minWave: 7 }, // 밀로틱
+      { id: '365', types: ['water', 'ice'],     minWave: 7 }, // 씨카이저
+      { id: '395', types: ['water', 'steel'],   minWave: 7 }, // 엠페르트
+    ],
+    elitePool: [
+      { id: '055', types: ['water', 'psychic'] },
+      { id: '073', types: ['water', 'poison'] },
+      { id: '091', types: ['water', 'ice'] },
+      { id: '099', types: ['water'] },
+      { id: '130', types: ['water', 'flying'] },
+      { id: '134', types: ['water'] },
+      { id: '160', types: ['water'] },
+      { id: '184', types: ['water'] },
+      { id: '260', types: ['water', 'ground'] },
+      { id: '342', types: ['water', 'dark'] },
+      { id: '350', types: ['water'] },
+      { id: '395', types: ['water', 'steel'] },
+    ],
+    boss10: { id: '130', name: '갸라도스', types: ['water', 'flying'], hp: 5000,  moveSpeed: 50, exp: 60,  goldValue: 40  },
+    boss20: { id: '009', name: '거북왕',   types: ['water'],           hp: 10000, moveSpeed: 45, exp: 150, goldValue: 100 },
+  },
 ];
 
 export function getStageData(stageId: number): StageData {

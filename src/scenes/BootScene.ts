@@ -144,6 +144,33 @@ export class BootScene extends Phaser.Scene {
       // Stage 4 — Gen4 불꽃
       '390': 'chimchar',  '391': 'monferno',  '392': 'infernape',
       '467': 'magmortar',
+      // Stage 5 — Gen1 물
+      '055': 'golduck',
+      '060': 'poliwag',   '061': 'poliwhirl', '062': 'poliwrath',
+      '072': 'tentacool', '073': 'tentacruel',
+      '079': 'slowpoke',  '080': 'slowbro',
+      '086': 'seel',      '087': 'dewgong',
+      '090': 'shellder',  '091': 'cloyster',
+      '098': 'krabby',    '099': 'kingler',
+      '116': 'horsea',    '117': 'seadra',
+      '118': 'goldeen',
+      '129': 'magikarp',  '130': 'gyarados',
+      '134': 'vaporeon',
+      // Stage 5 — Gen2 물
+      '158': 'totodile',  '159': 'croconaw',  '160': 'feraligatr',
+      '170': 'chinchou',
+      '183': 'marill',    '184': 'azumarill',
+      '194': 'wooper',
+      // Stage 5 — Gen3 물
+      '258': 'mudkip',    '259': 'marshtomp', '260': 'swampert',
+      '278': 'wingull',   '279': 'pelipper',
+      '341': 'corphish',  '342': 'crawdaunt',
+      '350': 'milotic',
+      '363': 'spheal',    '365': 'walrein',
+      // Stage 5 — Gen4 물
+      '393': 'piplup',    '394': 'prinplup',  '395': 'empoleon',
+      '418': 'buizel',    '419': 'floatzel',
+      '422': 'shellos',
     };
     Object.entries(POKEMON_NAMES).forEach(([id, name]) => {
       this.load.image(`pokemon_${id}`, `/pokemon_gen4_sprites/${id}_${name}.png`);
