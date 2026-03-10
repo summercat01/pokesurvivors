@@ -30,8 +30,9 @@ export interface WeaponConfig {
   zoneRadius?: number;    // 장판 반지름 px
   zoneDamageInterval?: number; // 장판 데미지 간격 ms
   // lightning
-  lightningChainCount?: number; // 체인 횟수
-  lightningRange?: number;      // 체인 최대 거리 px
+  lightningChainCount?: number;    // 체인 횟수
+  lightningRange?: number;         // 체인 최대 거리 px
+  chainCountPerLevel?: number;     // 레벨당 체인 증가량 (미설정 시 LV_COUNT_BONUS 사용)
   // explosion
   explosionRadius?: number;     // 폭발 반지름 px
   // 넉백 배율 (기본값은 behavior별 상수)
@@ -118,6 +119,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     behavior: 'lightning',
     lightningChainCount: 3,
     lightningRange: 150,
+    chainCountPerLevel: 0,
   },
   {
     pokemonId: 54,
@@ -259,6 +261,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     lightningChainCount: 1,
     lightningRange: 150,
     explosionRadius: 50,
+    chainCountPerLevel: 1,
   },
   {
     pokemonId: 109,
@@ -349,7 +352,7 @@ export function getUpgradedWeapon(base: WeaponConfig, level: number): WeaponConf
     beamWidth:            base.beamWidth   != null  ? base.beamWidth   + Math.round(rangeBonus * 0.2) : undefined,
     zoneRadius:           base.zoneRadius  != null  ? base.zoneRadius  + rangeBonus : undefined,
     orbitCount:           base.orbitCount  != null  ? base.orbitCount  + LV_COUNT_BONUS[l] : undefined,
-    lightningChainCount:  base.lightningChainCount != null ? base.lightningChainCount + l : undefined,
+    lightningChainCount:  base.lightningChainCount != null ? base.lightningChainCount + (base.chainCountPerLevel !== undefined ? base.chainCountPerLevel * l : LV_COUNT_BONUS[l]) : undefined,
     explosionRadius:      base.explosionRadius != null ? base.explosionRadius + rangeBonus : undefined,
     rotateSpeed:          base.rotateSpeed != null ? +(base.rotateSpeed + l * 0.1).toFixed(2) : undefined,
     fallingCount:         base.fallingCount != null ? base.fallingCount + LV_COUNT_BONUS[l] : undefined,
