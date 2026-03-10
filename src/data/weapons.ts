@@ -58,7 +58,7 @@ const LV_RANGE_BONUS:   readonly number[] = [0,   20,   40,   65,   100]; // mel
 // ===== 전체 무기 풀 (레벨 1 기준치) =====
 export const ALL_WEAPONS: WeaponConfig[] = [
   {
-    pokemonId: 387,
+    pokemonId: 252,
     name: '나무지기',
     type: 'grass',
     description: '전방 135° 범위의 덩굴채찍으로\n주변 적을 후려칩니다.',
@@ -280,7 +280,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     zoneDamageInterval: 600,
   },
   {
-    pokemonId: 173,
+    pokemonId: 174,
     name: '푸푸린',
     type: 'normal',
     description: '노래 에너지가 8방향으로 퍼져나갑니다.\n전방위 동시 공격으로 모든 적을 노립니다.',
