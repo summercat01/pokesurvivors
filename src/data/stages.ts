@@ -230,6 +230,63 @@ export const STAGE_DATA: StageData[] = [
     boss10: { id: '003', name: '이상해꽃', types: ['grass', 'poison'], hp: 5000, moveSpeed: 40, exp: 60,  goldValue: 40  },
     boss20: { id: '389', name: '토대부기', types: ['grass', 'ground'], hp: 10000, moveSpeed: 35, exp: 150, goldValue: 100 },
   },
+  // ══════════════════════════════════════════
+  // STAGE 4 — 불꽃
+  // ══════════════════════════════════════════
+  {
+    id: 4,
+    stageType: 'fire',
+    difficulty: 1.6,
+    enemyPool: [
+      // Wave 0+
+      { id: '004', types: ['fire'],             minWave: 0 }, // 파이리
+      { id: '037', types: ['fire'],             minWave: 0 }, // 식스테일
+      { id: '058', types: ['fire'],             minWave: 0 }, // 가디
+      { id: '155', types: ['fire'],             minWave: 0 }, // 브케인
+      { id: '218', types: ['fire', 'rock'],     minWave: 0 }, // 마그마그
+      { id: '228', types: ['fire', 'dark'],     minWave: 0 }, // 델빌
+      { id: '255', types: ['fire'],             minWave: 0 }, // 아차모
+      { id: '390', types: ['fire'],             minWave: 0 }, // 불꽃숭이
+      // Wave 1+
+      { id: '005', types: ['fire'],             minWave: 1 }, // 리자드
+      { id: '077', types: ['fire'],             minWave: 1 }, // 포니타
+      { id: '156', types: ['fire'],             minWave: 1 }, // 마그케인
+      { id: '219', types: ['fire', 'rock'],     minWave: 1 }, // 마그카르고
+      { id: '229', types: ['fire', 'dark'],     minWave: 1 }, // 헬가
+      { id: '256', types: ['fire', 'fighting'], minWave: 1 }, // 영치코
+      { id: '391', types: ['fire', 'fighting'], minWave: 1 }, // 파이몬
+      // Wave 2+
+      { id: '038', types: ['fire'],             minWave: 2 }, // 나인테일
+      { id: '078', types: ['fire'],             minWave: 2 }, // 날쌩마
+      { id: '126', types: ['fire'],             minWave: 2 }, // 마그마
+      { id: '240', types: ['fire'],             minWave: 2 }, // 마그비
+      { id: '322', types: ['fire', 'ground'],   minWave: 2 }, // 깜놀
+      // Wave 3+
+      { id: '136', types: ['fire'],             minWave: 3 }, // 부스터
+      { id: '157', types: ['fire'],             minWave: 3 }, // 블레이범
+      { id: '257', types: ['fire', 'fighting'], minWave: 3 }, // 번치코
+      { id: '324', types: ['fire'],             minWave: 3 }, // 코터스
+      // Wave 4+
+      { id: '323', types: ['fire', 'ground'],   minWave: 4 }, // 폭발메기
+      { id: '392', types: ['fire', 'fighting'], minWave: 4 }, // infernape 초염몽
+      // Wave 7+
+      { id: '059', types: ['fire'],             minWave: 7 }, // 윈디
+      { id: '467', types: ['fire'],             minWave: 7 }, // 마그마번
+    ],
+    elitePool: [
+      { id: '038', types: ['fire'] },
+      { id: '059', types: ['fire'] },
+      { id: '078', types: ['fire'] },
+      { id: '157', types: ['fire'] },
+      { id: '229', types: ['fire', 'dark'] },
+      { id: '257', types: ['fire', 'fighting'] },
+      { id: '323', types: ['fire', 'ground'] },
+      { id: '392', types: ['fire', 'fighting'] },
+      { id: '467', types: ['fire'] },
+    ],
+    boss10: { id: '059', name: '윈디',   types: ['fire'],           hp: 5000,  moveSpeed: 65, exp: 60,  goldValue: 40  },
+    boss20: { id: '006', name: '리자몽', types: ['fire', 'flying'], hp: 10000, moveSpeed: 60, exp: 150, goldValue: 100 },
+  },
 ];
 
 export function getStageData(stageId: number): StageData {

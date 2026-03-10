@@ -128,6 +128,22 @@ export class BootScene extends Phaser.Scene {
       '420': 'cherubi',   '421': 'cherrim',
       '459': 'snover',    '460': 'abomasnow',
       '465': 'tangrowth', '470': 'leafeon',
+      // Stage 4 — Gen1 불꽃
+      '037': 'vulpix',    '038': 'ninetales',
+      '058': 'growlithe', '059': 'arcanine',
+      '077': 'ponyta',    '078': 'rapidash',
+      '126': 'magmar',    '136': 'flareon',
+      // Stage 4 — Gen2 불꽃
+      '155': 'cyndaquil', '156': 'quilava',   '157': 'typhlosion',
+      '218': 'slugma',    '219': 'magcargo',
+      '228': 'houndour',  '229': 'houndoom',
+      '240': 'magby',
+      // Stage 4 — Gen3 불꽃
+      '255': 'torchic',   '256': 'combusken', '257': 'blaziken',
+      '322': 'numel',     '323': 'camerupt',  '324': 'torkoal',
+      // Stage 4 — Gen4 불꽃
+      '390': 'chimchar',  '391': 'monferno',  '392': 'infernape',
+      '467': 'magmortar',
     };
     Object.entries(POKEMON_NAMES).forEach(([id, name]) => {
       this.load.image(`pokemon_${id}`, `/pokemon_gen4_sprites/${id}_${name}.png`);
