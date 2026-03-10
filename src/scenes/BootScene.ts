@@ -58,6 +58,15 @@ export class BootScene extends Phaser.Scene {
       '032': 'nidoran-m',  '063': 'abra',        '172': 'pichu',
       '174': 'igglybuff',  '220': 'swinub',      '246': 'larvitar',
       '396': 'starly',
+      // Stage 6 — Gen1~4 전기
+      '026': 'raichu',     '081': 'magnemite',  '082': 'magneton',
+      '100': 'voltorb',    '101': 'electrode',  '125': 'electabuzz',
+      '135': 'jolteon',    '179': 'mareep',     '180': 'flaaffy',
+      '181': 'ampharos',   '239': 'elekid',
+      '309': 'electrike',  '310': 'manectric',  '311': 'plusle',
+      '312': 'minun',      '403': 'shinx',      '404': 'luxio',
+      '405': 'luxray',     '417': 'pachirisu',  '462': 'magnezone',
+      '466': 'electivire',
       // Stage 1 일반 적 — Gen1 노말
       '016': 'pidgey',     '017': 'pidgeotto',   '018': 'pidgeot',
       '019': 'rattata',    '020': 'raticate',

@@ -362,6 +362,54 @@ export const STAGE_DATA: StageData[] = [
     boss10: { id: '130', name: '갸라도스', types: ['water', 'flying'], hp: 5000,  moveSpeed: 50, exp: 60,  goldValue: 40  },
     boss20: { id: '395', name: '엠페르트', types: ['water', 'steel'],  hp: 10000, moveSpeed: 45, exp: 150, goldValue: 100 },
   },
+
+  // ══════════════════════════════════════════════
+  // 6스테이지 — 전기 평원 (Electric Plains)
+  // ══════════════════════════════════════════════
+  {
+    id: 6,
+    stageType: 'electric',
+    difficulty: 2.0,
+    enemyPool: [
+      // Wave 0+ — 기본 전기 포켓몬
+      { id: '025', types: ['electric'],          minWave: 0 },  // 피카츄
+      { id: '172', types: ['electric'],          minWave: 0 },  // 피츄
+      { id: '081', types: ['electric', 'steel'], minWave: 0 },  // 코일
+      { id: '100', types: ['electric'],          minWave: 0 },  // 찌리리공
+      { id: '179', types: ['electric'],          minWave: 0 },  // 메리프
+      { id: '311', types: ['electric'],          minWave: 0 },  // 플러레
+      { id: '312', types: ['electric'],          minWave: 0 },  // 마이농
+      { id: '309', types: ['electric'],          minWave: 0 },  // 썬더
+      { id: '403', types: ['electric'],          minWave: 0 },  // 꼬링
+      { id: '417', types: ['electric'],          minWave: 0 },  // 파치리스
+      // Wave 3+ — 중급
+      { id: '026', types: ['electric'],          minWave: 3 },  // 라이츄
+      { id: '082', types: ['electric', 'steel'], minWave: 3 },  // 레어코일
+      { id: '101', types: ['electric'],          minWave: 3 },  // 붐볼
+      { id: '180', types: ['electric'],          minWave: 3 },  // 보송송
+      { id: '310', types: ['electric'],          minWave: 3 },  // 썬더볼트
+      { id: '404', types: ['electric'],          minWave: 3 },  // 럭시오
+      // Wave 5+ — 상급
+      { id: '125', types: ['electric'],          minWave: 5 },  // 에레브
+      { id: '181', types: ['electric'],          minWave: 5 },  // 전룡
+      { id: '239', types: ['electric'],          minWave: 5 },  // 에레키드
+      { id: '405', types: ['electric'],          minWave: 5 },  // 렉시오라
+      // Wave 7+ — 정예급
+      { id: '135', types: ['electric'],          minWave: 7 },  // 쥬피썬더
+      { id: '462', types: ['electric', 'steel'], minWave: 7 },  // 자포코일
+    ],
+    elitePool: [
+      { id: '026', types: ['electric'] },
+      { id: '101', types: ['electric'] },
+      { id: '181', types: ['electric'] },
+      { id: '310', types: ['electric'] },
+      { id: '405', types: ['electric'] },
+      { id: '462', types: ['electric', 'steel'] },
+      { id: '466', types: ['electric'] },
+    ],
+    boss10: { id: '466', name: '에레키블', types: ['electric'],           hp: 5000,  moveSpeed: 60, exp: 60,  goldValue: 40  },
+    boss20: { id: '026', name: '라이츄',   types: ['electric'],           hp: 10000, moveSpeed: 55, exp: 150, goldValue: 100 },
+  },
 ];
 
 export function getStageData(stageId: number): StageData {
