@@ -44,6 +44,17 @@ function applyCloudUpgrades(cloud: Record<string, number>) {
   });
 }
 
+/** 회원가입 시: 클라우드 데이터를 로컬에 덮어씀 (새 계정은 초기화) */
+export async function overwriteLocalWithCloud(userId: string) {
+  const cloud = await loadUserRecord(userId);
+  const upgrades = cloud?.upgrades ?? {};
+  UPGRADES.forEach(upg => setUpgradeLevel(upg.id, upgrades[upg.id] ?? 0));
+  localStorage.setItem('totalGold',  String(cloud?.total_gold ?? 0));
+  localStorage.setItem('bestWave',   String(cloud?.best_wave  ?? 0));
+  localStorage.setItem('bestKills',  String(cloud?.best_kills ?? 0));
+  localStorage.setItem('bestTime',   String(cloud?.best_time  ?? 0));
+}
+
 /** 로그인 시: 클라우드↔로컬 병합 (더 높은 값 유지) */
 export async function syncLocalWithCloud(userId: string) {
   const cloud = await loadUserRecord(userId);

@@ -88,7 +88,8 @@ export class GameScene extends Phaser.Scene {
   private waveTimer: number = 0;
   private waveNumber: number = 0;
   private spawnTimer: number = 0;
-  private readonly MAX_ENEMIES = 60;
+  private eliteTimer: number = 0;
+  private readonly MAX_ENEMIES = 80;
   private darkraiSpawned: boolean = false;
 
   // 보스 패턴
@@ -152,6 +153,7 @@ export class GameScene extends Phaser.Scene {
     this.waveTimer      = 0;
     this.waveNumber     = 0;
     this.spawnTimer     = 0;
+    this.eliteTimer     = 0;
     this.darkraiSpawned   = false;
     this.bossPatternTimer = 0;
     this.bossPatternState = 'walk';
@@ -365,24 +367,30 @@ export class GameScene extends Phaser.Scene {
     this.renderEnemyHpBars();
     this.updateCombo(delta);
 
-    if (this.waveTimer >= 60000) {
-      this.waveTimer -= 60000;
+    if (this.waveTimer >= 30000) {
+      this.waveTimer -= 30000;
       this.waveNumber++;
       this.spawnWave();
       this.showWaveAnnouncement();
-      // 웨이브 전환 플래시 (cameras.main에서만)
       this.cameras.main.flash(300, 255, 255, 255, false);
     }
 
-    // 지속 스폰 (웨이브와 무관하게 주기적으로 적 추가)
+    // 꾸준한 일반 몹 스폰
     this.spawnTimer += delta;
-    const spawnInterval = Math.max(1200, 3500 - this.waveNumber * 200);
+    const spawnInterval = Math.max(600, 2800 - this.waveNumber * 120);
     if (this.spawnTimer >= spawnInterval) {
       this.spawnTimer -= spawnInterval;
       const activeCount = this.enemies.getChildren().filter(e => (e as Enemy).active).length;
       if (activeCount < this.MAX_ENEMIES) {
         this.spawnEnemy();
       }
+    }
+
+    // 엘리트 1분에 1마리
+    this.eliteTimer += delta;
+    if (this.eliteTimer >= 60000 && this.waveNumber >= 1) {
+      this.eliteTimer -= 60000;
+      this.spawnElite();
     }
 
     this.updateUI();
@@ -1357,7 +1365,7 @@ export class GameScene extends Phaser.Scene {
     if (this.exp >= this.expToNext && !this.isLevelingUp) {
       this.exp      -= this.expToNext;
       this.level++;
-      this.expToNext = Math.floor(this.expToNext * 1.3);
+      this.expToNext = Math.floor(this.expToNext * 1.15);
       // 레벨 마일스톤
       for (const m of this.LEVEL_MILESTONES) {
         if (this.level >= m && !this.reachedLevelMilestones.has(m)) {
@@ -1519,7 +1527,7 @@ export class GameScene extends Phaser.Scene {
     if (this.exp >= this.expToNext) {
       this.exp      -= this.expToNext;
       this.level++;
-      this.expToNext = Math.floor(this.expToNext * 1.3);
+      this.expToNext = Math.floor(this.expToNext * 1.15);
       this.needsLevelUp = true;
     }
   }
@@ -1773,19 +1781,19 @@ export class GameScene extends Phaser.Scene {
 
   // ===== 웨이브 =====
   private spawnWave() {
-    // 15웨이브(15분) — 다크라이 등장, 일반 스폰 없음
-    if (this.waveNumber === 15) {
+    // 30웨이브(15분) — 다크라이 등장, 일반 스폰 없음
+    if (this.waveNumber === 30) {
       this.time.delayedCall(1000, () => this.spawnDarkrai());
       return;
     }
 
-    const count = 6 + this.waveNumber * 3;
+    const count = 12 + this.waveNumber * 4;
     for (let i = 0; i < count; i++) {
-      this.time.delayedCall(i * 220, () => this.spawnEnemy());
+      this.time.delayedCall(i * 160, () => this.spawnEnemy());
     }
 
-    // 5웨이브(5분) → 카비곤, 10웨이브(10분) → 강크칸
-    if (this.waveNumber === 5 || this.waveNumber === 10) {
+    // 10웨이브(5분) → 잠만보, 20웨이브(10분) → 캥카
+    if (this.waveNumber === 10 || this.waveNumber === 20) {
       this.time.delayedCall(1500, () => this.spawnBoss());
     }
   }
@@ -1854,36 +1862,59 @@ export class GameScene extends Phaser.Scene {
       ] : []),
     ];
 
-    const entry   = POOL[Phaser.Math.Between(0, POOL.length - 1)];
-    const isElite = this.waveNumber >= 1 && Math.random() < 0.06;
+    const entry = POOL[Phaser.Math.Between(0, POOL.length - 1)];
 
     const enemy = new Enemy(this, x, y, `pokemon_${entry.id}`, {
-      hp:          Math.round((25 + this.waveNumber * 10) * (isElite ? 3 : 1)),
-      moveSpeed:   Math.min(55 + this.waveNumber * 5, 160) * (isElite ? 1.2 : 1),
-      exp:         2 + this.waveNumber,
+      hp:           Math.round(60 + this.waveNumber * 22),
+      moveSpeed:    Math.min(55 + this.waveNumber * 5, 160),
+      exp:          2 + this.waveNumber,
       pokemonTypes: entry.types,
-      isElite,
-      goldValue:   isElite ? 5 : 1,
+      isElite:      false,
+      goldValue:    1,
     });
     this.enemies.add(enemy);
     this.cameras.main.ignore(enemy);
   }
 
+  private spawnElite() {
+    const { x, y } = this.getSpawnPosition();
+    const POOL = [
+      { id: '020', types: ['normal'] as PokemonType[] },
+      { id: '053', types: ['normal'] as PokemonType[] },
+      { id: '036', types: ['normal'] as PokemonType[] },
+      { id: '040', types: ['normal'] as PokemonType[] },
+      { id: '085', types: ['normal', 'flying'] as PokemonType[] },
+      { id: '113', types: ['normal'] as PokemonType[] },
+      { id: '128', types: ['normal'] as PokemonType[] },
+    ];
+    const entry = POOL[Phaser.Math.Between(0, POOL.length - 1)];
+    const elite = new Enemy(this, x, y, `pokemon_${entry.id}`, {
+      hp:           Math.round((200 + this.waveNumber * 50) * 1),
+      moveSpeed:    Math.min(65 + this.waveNumber * 4, 150),
+      exp:          10 + this.waveNumber * 2,
+      pokemonTypes: entry.types,
+      isElite:      true,
+      goldValue:    8,
+    });
+    this.enemies.add(elite);
+    this.cameras.main.ignore(elite);
+  }
+
   private spawnBoss() {
     const { x, y } = this.getSpawnPosition();
 
-    // Wave 5 → 카비곤(143),  Wave 10 → 강크칸(115)
-    const isWave5 = this.waveNumber === 5;
-    const bossId  = isWave5 ? '143' : '115';
-    this.currentBossName = isWave5 ? '잠만보' : '캥카';
+    // Wave 10(5분) → 잠만보(143),  Wave 20(10분) → 캥카(115)
+    const isWave10 = this.waveNumber === 10;
+    const bossId   = isWave10 ? '143' : '115';
+    this.currentBossName = isWave10 ? '잠만보' : '캥카';
 
     const boss = new Enemy(this, x, y, `pokemon_${bossId}`, {
-      hp:        isWave5 ? 1500 : 2400,
-      moveSpeed: isWave5 ? 35  : 55,
-      exp:       isWave5 ? 40  : 90,
+      hp:        isWave10 ? 5000 : 10000,
+      moveSpeed: isWave10 ? 35   : 55,
+      exp:       isWave10 ? 60   : 150,
       isBoss:    true,
       pokemonTypes: ['normal'],
-      goldValue: isWave5 ? 25  : 55,
+      goldValue: isWave10 ? 40   : 100,
     });
     this.enemies.add(boss);
     this.cameras.main.ignore(boss);
@@ -2074,7 +2105,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showWaveAnnouncement() {
-    if (this.waveNumber === 15) return; // 다크라이 웨이브는 별도 연출
+    if (this.waveNumber === 30) return; // 다크라이 웨이브는 별도 연출
 
     const W  = this.scale.width;
     const cy = 70 + (this.scale.height - 70 - 132) / 2;
@@ -2469,7 +2500,7 @@ export class GameScene extends Phaser.Scene {
   }
   devLevelUp() {
     this.level++;
-    this.expToNext = Math.floor(this.expToNext * 1.3);
+    this.expToNext = Math.floor(this.expToNext * 1.15);
     this.needsLevelUp = true;
   }
   devAddWeapon(pokemonId: number) {
@@ -2750,25 +2781,41 @@ export class GameScene extends Phaser.Scene {
       this.pauseOverlayItems.push(lv);
     }
 
-    // ── 딜 순위 섹션 ──
+    // ── 딜 섹션 (슬롯 1~3 왼쪽, 4~6 오른쪽) ──
     const DMG_TOP = POKE_TOP + 28 + POKE_SLOT_H + 12;
 
-    addOverlay(this.add.text(COL_L, DMG_TOP + 10, '무기 딜 순위', {
+    addOverlay(this.add.text(COL_L, DMG_TOP + 10, '무기 DPS', {
       fontSize: '11px', color: '#8888aa',
     }).setOrigin(0, 0.5));
     addOverlay(this.add.graphics().lineStyle(1, 0x444466)
       .lineBetween(COL_L, DMG_TOP + 20, COL_L + PW - 20, DMG_TOP + 20));
+    // 세로 중앙 구분선
+    addOverlay(this.add.graphics().lineStyle(1, 0x444466)
+      .lineBetween(CX, DMG_TOP + 20, CX, DMG_TOP + 20 + 3 * 22 + 4));
 
-    // 최대 3개 무기 딜 순위 (동적 텍스트)
-    const dmgRankTexts: Phaser.GameObjects.Text[] = [];
-    const RANK_MEDALS = ['🥇', '🥈', '🥉'];
-    for (let r = 0; r < 3; r++) {
-      const ry = DMG_TOP + 30 + r * 20;
-      const txt = this.add.text(COL_L, ry, '', {
-        fontSize: '13px', color: '#ccccee',
+    // 6슬롯 × 2텍스트(이름/딜)
+    const dpsNameTexts: Phaser.GameObjects.Text[] = [];
+    const dpsDmgTexts:  Phaser.GameObjects.Text[] = [];
+    const RIGHT_END_X = COL_L + PW - 20;
+
+    for (let i = 0; i < 6; i++) {
+      const col  = i < 3 ? 0 : 1;
+      const row  = i % 3;
+      const ry   = DMG_TOP + 32 + row * 22;
+      const nameX = col === 0 ? COL_L  : CX + 4;
+      const dpsX  = col === 0 ? CX - 4 : RIGHT_END_X;
+
+      const nameTxt = this.add.text(nameX, ry, '', {
+        fontSize: '12px', color: '#aaaacc',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
-      dmgRankTexts.push(txt);
-      this.pauseOverlayItems.push(txt);
+      dpsNameTexts.push(nameTxt);
+      this.pauseOverlayItems.push(nameTxt);
+
+      const dpsTxt = this.add.text(dpsX, ry, '', {
+        fontSize: '12px', color: '#eeeeff', fontStyle: 'bold',
+      }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
+      dpsDmgTexts.push(dpsTxt);
+      this.pauseOverlayItems.push(dpsTxt);
     }
 
     // ── 버튼 섹션 (나란히 배치) ──
@@ -2818,18 +2865,18 @@ export class GameScene extends Phaser.Scene {
     this.events.on('pause-opened', () => {
       statValueTexts.forEach(({ text, fn }) => text.setText(fn()));
 
-      // 딜 순위 갱신
-      const sorted = [...this.weaponDamageLog.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3);
-      dmgRankTexts.forEach((txt, r) => {
-        if (r < sorted.length) {
-          const [name, dmg] = sorted[r];
-          txt.setText(`${RANK_MEDALS[r]}  ${name}   ${dmg.toLocaleString()}`);
+      // 슬롯별 DPS 갱신 (1~6)
+      for (let i = 0; i < 6; i++) {
+        const w = this.weapons[i];
+        if (w) {
+          const dmg = this.weaponDamageLog.get(w.name) ?? 0;
+          dpsNameTexts[i].setText(`${i + 1}. ${w.name}`);
+          dpsDmgTexts[i].setText(dmg.toLocaleString());
         } else {
-          txt.setText('');
+          dpsNameTexts[i].setText(`${i + 1}. —`);
+          dpsDmgTexts[i].setText('');
         }
-      });
+      }
 
       for (let i = 0; i < 6; i++) {
         const w = this.weapons[i];

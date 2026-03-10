@@ -18,7 +18,8 @@ export interface UpgradeConfig {
   costs:       number[];
 }
 
-const BASE_COSTS = [50, 100, 180, 300, 500];
+// 8종 × 합계 62,500 = 총 500,000골드 (15분 5천골드 기준 100판)
+const BASE_COSTS = [2500, 5000, 10000, 20000, 25000];
 
 export const UPGRADES: UpgradeConfig[] = [
   {

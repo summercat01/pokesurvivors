@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { signIn, signUp } from '../lib/auth';
-import { syncLocalWithCloud } from '../lib/userDB';
+import { syncLocalWithCloud, overwriteLocalWithCloud } from '../lib/userDB';
 
 /**
  * LoginScene
@@ -185,7 +185,7 @@ export class LoginScene extends Phaser.Scene {
       const user = await signUp(id, pw, nickname);
       if (user) {
         this.setMsg('✔ 가입 완료! 바로 로그인합니다.', '#88ffaa');
-        await syncLocalWithCloud(user.id);
+        await overwriteLocalWithCloud(user.id);
         this.time.delayedCall(400, () => this.proceed());
       }
     } catch (e: unknown) {
