@@ -13,45 +13,37 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  {
-    id: 1,
-    name: '태초마을',
-    subtitle: 'Pallet Town',
-    enemyTypes: ['normal' as PokemonType],
-    bgColor: 0x2a5c1a,
-    locked: false,
-    bgPokemon: ['pokemon_143', 'pokemon_115', 'pokemon_007', 'pokemon_025'],
-  },
-  {
-    id: 2,
-    name: '1번 도로',
-    subtitle: 'Route 1',
-    enemyTypes: ['normal', 'flying'] as PokemonType[],
-    bgColor: 0x1a3a5c,
-    locked: true,
-    bgPokemon: [],
-  },
-  {
-    id: 3,
-    name: '달맞이산',
-    subtitle: 'Mt. Moon',
-    enemyTypes: ['rock', 'poison'] as PokemonType[],
-    bgColor: 0x2a1a4a,
-    locked: true,
-    bgPokemon: [],
-  },
+  { id:  1, name: '태초마을',    subtitle: 'Pallet Town',    enemyTypes: ['normal'],               bgColor: 0x2a5c1a, locked: false, bgPokemon: ['pokemon_143', 'pokemon_115', 'pokemon_039'] },
+  { id:  2, name: '벌레숲',      subtitle: 'Bug Forest',     enemyTypes: ['bug'],                  bgColor: 0x2d5c1a, locked: false, bgPokemon: ['pokemon_214', 'pokemon_127', 'pokemon_012'] },
+  { id:  3, name: '풀밭 지대',   subtitle: 'Grass Fields',   enemyTypes: ['grass'],                bgColor: 0x1a4a10, locked: true,  bgPokemon: [] },
+  { id:  4, name: '불꽃 산지',   subtitle: 'Fire Mountain',  enemyTypes: ['fire'],                 bgColor: 0x8a2010, locked: true,  bgPokemon: [] },
+  { id:  5, name: '수로 지대',   subtitle: 'Water Route',    enemyTypes: ['water'],                bgColor: 0x1a3a8a, locked: true,  bgPokemon: [] },
+  { id:  6, name: '전기 평원',   subtitle: 'Electric Plains', enemyTypes: ['electric'],            bgColor: 0x7a6010, locked: true,  bgPokemon: [] },
+  { id:  7, name: '구름 위',     subtitle: 'Sky Ruins',      enemyTypes: ['flying'],               bgColor: 0x3a6a9a, locked: true,  bgPokemon: [] },
+  { id:  8, name: '독 늪지',     subtitle: 'Poison Marsh',   enemyTypes: ['poison'],               bgColor: 0x5a1a7a, locked: true,  bgPokemon: [] },
+  { id:  9, name: '사막 지대',   subtitle: 'Desert Sands',   enemyTypes: ['ground'],               bgColor: 0x8a5a10, locked: true,  bgPokemon: [] },
+  { id: 10, name: '암석 지대',   subtitle: 'Rocky Cavern',   enemyTypes: ['rock'],                 bgColor: 0x4a4a4a, locked: true,  bgPokemon: [] },
+  { id: 11, name: '격투 도장',   subtitle: 'Fighting Dojo',  enemyTypes: ['fighting'],             bgColor: 0x8a2020, locked: true,  bgPokemon: [] },
+  { id: 12, name: '에스퍼 궁전', subtitle: 'Psychic Palace', enemyTypes: ['psychic'],              bgColor: 0x8a206a, locked: true,  bgPokemon: [] },
+  { id: 13, name: '유령 탑',     subtitle: 'Ghost Tower',    enemyTypes: ['ghost'],                bgColor: 0x2a0a4a, locked: true,  bgPokemon: [] },
+  { id: 14, name: '강철 공장',   subtitle: 'Steel Factory',  enemyTypes: ['steel'],                bgColor: 0x3a4a5a, locked: true,  bgPokemon: [] },
+  { id: 15, name: '용의 소굴',   subtitle: "Dragon's Den",   enemyTypes: ['dragon'],               bgColor: 0x2a1a7a, locked: true,  bgPokemon: [] },
+  { id: 16, name: '설산',        subtitle: 'Ice Mountain',   enemyTypes: ['ice'],                  bgColor: 0x4a7a9a, locked: true,  bgPokemon: [] },
+  { id: 17, name: '어둠의 세계', subtitle: 'Dark World',     enemyTypes: ['dark'],                 bgColor: 0x0a0a1a, locked: true,  bgPokemon: [] },
 ];
 
-export class StageSelectScene extends Phaser.Scene {
-  private stageId: number = 1;
+const CARD_H   = 150;
+const CARD_GAP = 10;
+const CARD_STRIDE = CARD_H + CARD_GAP;
 
+export class StageSelectScene extends Phaser.Scene {
   constructor() {
     super({ key: 'StageSelectScene' });
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    const W  = this.scale.width;
+    const H  = this.scale.height;
     const CX = W / 2;
 
     // ── 배경 ──
@@ -61,36 +53,25 @@ export class StageSelectScene extends Phaser.Scene {
     for (let x = 0; x < W; x += 40) g.lineBetween(x, 0, x, H);
     for (let y = 0; y < H; y += 40) g.lineBetween(0, y, W, y);
 
-    // ── 헤더 ──
+    // ── 헤더 (고정) ──
     this.add.text(CX, 36, '스테이지 선택', {
       fontSize: '22px', color: '#ffdd00', fontStyle: 'bold',
       stroke: '#302000', strokeThickness: 5,
       padding: { top: 6 },
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(10);
 
     this.add.text(CX, 70, '탐험할 지역을 선택하세요', {
       fontSize: '12px', color: '#aaaaaa',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(10);
 
-    // ── 스테이지 카드 ──
-    const CARD_W = W - 32;
-    const CARD_H = 150;
-    const CARD_GAP = 12;
-    const startY = 92;
-
-    STAGES.forEach((stage, i) => {
-      const cy = startY + i * (CARD_H + CARD_GAP) + CARD_H / 2;
-      this.createStageCard(stage, CX, cy, CARD_W, CARD_H);
-    });
-
-    // ── 뒤로 버튼 ──
-    const backY = H - 44;
-    const backBg = this.add.rectangle(CX, backY, 160, 40, 0x222233)
+    // ── 뒤로 버튼 (고정) ──
+    const backY  = H - 44;
+    const backBg = this.add.rectangle(CX, backY, 160, 40, 0x222233).setDepth(10)
       .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(1, 0x445566).strokeRect(CX - 80, backY - 20, 160, 40);
+    this.add.graphics().lineStyle(1, 0x445566).strokeRect(CX - 80, backY - 20, 160, 40).setDepth(10);
     const backTxt = this.add.text(CX, backY, '← 뒤로', {
       fontSize: '15px', color: '#aaaacc', fontStyle: 'bold',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(10);
 
     backBg.on('pointerover', () => { backBg.setFillStyle(0x333355); backTxt.setColor('#ffffff'); });
     backBg.on('pointerout',  () => { backBg.setFillStyle(0x222233); backTxt.setColor('#aaaacc'); });
@@ -99,94 +80,148 @@ export class StageSelectScene extends Phaser.Scene {
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
     });
 
+    // ── 스크롤 영역 ──
+    const SCROLL_TOP = 88;
+    const SCROLL_BOT = backY - 16;
+    const viewH      = SCROLL_BOT - SCROLL_TOP;
+    const totalH     = STAGES.length * CARD_STRIDE;
+    const maxScroll  = Math.max(0, totalH - viewH);
+
+    // 마스크
+    const maskGfx = this.add.graphics();
+    maskGfx.fillRect(0, SCROLL_TOP, W, viewH);
+    const mask = new Phaser.Display.Masks.GeometryMask(this, maskGfx);
+
+    // 카드 컨테이너
+    const container = this.add.container(0, SCROLL_TOP);
+    container.setMask(mask);
+
+    const CARD_W = W - 32;
+    STAGES.forEach((stage, i) => {
+      const cy = i * CARD_STRIDE + CARD_H / 2;
+      this.createStageCard(stage, CX, cy, CARD_W, CARD_H, container);
+    });
+
+    // ── 드래그 스크롤 ──
+    let lastY      = 0;
+    let isDragging = false;
+    let scrollY    = 0; // container.y offset from SCROLL_TOP (negative = scrolled down)
+
+    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+      if (ptr.y < SCROLL_TOP || ptr.y > SCROLL_BOT) return;
+      lastY      = ptr.y;
+      isDragging = true;
+    });
+
+    this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
+      if (!isDragging) return;
+      const dy = ptr.y - lastY;
+      lastY     = ptr.y;
+      scrollY   = Phaser.Math.Clamp(scrollY + dy, -maxScroll, 0);
+      container.y = SCROLL_TOP + scrollY;
+    });
+
+    this.input.on('pointerup',   () => { isDragging = false; });
+    this.input.on('pointerout',  () => { isDragging = false; });
+
     this.cameras.main.fadeIn(300, 0, 0, 0);
   }
 
-  private createStageCard(stage: StageConfig, cx: number, cy: number, cardW: number, cardH: number) {
-    const W = this.scale.width;
+  private createStageCard(
+    stage: StageConfig, cx: number, cy: number,
+    cardW: number, cardH: number,
+    container: Phaser.GameObjects.Container,
+  ) {
     const cardLeft = cx - cardW / 2;
     const cardTop  = cy - cardH / 2;
-    const cardBot  = cy + cardH / 2;
 
     // 그림자
-    this.add.rectangle(cx + 3, cy + 4, cardW + 4, cardH + 4, 0x000000, 0.5);
+    const shadow = this.add.rectangle(cx + 3, cy + 4, cardW + 4, cardH + 4, 0x000000, 0.5);
 
     // 카드 배경
     const fillColor = stage.locked ? 0x0d0d1a : 0x111827;
-    const cardBg = this.add.rectangle(cx, cy, cardW, cardH, fillColor);
+    const cardBg    = this.add.rectangle(cx, cy, cardW, cardH, fillColor);
     if (!stage.locked) cardBg.setInteractive({ useHandCursor: true });
 
-    // 왼쪽 타입 컬러 사이드바
+    // 타입 컬러 사이드바
     const typeColor = TYPE_COLORS[stage.enemyTypes[0]] ?? 0x888888;
-    this.add.rectangle(cardLeft + 4, cy, 6, cardH - 4, stage.locked ? 0x333333 : typeColor);
+    const sidebar   = this.add.rectangle(cardLeft + 4, cy, 6, cardH - 4, stage.locked ? 0x333333 : typeColor);
 
     // 테두리
     const outline = this.add.graphics();
     outline.lineStyle(2, stage.locked ? 0x333344 : typeColor, stage.locked ? 0.3 : 0.6);
     outline.strokeRect(cardLeft, cardTop, cardW, cardH);
 
+    container.add([shadow, cardBg, sidebar, outline]);
+
     if (stage.locked) {
-      // ── 잠김 상태 ──
-      this.add.text(cx, cy - 14, '🔒', { fontSize: '28px' }).setOrigin(0.5);
-      this.add.text(cx, cy + 18, `${stage.name}  —  준비 중`, {
+      const lockIcon = this.add.text(cx, cy - 14, '🔒', { fontSize: '28px' }).setOrigin(0.5);
+      const lockText = this.add.text(cx, cy + 18, `${stage.name}  —  준비 중`, {
         fontSize: '14px', color: '#555566',
       }).setOrigin(0.5);
+      container.add([lockIcon, lockText]);
       return;
     }
 
-    const L = cardLeft + 16;  // 왼쪽 여백
-    const R = cardLeft + cardW - 16; // 오른쪽 끝
+    const L = cardLeft + 16;
+    const R = cardLeft + cardW - 16;
 
-    // ── Row 1 (cardTop + 26): STAGE 배지 + 맵 이름 ──
+    // Row 1: STAGE 배지 + 이름
     const row1Y = cardTop + 26;
-    this.add.rectangle(L + 32, row1Y, 64, 22, typeColor, 0.9);
-    this.add.text(L + 32, row1Y, `STAGE ${stage.id}`, {
+    const badge = this.add.rectangle(L + 32, row1Y, 64, 22, typeColor, 0.9);
+    const badgeTxt = this.add.text(L + 32, row1Y, `STAGE ${stage.id}`, {
       fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
       padding: { top: 2 },
     }).setOrigin(0.5);
 
-    this.add.text(L + 72, row1Y, stage.name, {
+    const nameTxt = this.add.text(L + 72, row1Y, stage.name, {
       fontSize: '26px', color: '#ffffff', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
       padding: { top: 4 },
     }).setOrigin(0, 0.5);
 
-    // ── Row 2 (cardTop + 56): 영문 지역명 ──
-    this.add.text(L + 72, cardTop + 56, stage.subtitle, {
+    // Row 2: 영문명
+    const subtitleTxt = this.add.text(L + 72, cardTop + 56, stage.subtitle, {
       fontSize: '15px', color: '#aabbdd', fontStyle: 'bold',
     }).setOrigin(0, 0.5);
 
-    // ── 구분선 ──
-    this.add.graphics().lineStyle(1, 0x2a3a50)
+    // 구분선
+    const line = this.add.graphics().lineStyle(1, 0x2a3a50)
       .lineBetween(L, cardTop + 76, R, cardTop + 76);
 
-    // ── Row 3 (cardTop + 97): 출현 타입 라벨 ──
-    this.add.text(L, cardTop + 97, '출현 타입', {
+    // Row 3: 출현 타입 라벨
+    const typeLabel = this.add.text(L, cardTop + 97, '출현 타입', {
       fontSize: '13px', color: '#7788aa',
     }).setOrigin(0, 0.5);
 
-    // ── Row 4 (cardTop + 124): 타입 뱃지 ──
+    // Row 4: 타입 배지들
+    const typeBadges: Phaser.GameObjects.Text[] = [];
     let bx = 0;
     stage.enemyTypes.forEach(t => {
-      const hex = `#${(TYPE_COLORS[t] ?? 0x888888).toString(16).padStart(6, '0')}`;
-      const badge = this.add.text(L + bx, cardTop + 124, `  ${t.toUpperCase()}  `, {
+      const hex   = `#${(TYPE_COLORS[t] ?? 0x888888).toString(16).padStart(6, '0')}`;
+      const tbadge = this.add.text(L + bx, cardTop + 124, `  ${t.toUpperCase()}  `, {
         fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
         backgroundColor: hex,
         padding: { x: 6, y: 4 },
       }).setOrigin(0, 0.5);
-      bx += badge.width + 8;
+      typeBadges.push(tbadge);
+      bx += tbadge.width + 8;
     });
 
-    // ── 포켓몬 미리보기 (오른쪽 세로 중앙) ──
+    // 포켓몬 미리보기
+    const pkmImages: Phaser.GameObjects.Image[] = [];
     const shown = stage.bgPokemon.filter(k => this.textures.exists(k)).slice(0, 2);
     shown.forEach((key, idx) => {
-      this.add.image(R - idx * 56, cy - 4, key)
+      const img = this.add.image(R - idx * 56, cy - 4, key)
         .setDisplaySize(60, 60)
         .setOrigin(1, 0.5)
         .setAlpha(0.55 - idx * 0.15);
+      pkmImages.push(img);
     });
 
-    // ── 호버 / 클릭 ──
+    container.add([badge, badgeTxt, nameTxt, subtitleTxt, line, typeLabel, ...typeBadges, ...pkmImages]);
+
+    // 호버 / 클릭
     cardBg.on('pointerover', () => {
       cardBg.setFillStyle(0x1a2840);
       outline.clear();

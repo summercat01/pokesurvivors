@@ -13,6 +13,7 @@ import {
 import { PASSIVE_ITEMS, getPassiveItem, formatPassiveValue } from '../data/passiveItems';
 import { POKEMON_DATA } from '../data/pokemonData';
 import { applyPermanentUpgrades } from '../data/upgrades';
+import { getStageData, getActiveEnemyPool, getElitePool } from '../data/stages';
 import type { LevelUpOption, PokemonType, PlayerStats } from '../types';
 import { IS_DEV_MODE } from '../main';
 
@@ -108,6 +109,7 @@ export class GameScene extends Phaser.Scene {
   private reachedKillMilestones: Set<number> = new Set();
   private readonly LEVEL_MILESTONES = [5, 10, 20];
   private reachedLevelMilestones: Set<number> = new Set();
+  private stageId = 1;
   private worldW = 0;
   private worldH = 0;
   private bgImage!: Phaser.GameObjects.Image;
@@ -141,7 +143,8 @@ export class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' });
   }
 
-  create(data?: { weaponIndex?: number }) {
+  create(data?: { weaponIndex?: number; stageId?: number }) {
+    this.stageId = data?.stageId ?? 1;
     // ── 재시작 시 상태 완전 초기화 ──
     this.gameTime     = 0;
     this.exp          = 0;
@@ -1825,47 +1828,8 @@ export class GameScene extends Phaser.Scene {
   private spawnEnemy() {
     const { x, y } = this.getSpawnPosition();
 
-    // ── Stage 1 노말 타입 포켓몬 풀 (웨이브별 확장) ──
-    type PoolEntry = { id: string; types: PokemonType[] };
-    const POOL: PoolEntry[] = [
-      // Wave 0+
-      { id: '019', types: ['normal'] },           // 라타타
-      { id: '016', types: ['normal', 'flying'] }, // 구구
-      { id: '052', types: ['normal'] },           // 나옹
-      // Wave 1+
-      ...(this.waveNumber >= 1 ? [
-        { id: '021', types: ['normal', 'flying'] as PokemonType[] }, // 깨비참
-        { id: '039', types: ['normal'] as PokemonType[] },           // 푸린
-      ] : []),
-      // Wave 2+
-      ...(this.waveNumber >= 2 ? [
-        { id: '020', types: ['normal'] as PokemonType[] },           // 라이츄 (라타이트)
-        { id: '017', types: ['normal', 'flying'] as PokemonType[] }, // 피죤
-        { id: '053', types: ['normal'] as PokemonType[] },           // 페르시온
-      ] : []),
-      // Wave 3+
-      ...(this.waveNumber >= 3 ? [
-        { id: '022', types: ['normal', 'flying'] as PokemonType[] }, // 깃털왕관
-        { id: '035', types: ['normal'] as PokemonType[] },           // 삐삐
-        { id: '084', types: ['normal', 'flying'] as PokemonType[] }, // 두두
-      ] : []),
-      // Wave 4+
-      ...(this.waveNumber >= 4 ? [
-        { id: '036', types: ['normal'] as PokemonType[] },           // 픽시
-        { id: '040', types: ['normal'] as PokemonType[] },           // 푸크린
-        { id: '085', types: ['normal', 'flying'] as PokemonType[] }, // 두트리오
-        { id: '133', types: ['normal'] as PokemonType[] },           // 이브이
-      ] : []),
-      // Wave 7+
-      ...(this.waveNumber >= 7 ? [
-        { id: '108', types: ['normal'] as PokemonType[] },           // 내루미
-        { id: '113', types: ['normal'] as PokemonType[] },           // 럭키
-        { id: '128', types: ['normal'] as PokemonType[] },           // 켄타로스
-        { id: '137', types: ['normal'] as PokemonType[] },           // 폴리곤
-      ] : []),
-    ];
-
-    const entry = POOL[Phaser.Math.Between(0, POOL.length - 1)];
+    const pool  = getActiveEnemyPool(this.stageId, this.waveNumber);
+    const entry = pool[Phaser.Math.Between(0, pool.length - 1)];
 
     const enemy = new Enemy(this, x, y, `pokemon_${entry.id}`, {
       hp:           Math.round(60 + this.waveNumber * 22),
@@ -1881,16 +1845,8 @@ export class GameScene extends Phaser.Scene {
 
   private spawnElite() {
     const { x, y } = this.getSpawnPosition();
-    const POOL = [
-      { id: '020', types: ['normal'] as PokemonType[] },
-      { id: '053', types: ['normal'] as PokemonType[] },
-      { id: '036', types: ['normal'] as PokemonType[] },
-      { id: '040', types: ['normal'] as PokemonType[] },
-      { id: '085', types: ['normal', 'flying'] as PokemonType[] },
-      { id: '113', types: ['normal'] as PokemonType[] },
-      { id: '128', types: ['normal'] as PokemonType[] },
-    ];
-    const entry = POOL[Phaser.Math.Between(0, POOL.length - 1)];
+    const pool  = getElitePool(this.stageId);
+    const entry = pool[Phaser.Math.Between(0, pool.length - 1)];
     const elite = new Enemy(this, x, y, `pokemon_${entry.id}`, {
       hp:           Math.round((200 + this.waveNumber * 50) * 1),
       moveSpeed:    Math.min(65 + this.waveNumber * 4, 150),
@@ -1906,18 +1862,17 @@ export class GameScene extends Phaser.Scene {
   private spawnBoss() {
     const { x, y } = this.getSpawnPosition();
 
-    // Wave 10(5분) → 잠만보(143),  Wave 20(10분) → 캥카(115)
-    const isWave10 = this.waveNumber === 10;
-    const bossId   = isWave10 ? '143' : '115';
-    this.currentBossName = isWave10 ? '잠만보' : '캥카';
+    const stage      = getStageData(this.stageId);
+    const bossConfig = this.waveNumber === 10 ? stage.boss10 : stage.boss20;
+    this.currentBossName = bossConfig.name;
 
-    const boss = new Enemy(this, x, y, `pokemon_${bossId}`, {
-      hp:        isWave10 ? 5000 : 10000,
-      moveSpeed: isWave10 ? 35   : 55,
-      exp:       isWave10 ? 60   : 150,
-      isBoss:    true,
-      pokemonTypes: ['normal'],
-      goldValue: isWave10 ? 40   : 100,
+    const boss = new Enemy(this, x, y, `pokemon_${bossConfig.id}`, {
+      hp:           bossConfig.hp,
+      moveSpeed:    bossConfig.moveSpeed,
+      exp:          bossConfig.exp,
+      isBoss:       true,
+      pokemonTypes: bossConfig.types,
+      goldValue:    bossConfig.goldValue,
     });
     this.enemies.add(boss);
     this.cameras.main.ignore(boss);
@@ -1927,7 +1882,7 @@ export class GameScene extends Phaser.Scene {
     this.setBossPanelVisible(true);
 
     this.gameCam.shake(600, 0.015);
-    this.time.delayedCall(300, () => this.showBossAlert(bossId));
+    this.time.delayedCall(300, () => this.showBossAlert(bossConfig.id));
   }
 
   private spawnDarkrai() {

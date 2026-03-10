@@ -54,7 +54,7 @@ export class BootScene extends Phaser.Scene {
       '007': 'squirtle',   '008': 'wartortle',   '009': 'blastoise',
       '025': 'pikachu',    '054': 'psyduck',     '074': 'geodude',
       '041': 'zubat',      '092': 'gastly',      '066': 'machop',
-      // Stage 1 일반 적 (노말 타입)
+      // Stage 1 일반 적 — Gen1 노말
       '016': 'pidgey',     '017': 'pidgeotto',   '018': 'pidgeot',
       '019': 'rattata',    '020': 'raticate',
       '021': 'spearow',    '022': 'fearow',
@@ -69,12 +69,44 @@ export class BootScene extends Phaser.Scene {
       '143': 'snorlax',
       // 다크라이 (15분 사신)
       '491': 'darkrai',
-      // 새 무기 포켓몬 (9개 추가)
+      // 무기 포켓몬
       '015': 'beedrill',  '046': 'paras',     '050': 'diglett',
       '095': 'onix',      '109': 'koffing',   '124': 'jynx',
       '127': 'pinsir',    '443': 'gible',
-      // 악/강철 무기 포켓몬
       '261': 'poochyena', '374': 'beldum',
+      // Stage 1 확장 — Gen2 노말
+      '161': 'sentret',   '162': 'furret',
+      '175': 'togepi',    '176': 'togetic',
+      '203': 'girafarig', '216': 'teddiursa', '217': 'ursaring',
+      '234': 'stantler',  '241': 'miltank',
+      // Stage 1 확장 — Gen3 노말
+      '263': 'zigzagoon', '264': 'linoone',
+      '300': 'skitty',    '301': 'delcatty',
+      '427': 'buneary',   '428': 'lopunny',
+      '431': 'glameow',   '432': 'purugly',
+      // Stage 1 확장 — Gen4 노말
+      '399': 'bidoof',    '400': 'bibarel',
+      // Stage 2 — Gen1 벌레
+      '010': 'caterpie',  '011': 'metapod',   '012': 'butterfree',
+      '013': 'weedle',    '014': 'kakuna',
+      '047': 'parasect',  '048': 'venonat',   '049': 'venomoth',
+      '123': 'scyther',
+      // Stage 2 — Gen2 벌레
+      '165': 'ledyba',    '166': 'ledian',
+      '167': 'spinarak',  '168': 'ariados',
+      '193': 'yanma',
+      '204': 'pineco',    '205': 'forretress',
+      '213': 'shuckle',   '214': 'heracross',
+      // Stage 2 — Gen3 벌레
+      '265': 'wurmple',   '266': 'silcoon',   '267': 'beautifly',
+      '268': 'cascoon',   '269': 'dustox',
+      '283': 'surskit',   '284': 'masquerain',
+      '290': 'nincada',   '291': 'ninjask',
+      '313': 'volbeat',   '314': 'illumise',
+      // Stage 2 — Gen4 벌레
+      '401': 'kricketot', '402': 'kricketune',
+      '412': 'burmy',     '413': 'wormadam',  '414': 'mothim',
+      '415': 'combee',    '416': 'vespiquen',
     };
     Object.entries(POKEMON_NAMES).forEach(([id, name]) => {
       this.load.image(`pokemon_${id}`, `/pokemon_gen4_sprites/${id}_${name}.png`);
