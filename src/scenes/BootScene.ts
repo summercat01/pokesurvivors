@@ -58,6 +58,17 @@ export class BootScene extends Phaser.Scene {
       '032': 'nidoran-m',  '063': 'abra',        '172': 'pichu',
       '174': 'igglybuff',  '220': 'swinub',      '246': 'larvitar',
       '396': 'starly',
+      // 진화형 (1차) — 기존 목록에 없는 것만
+      '033': 'nidorino',
+      '064': 'kadabra',    '067': 'machoke',
+      '075': 'graveler',   '093': 'haunter',     '221': 'piloswine',
+      '247': 'pupitar',
+      '397': 'staravia',   '444': 'gabite',      '262': 'mightyena',
+      // 진화형 (2차 / 최종) — 기존 목록에 없는 것만
+      '034': 'nidoking',   '065': 'alakazam',    '068': 'machamp',
+      '076': 'golem',      '094': 'gengar',      '248': 'tyranitar',
+      '376': 'metagross',  '398': 'staraptor',   '445': 'garchomp',
+      '473': 'mamoswine',
       // Stage 6 — Gen1~4 전기
       '026': 'raichu',     '081': 'magnemite',  '082': 'magneton',
       '100': 'voltorb',    '101': 'electrode',  '125': 'electabuzz',

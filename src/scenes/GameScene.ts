@@ -3,11 +3,12 @@ import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
 import { ExpOrb } from '../entities/ExpOrb';
+import { PokeballItem, type PokeballType } from '../entities/PokeballItem';
 import {
   TYPE_COLORS,
   ALL_WEAPONS, MAX_WEAPON_LEVEL, MAX_WEAPON_SLOTS, MAX_PASSIVE_SLOTS,
   getWeaponByPokemonId, getUpgradedWeapon, getUpgradeDescription,
-  isSuperEffective,
+  isSuperEffective, WEAPON_EVOLUTIONS, buildEvolvedWeapon,
   type WeaponConfig,
 } from '../data/weapons';
 import { PASSIVE_ITEMS, getPassiveItem, formatPassiveValue } from '../data/passiveItems';
@@ -92,6 +93,9 @@ export class GameScene extends Phaser.Scene {
   private eliteTimer: number = 0;
   private readonly MAX_ENEMIES = 80;
   private darkraiSpawned: boolean = false;
+  isGodMode: boolean = false;
+  private currentBossWave: number = 0;         // 10 or 20
+  private pokeballs: PokeballItem[] = [];
 
   // 보스 패턴
   private bossPatternTimer: number = 0;
@@ -341,10 +345,15 @@ export class GameScene extends Phaser.Scene {
 
     // 게임오버 체크 (부활 처리 포함)
     if (this.player.isDead()) {
-      if (this.player.stats.revives > 0) {
+      if (this.isGodMode) {
+        this.player.heal(this.player.stats.maxHp);
+      } else if (this.player.stats.revives > 0) {
         this.player.stats.revives--;
         this.player.heal(Math.floor(this.player.stats.maxHp * 0.4));
         this.showReviveEffect();
+      } else if (this.darkraiSpawned) {
+        this.showDarkraiDeathOverlay();
+        return;
       } else {
         this.triggerGameOver();
         return;
@@ -369,8 +378,9 @@ export class GameScene extends Phaser.Scene {
     this.applySeparation();
     this.renderEnemyHpBars();
     this.updateCombo(delta);
+    this.checkPokeballPickup();
 
-    if (this.waveTimer >= 30000) {
+    if (!this.darkraiSpawned && this.waveTimer >= 30000) {
       this.waveTimer -= 30000;
       this.waveNumber++;
       this.spawnWave();
@@ -378,22 +388,25 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.flash(300, 255, 255, 255, false);
     }
 
-    // 꾸준한 일반 몹 스폰
-    this.spawnTimer += delta;
-    const spawnInterval = Math.max(600, 2800 - this.waveNumber * 120);
-    if (this.spawnTimer >= spawnInterval) {
-      this.spawnTimer -= spawnInterval;
-      const activeCount = this.enemies.getChildren().filter(e => (e as Enemy).active).length;
-      if (activeCount < this.MAX_ENEMIES) {
-        this.spawnEnemy();
+    // 꾸준한 일반 몹 스폰 (다크라이 페이즈 이후 중단)
+    if (!this.darkraiSpawned) {
+      this.spawnTimer += delta;
+      const spawnInterval = Math.max(600, 2800 - this.waveNumber * 120);
+      if (this.spawnTimer >= spawnInterval) {
+        this.spawnTimer -= spawnInterval;
+        const activeCount = this.enemies.getChildren().filter(e => (e as Enemy).active).length;
+        if (activeCount < this.MAX_ENEMIES) {
+          this.spawnEnemy();
+        }
       }
-    }
 
-    // 엘리트 1분에 1마리
-    this.eliteTimer += delta;
-    if (this.eliteTimer >= 60000 && this.waveNumber >= 1) {
-      this.eliteTimer -= 60000;
-      this.spawnElite();
+      // 엘리트 1분에 1마리 (보스 웨이브 제외)
+      const isBossActive = this.waveNumber === 10 || this.waveNumber === 20;
+      this.eliteTimer += delta;
+      if (this.eliteTimer >= 60000 && this.waveNumber >= 1 && !isBossActive) {
+        this.eliteTimer -= 60000;
+        this.spawnElite();
+      }
     }
 
     this.updateUI();
@@ -908,12 +921,13 @@ export class GameScene extends Phaser.Scene {
 
   // ── 낙하 공격 ──
   private fireFalling(weapon: WeaponConfig) {
-    const count    = weapon.fallingCount  ?? 3;
-    const radius   = weapon.fallingRadius ?? 50;
-    const damage   = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
-    const color    = TYPE_COLORS[weapon.type] ?? 0xffffff;
-    const range    = 260;
-    const bounds   = this.physics.world.bounds;
+    const count      = weapon.fallingCount  ?? 3;
+    const radius     = weapon.fallingRadius ?? 50;
+    const damage     = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    const color      = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const range      = 260;
+    const bounds     = this.physics.world.bounds;
+    const sourceName = weapon.name;
 
     for (let i = 0; i < count; i++) {
       const tx = Phaser.Math.Clamp(
@@ -939,12 +953,14 @@ export class GameScene extends Phaser.Scene {
         flash.fillStyle(color, 0.85);
         flash.fillCircle(tx, ty, radius);
         this.time.delayedCall(140, () => flash.destroy());
+        this.currentDamageSource = sourceName;
         (this.enemies.getChildren() as Enemy[]).forEach(e => {
           if (!e.active || e.isDead()) return;
           if (Phaser.Math.Distance.Between(tx, ty, e.x, e.y) <= radius + 16) {
             this.applyDamageToEnemy(e, damage, weapon.type, { x: tx, y: ty });
           }
         });
+        this.currentDamageSource = '';
       });
     }
   }
@@ -1049,11 +1065,12 @@ export class GameScene extends Phaser.Scene {
 
   // ── 함정 설치 ──
   private fireTrap(weapon: WeaponConfig) {
-    const count   = weapon.projectileCount ?? 2;
-    const radius  = (weapon.meleeRange ?? 45) * (this.player.stats.projectileRange ?? 1);
-    const damage  = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
-    const color   = TYPE_COLORS[weapon.type] ?? 0xffffff;
-    const lifeMs  = 4500;
+    const count      = weapon.projectileCount ?? 2;
+    const radius     = (weapon.meleeRange ?? 45) * (this.player.stats.projectileRange ?? 1);
+    const damage     = Math.floor(weapon.damage * this.player.stats.attackPower / 10);
+    const color      = TYPE_COLORS[weapon.type] ?? 0xffffff;
+    const lifeMs     = 4500;
+    const sourceName = weapon.name;
     for (let i = 0; i < count; i++) {
       const a  = Math.random() * Math.PI * 2;
       const d  = Phaser.Math.Between(40, 130);
@@ -1089,12 +1106,14 @@ export class GameScene extends Phaser.Scene {
               flash.fillStyle(color, 0.88);
               flash.fillCircle(tx, ty, radius * 1.6);
               this.time.delayedCall(150, () => flash.destroy());
+              this.currentDamageSource = sourceName;
               (this.enemies.getChildren() as Enemy[]).forEach(e2 => {
                 if (!e2.active || e2.isDead()) return;
                 if (Phaser.Math.Distance.Between(tx, ty, e2.x, e2.y) <= radius + 20) {
                   this.applyDamageToEnemy(e2, damage, weapon.type, { x: tx, y: ty });
                 }
               });
+              this.currentDamageSource = '';
             }
           });
         },
@@ -1262,7 +1281,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     });
 
-    // 엘리트 처치 알림
+    // 엘리트 처치 알림 + 몬스터볼 드롭
     if (enemy.isElite) {
       const eliteTxt = this.add.text(enemy.x, enemy.y - 30, '★ ELITE ★', {
         fontSize: '14px', color: '#ffdd00', fontStyle: 'bold',
@@ -1275,10 +1294,13 @@ export class GameScene extends Phaser.Scene {
         duration: 800,
         onComplete: () => eliteTxt.destroy(),
       });
+      this.spawnPokeball(enemy.x, enemy.y, 'pokeball', 1);
     }
 
     this.killCount++;
-    this.gold += Math.ceil(enemy.goldValue * this.player.stats.goldGain);
+    if (!enemy.isElite && !enemy.isBoss) {
+      this.gold += Math.ceil(enemy.goldValue * this.player.stats.goldGain);
+    }
     this.addComboKill();
     // 처치 마일스톤
     for (const m of this.KILL_MILESTONES) {
@@ -1299,13 +1321,369 @@ export class GameScene extends Phaser.Scene {
       this.setBossPanelVisible(false);
       this.bossArrow.setVisible(false);
       this.showBossDefeated();
+      // 5분 보스 → 슈퍼볼 3개, 10분 보스 → 하이퍼볼 5개
+      if (this.currentBossWave === 10) {
+        this.spawnPokeball(enemy.x, enemy.y, 'superball', 3);
+      } else if (this.currentBossWave === 20) {
+        this.spawnPokeball(enemy.x, enemy.y, 'hyperball', 5);
+      }
     }
 
-    // 경험치 구슬 스폰
-    const orb = new ExpOrb(this, enemy.x, enemy.y, enemy.exp);
-    this.cameras.main.ignore(orb);
+    // 경험치 구슬 스폰 (엘리트/보스는 몬스터볼로 대체)
+    if (!enemy.isElite && !enemy.isBoss) {
+      const orb = new ExpOrb(this, enemy.x, enemy.y, enemy.exp);
+      this.cameras.main.ignore(orb);
+    }
 
     enemy.destroy();
+  }
+
+  // ===== 몬스터볼 =====
+  private spawnPokeball(x: number, y: number, type: PokeballType, count: number) {
+    for (let i = 0; i < count; i++) {
+      const ox = x + Phaser.Math.Between(-40, 40);
+      const oy = y + Phaser.Math.Between(-40, 40);
+      const ball = new PokeballItem(this, ox, oy, type);
+      this.cameras.main.ignore(ball);
+      this.pokeballs.push(ball);
+    }
+  }
+
+  private checkPokeballPickup() {
+    const px = this.player.x;
+    const py = this.player.y;
+    for (let i = this.pokeballs.length - 1; i >= 0; i--) {
+      const ball = this.pokeballs[i];
+      if (!ball.active || !ball.canCollect()) continue;
+      if (Phaser.Math.Distance.Between(px, py, ball.x, ball.y) <= 40) {
+        ball.collect();
+        this.applyPokeballEffect(ball.ballType, ball.x, ball.y);
+        ball.destroy();
+        this.pokeballs.splice(i, 1);
+      }
+    }
+  }
+
+  /** 진화 가능한 무기 확인 후 진화 처리. 진화 발생 시 true 반환 */
+  private checkAndApplyEvolution(x: number, y: number): boolean {
+    const evolvable: Array<{ idx: number; evo: typeof WEAPON_EVOLUTIONS[number] }> = [];
+
+    this.weapons.forEach((weapon, idx) => {
+      const lv = this.weaponLevels[idx] ?? 1;
+      if (lv < MAX_WEAPON_LEVEL) return;
+      const evo = WEAPON_EVOLUTIONS[weapon.pokemonId];
+      if (!evo) return;
+      const stoneLv = this.equippedPassives.get(weapon.type) ?? 0;
+      if (stoneLv < evo.requireStoneLv) return;
+      evolvable.push({ idx, evo });
+    });
+
+    if (evolvable.length === 0) return false;
+
+    // 진화 적용 (한 번에 하나 — 다음 볼에서 나머지 진화)
+    const { idx, evo } = evolvable[0];
+    const base = this.weapons[idx];
+    const evolvedBase = buildEvolvedWeapon(base, evo);
+    this.weapons[idx]      = getUpgradedWeapon(evolvedBase, 1);
+    this.weaponLevels[idx] = 1;
+
+    this.updateUI();
+    this.updateSlotUI();
+    this.showEvolutionEffect(x, y, base.name, evo.toName, base.pokemonId, evo.toId);
+    return true;
+  }
+
+  /** 진화 연출 — 게임 일시정지 + 터치하여 계속 */
+  private showEvolutionEffect(
+    x: number, y: number,
+    fromName: string, toName: string,
+    fromId: number, toId: number,
+  ) {
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const CX = W / 2;
+    const CY = H / 2;
+
+    // 일시정지
+    this.isPaused = true;
+    this.physics.pause();
+
+    // 강한 플래시 + 카메라 진동
+    this.cameras.main.flash(700, 255, 255, 200, false);
+    this.gameCam.shake(500, 0.022);
+
+    // 반투명 어두운 배경
+    const overlay = this.add.rectangle(CX, CY, W, H, 0x000011, 0.85)
+      .setDepth(60).setScrollFactor(0);
+
+    // 빛나는 원 (가운데)
+    const glow = this.add.circle(CX, CY - 20, 88, 0xffffaa, 0.13)
+      .setDepth(61).setScrollFactor(0);
+    this.tweens.add({
+      targets: glow, scaleX: 1.45, scaleY: 1.45, alpha: 0.04,
+      duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+
+    // "✦ 진 화 ! ✦" 제목
+    const titleTxt = this.add.text(CX, CY - 120, '✦  진  화  !  ✦', {
+      fontSize: '24px', color: '#ffee00', fontStyle: 'bold',
+      stroke: '#664400', strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(62).setScrollFactor(0).setScale(0);
+    this.tweens.add({ targets: titleTxt, scaleX: 1, scaleY: 1, duration: 450, ease: 'Back.easeOut' });
+
+    // 포켓몬 이름
+    const nameTxt = this.add.text(CX, CY + 52, `${fromName}  →  ${toName}`, {
+      fontSize: '14px', color: '#aaddff', fontStyle: 'bold',
+      stroke: '#001133', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(62).setScrollFactor(0);
+
+    // 화살표 (가운데)
+    const arrow = this.add.text(CX, CY - 20, '▶', {
+      fontSize: '22px', color: '#ffdd00',
+    }).setOrigin(0.5).setDepth(62).setScrollFactor(0);
+    this.tweens.add({
+      targets: arrow, x: CX + 6,
+      duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+
+    const allItems: Phaser.GameObjects.GameObject[] = [overlay, glow, titleTxt, nameTxt, arrow];
+
+    // fromImg (희미하게, 서서히 사라짐)
+    const fromKey = `pokemon_${String(fromId).padStart(3, '0')}`;
+    if (this.textures.exists(fromKey)) {
+      const fromImg = this.add.image(CX - 72, CY - 20, fromKey)
+        .setDisplaySize(68, 68).setDepth(62).setScrollFactor(0).setAlpha(0.45);
+      this.tweens.add({ targets: fromImg, alpha: 0, duration: 700, delay: 300 });
+      allItems.push(fromImg);
+    }
+
+    // toImg (등장 애니)
+    const toKey = `pokemon_${String(toId).padStart(3, '0')}`;
+    if (this.textures.exists(toKey)) {
+      const toImg = this.add.image(CX + 72, CY - 20, toKey)
+        .setDisplaySize(84, 84).setDepth(62).setScrollFactor(0).setScale(0).setAlpha(0);
+      this.tweens.add({
+        targets: toImg, scaleX: 1, scaleY: 1, alpha: 1,
+        duration: 550, delay: 450, ease: 'Back.easeOut',
+      });
+      allItems.push(toImg);
+    }
+
+    // "터치하여 계속" 버튼
+    const btnY = CY + 96;
+    const btnBg = this.add.rectangle(CX, btnY, 190, 36, 0x113355)
+      .setDepth(62).setScrollFactor(0).setInteractive({ useHandCursor: true })
+      .setStrokeStyle(1, 0x4488bb);
+    const btnTxt = this.add.text(CX, btnY, '터치하여 계속', {
+      fontSize: '13px', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(63).setScrollFactor(0);
+    allItems.push(btnBg, btnTxt);
+
+    btnBg.on('pointerover', () => btnBg.setFillStyle(0x1a4a77));
+    btnBg.on('pointerout',  () => btnBg.setFillStyle(0x113355));
+    btnBg.on('pointerdown', () => {
+      allItems.forEach(o => o.destroy());
+      this.isPaused = false;
+      this.physics.resume();
+    });
+
+    // 수집 위치 파티클
+    const burst = this.add.circle(x, y, 30, 0xffffff, 0.9).setDepth(30);
+    this.tweens.add({
+      targets: burst, scale: 5, alpha: 0, duration: 600,
+      onComplete: () => burst.destroy(),
+    });
+  }
+
+  private applyPokeballEffect(type: PokeballType, x: number, y: number) {
+    // ── 진화 체크: 조건 충족 무기 있으면 진화 우선 ──
+    const evolved = this.checkAndApplyEvolution(x, y);
+    if (evolved) return;
+
+    const upgradeCount = type === 'hyperball' ? 5 : type === 'superball' ? 3 : 1;
+    const goldBonus    = type === 'hyperball' ? 60 : type === 'superball' ? 30 : 10;
+    const ballLabel    = type === 'hyperball' ? '하이퍼볼' : type === 'superball' ? '슈퍼볼' : '몬스터볼';
+    const ballColor    = type === 'hyperball' ? 0xddaa00 : type === 'superball' ? 0x2244ee : 0xee2222;
+    const ballColorHex = type === 'hyperball' ? '#ddaa00' : type === 'superball' ? '#5577ff' : '#ff5555';
+
+    // 강화 가능한 무기/패시브 목록 수집
+    const upgradable: Array<{ upgrade: () => string }> = [];
+
+    this.weapons.forEach((w, idx) => {
+      const curLv = this.weaponLevels[idx] ?? 1;
+      if (curLv < 5) {
+        upgradable.push({
+          upgrade: () => {
+            const newLv = curLv + 1;
+            this.weapons[idx]      = getUpgradedWeapon(w, newLv);
+            this.weaponLevels[idx] = newLv;
+            return `${w.name}  Lv${newLv}`;
+          },
+        });
+      }
+    });
+
+    this.equippedPassives.forEach((lv, pType) => {
+      if (lv < 5) {
+        const item = getPassiveItem(pType);
+        if (item) {
+          upgradable.push({
+            upgrade: () => {
+              const newLv = lv + 1;
+              this.equippedPassives.set(pType, newLv);
+              this.applyPassiveBonus(pType, lv, newLv);
+              return `${item.name}  Lv${newLv}`;
+            },
+          });
+        }
+      }
+    });
+
+    // 랜덤 셔플 후 upgradeCount만큼 강화
+    Phaser.Utils.Array.Shuffle(upgradable);
+    const picked = upgradable.slice(0, upgradeCount);
+    const obtainedLabels = picked.map(u => u.upgrade());
+
+    // 골드 지급
+    this.gold += goldBonus;
+    this.updateUI();
+    this.updateSlotUI();
+
+    // 수집 파티클
+    const burst = this.add.circle(x, y, 20, ballColor, 0.8).setDepth(25);
+    this.tweens.add({
+      targets: burst, scale: 3, alpha: 0, duration: 350,
+      onComplete: () => burst.destroy(),
+    });
+
+    // ── 결과 패널 (게임 일시정지) ──
+    this.isPaused = true;
+    this.physics.pause();
+
+    const W   = this.scale.width;
+    const H   = this.scale.height;
+    const CX  = W / 2;
+    const CY  = H / 2;
+    const rowH = 26;
+    const panelH = 76 + obtainedLabels.length * rowH + 46;
+    const panelW = 250;
+
+    const overlay = this.add.rectangle(CX, CY, W, H, 0x000000, 0.55)
+      .setDepth(60).setScrollFactor(0);
+
+    const panel = this.add.rectangle(CX, CY - 10, panelW, panelH, 0x001133, 0.96)
+      .setDepth(61).setScrollFactor(0).setStrokeStyle(2, ballColor);
+
+    const titleTxt = this.add.text(CX, CY - panelH / 2 + 20, `✦ ${ballLabel} 획득! ✦`, {
+      fontSize: '15px', color: ballColorHex, fontStyle: 'bold',
+      stroke: '#000033', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(62).setScrollFactor(0);
+
+    const allItems: Phaser.GameObjects.GameObject[] = [overlay, panel, titleTxt];
+
+    const listY0 = CY - panelH / 2 + 50;
+    if (obtainedLabels.length === 0) {
+      const maxTxt = this.add.text(CX, listY0, '이미 최대 레벨!', {
+        fontSize: '13px', color: '#888888',
+      }).setOrigin(0.5).setDepth(62).setScrollFactor(0);
+      allItems.push(maxTxt);
+    } else {
+      obtainedLabels.forEach((lbl, i) => {
+        const txt = this.add.text(CX, listY0 + i * rowH, `▸ ${lbl}`, {
+          fontSize: '13px', color: '#aaddff', fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(62).setScrollFactor(0);
+        allItems.push(txt);
+      });
+    }
+
+    const goldTxt = this.add.text(CX, listY0 + obtainedLabels.length * rowH, `+ ${goldBonus} G`, {
+      fontSize: '13px', color: '#ffdd44', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(62).setScrollFactor(0);
+    allItems.push(goldTxt);
+
+    // "터치하여 계속" 버튼
+    const btnY = CY + panelH / 2 - 20;
+    const btnBg = this.add.rectangle(CX, btnY, panelW - 20, 32, 0x223355)
+      .setDepth(62).setScrollFactor(0).setInteractive({ useHandCursor: true });
+    const btnTxt = this.add.text(CX, btnY, '터치하여 계속', {
+      fontSize: '13px', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(63).setScrollFactor(0);
+    allItems.push(btnBg, btnTxt);
+
+    btnBg.on('pointerover', () => btnBg.setFillStyle(0x335577));
+    btnBg.on('pointerout',  () => btnBg.setFillStyle(0x223355));
+    btnBg.on('pointerdown', () => {
+      allItems.forEach(o => o.destroy());
+      this.isPaused = false;
+      this.physics.resume();
+    });
+  }
+
+  // ===== 다크라이 페이즈 사망 오버레이 =====
+  private showDarkraiDeathOverlay() {
+    this.isGameOver = true;
+    this.physics.pause();
+
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const CX = W / 2;
+    const CY = H / 2;
+
+    // 반투명 배경
+    const overlay = this.add.rectangle(CX, CY, W, H, 0x000000, 0.75).setDepth(200);
+    this.cameras.main.ignore(overlay);
+
+    // 텍스트
+    const titleTxt = this.add.text(CX, CY - 110, '당신은 쓰러졌습니다', {
+      fontSize: '20px', color: '#ff4444', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(201);
+    this.cameras.main.ignore(titleTxt);
+
+    const hasRevive = this.player.stats.revives > 0;
+
+    // 부활 버튼
+    const reviveBg = this.add.rectangle(CX, CY - 30, 200, 50, hasRevive ? 0x226633 : 0x333333).setDepth(201);
+    this.cameras.main.ignore(reviveBg);
+    const reviveLabel = hasRevive
+      ? `부활 (남은 횟수: ${this.player.stats.revives})`
+      : '부활 불가';
+    const reviveTxt = this.add.text(CX, CY - 30, reviveLabel, {
+      fontSize: '15px', color: hasRevive ? '#88ffaa' : '#666666', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(202);
+    this.cameras.main.ignore(reviveTxt);
+
+    if (hasRevive) {
+      reviveBg.setInteractive({ useHandCursor: true });
+      reviveBg.on('pointerover', () => reviveBg.setFillStyle(0x33aa55));
+      reviveBg.on('pointerout',  () => reviveBg.setFillStyle(0x226633));
+      reviveBg.on('pointerdown', () => {
+        this.player.stats.revives--;
+        this.player.heal(Math.floor(this.player.stats.maxHp * 0.4));
+        overlay.destroy(); titleTxt.destroy();
+        reviveBg.destroy(); reviveTxt.destroy();
+        quitBg.destroy(); quitTxt.destroy();
+        this.isGameOver = false;
+        this.physics.resume();
+        this.showReviveEffect();
+      });
+    }
+
+    // 종료 버튼
+    const quitBg = this.add.rectangle(CX, CY + 40, 200, 50, 0x442222).setDepth(201)
+      .setInteractive({ useHandCursor: true });
+    this.cameras.main.ignore(quitBg);
+    const quitTxt = this.add.text(CX, CY + 40, '종료', {
+      fontSize: '15px', color: '#ffaaaa', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(202);
+    this.cameras.main.ignore(quitTxt);
+
+    quitBg.on('pointerover', () => quitBg.setFillStyle(0x773333));
+    quitBg.on('pointerout',  () => quitBg.setFillStyle(0x442222));
+    quitBg.on('pointerdown', () => {
+      this.isGameOver = false; // triggerGameOver가 내부에서 true로 재설정
+      this.triggerGameOver();
+    });
   }
 
   // ===== 게임오버 =====
@@ -1812,9 +2190,10 @@ export class GameScene extends Phaser.Scene {
       this.time.delayedCall(i * 160, () => this.spawnEnemy());
     }
 
-    // 10웨이브(10분) → 스테이지별 보스, 20웨이브(20분) → 스테이지별 보스
+    // 10웨이브(5분) → 스테이지별 보스, 20웨이브(10분) → 스테이지별 보스
     if (this.waveNumber === 10 || this.waveNumber === 20) {
-      this.time.delayedCall(1500, () => this.spawnBoss());
+      const capturedWave = this.waveNumber;
+      this.time.delayedCall(1500, () => this.spawnBoss(capturedWave));
     }
   }
 
@@ -1875,11 +2254,13 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.ignore(elite);
   }
 
-  private spawnBoss() {
+  private spawnBoss(capturedWave?: number) {
     const { x, y } = this.getSpawnPosition();
 
     const stage      = getStageData(this.stageId);
-    const bossConfig = this.waveNumber === 10 ? stage.boss10 : stage.boss20;
+    const wave       = capturedWave ?? this.waveNumber;
+    const bossConfig = wave === 10 ? stage.boss10 : stage.boss20;
+    this.currentBossWave = wave;
     this.currentBossName = bossConfig.name;
 
     const boss = new Enemy(this, x, y, `pokemon_${bossConfig.id}`, {
@@ -2499,6 +2880,10 @@ export class GameScene extends Phaser.Scene {
 
   // ===== 일시정지 UI =====
   // ===== 개발자 모드 API (DevScene에서 호출) =====
+  devToggleGodMode(): boolean {
+    this.isGodMode = !this.isGodMode;
+    return this.isGodMode;
+  }
   devAddTime() {
     this.gameTime  += 60_000;
     this.waveTimer += 60_000;
@@ -2979,7 +3364,11 @@ export class GameScene extends Phaser.Scene {
       const barColor = ratio < 0.3 ? 0xff6600 : ratio < 0.6 ? 0xdd8800 : 0xee2222;
       this.bossHpBar.setFillStyle(barColor);
       this.bossHpNameText.setText(this.currentBossName);
-      this.bossHpNumText.setText(`${this.currentBoss.hp.toLocaleString()} / ${this.currentBoss.maxHp.toLocaleString()}`);
+      this.bossHpNumText.setText(
+        this.darkraiSpawned
+          ? '??? / ???'
+          : `${this.currentBoss.hp.toLocaleString()} / ${this.currentBoss.maxHp.toLocaleString()}`
+      );
       this.updateBossArrow();
     } else {
       this.bossArrow.setVisible(false);

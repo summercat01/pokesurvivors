@@ -2,6 +2,51 @@ import Phaser from 'phaser';
 import { getCurrentUser, getNickname, signOut } from '../lib/auth';
 import { loadUserRecord } from '../lib/userDB';
 
+// ── 패치 노트 ──
+interface PatchEntry { version: string; date: string; changes: string[] }
+const PATCH_NOTES: PatchEntry[] = [
+  {
+    version: 'v0.4.0', date: '2026-03-11',
+    changes: [
+      '전체 무기 범위 50% 너프 조정',
+      '독 장판(니드런♂ 계열) Lv1 범위 상향',
+      '오박사 가이드 내용 리뉴얼',
+      '버전 배지 추가 및 패치 노트 기능 구현',
+    ],
+  },
+  {
+    version: 'v0.3.0', date: '2026-03-04',
+    changes: [
+      '진화 시스템 추가 — 무기 Lv5 + 같은 타입 돌 보유 시 진화',
+      '몬스터볼 시스템 — 엘리트/보스 처치 시 몬스터볼 드롭',
+      '몬스터볼 획득 시 일시정지 & 획득 결과 패널 표시',
+      '다크라이 HP ??? 표시 / 15분 이후 적 스폰 중단',
+      '보스 웨이브(5분·10분) 중 엘리트 스폰 제거',
+      '개발자 모드 무적 ON/OFF 버튼 추가',
+    ],
+  },
+  {
+    version: 'v0.2.0', date: '2026-02-10',
+    changes: [
+      '스테이지 2~6 추가 (벌레·풀·불꽃·물·전기)',
+      '17종 타입 무기 및 패시브 아이템(타입 돌) 완성',
+      '영구 업그레이드 상점 8종',
+      '보스 전용 패턴 추가 (잠만보·캥카)',
+      '딥상어동 버프 / 개무소 너프',
+      '타입 상성 1.5배 데미지 적용',
+    ],
+  },
+  {
+    version: 'v0.1.0', date: '2026-01-01',
+    changes: [
+      '포켓몬 서바이버즈 최초 출시',
+      '스테이지 1 (노말 타입) 구현',
+      '기본 무기·패시브 아이템·레벨업 선택지 시스템',
+      '5분 / 10분 / 15분 보스 기본 구조',
+    ],
+  },
+];
+
 // 배경에 돌아다닐 포켓몬 스프라이트 키 목록 (17개 무기 포켓몬)
 const BG_POKEMON = [
   'pokemon_174', // 푸푸린 (노말)
@@ -149,15 +194,17 @@ export class TitleScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(10);
 
-    // ── 버전 배지 (영문 서브타이틀 오른쪽 옆) ──
+    // ── 버전 배지 (클릭 시 패치노트) ──
     const badgeX = this.scale.width - 50;
     const badgeY = 240;
-    this.add.rectangle(badgeX, badgeY, 40, 18, 0x3377cc).setDepth(10);
+    const badgeBg = this.add.rectangle(badgeX, badgeY, 48, 18, 0x3377cc)
+      .setDepth(10).setInteractive({ useHandCursor: true });
     this.add.text(badgeX, badgeY, `v${__APP_VERSION__}`, {
-      fontSize: '11px',
-      color: '#ffffff',
-      fontStyle: 'bold',
+      fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(11);
+    badgeBg.on('pointerover', () => badgeBg.setFillStyle(0x5599ee));
+    badgeBg.on('pointerout',  () => badgeBg.setFillStyle(0x3377cc));
+    badgeBg.on('pointerdown', () => this.showPatchNotes());
 
     // ── 트레이너 이미지 ──
     if (this.textures.exists('trainer')) {
@@ -271,6 +318,85 @@ export class TitleScene extends Phaser.Scene {
       this.time.delayedCall(80, onClick);
     });
     bg.on('pointerup', () => bg.setFillStyle(0xd8d8c8));
+  }
+
+  // ─────────────────────────────────────────────
+  // 패치 노트 모달
+  // ─────────────────────────────────────────────
+  private showPatchNotes() {
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const CX = W / 2;
+    const D  = 80;
+
+    const allItems: Phaser.GameObjects.GameObject[] = [];
+    const close = () => allItems.forEach(o => o.destroy());
+
+    // 반투명 배경
+    const dimBg = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.78)
+      .setDepth(D).setInteractive();
+    allItems.push(dimBg);
+
+    // 패널
+    const PANEL_W = W - 28;
+    const PANEL_H = H - 100;
+    const PANEL_Y = H / 2 + 10;
+    const panel = this.add.rectangle(CX, PANEL_Y, PANEL_W, PANEL_H, 0x0d1a2e, 0.97)
+      .setDepth(D + 1).setStrokeStyle(2, 0x3377cc);
+    allItems.push(panel);
+
+    // 타이틀
+    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + 22, '패치 노트', {
+      fontSize: '16px', color: '#88bbff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(D + 2);
+    allItems.push(titleTxt);
+
+    // 구분선
+    const divLine = this.add.graphics()
+      .lineStyle(1, 0x3377cc, 0.5)
+      .lineBetween(CX - PANEL_W / 2 + 12, PANEL_Y - PANEL_H / 2 + 40,
+                   CX + PANEL_W / 2 - 12, PANEL_Y - PANEL_H / 2 + 40)
+      .setDepth(D + 2);
+    allItems.push(divLine);
+
+    // 닫기 버튼
+    const closeBg = this.add.rectangle(CX + PANEL_W / 2 - 18, PANEL_Y - PANEL_H / 2 + 18, 28, 28, 0x223355)
+      .setDepth(D + 2).setInteractive({ useHandCursor: true });
+    const closeTxt = this.add.text(CX + PANEL_W / 2 - 18, PANEL_Y - PANEL_H / 2 + 18, '✕', {
+      fontSize: '14px', color: '#aabbcc',
+    }).setOrigin(0.5).setDepth(D + 3);
+    closeBg.on('pointerover', () => { closeBg.setFillStyle(0x334466); closeTxt.setColor('#ffffff'); });
+    closeBg.on('pointerout',  () => { closeBg.setFillStyle(0x223355); closeTxt.setColor('#aabbcc'); });
+    closeBg.on('pointerdown', close);
+    allItems.push(closeBg, closeTxt);
+
+    // 패치 내용
+    let curY = PANEL_Y - PANEL_H / 2 + 54;
+    const LEFT = CX - PANEL_W / 2 + 18;
+
+    PATCH_NOTES.forEach(entry => {
+      // 버전 헤더
+      const verTxt = this.add.text(LEFT, curY, entry.version, {
+        fontSize: '14px', color: '#55aaff', fontStyle: 'bold',
+      }).setDepth(D + 2);
+      const dateTxt = this.add.text(CX + PANEL_W / 2 - 18, curY, entry.date, {
+        fontSize: '11px', color: '#556677',
+      }).setOrigin(1, 0).setDepth(D + 2);
+      allItems.push(verTxt, dateTxt);
+      curY += 20;
+
+      // 변경 항목
+      entry.changes.forEach(change => {
+        const line = this.add.text(LEFT + 8, curY, `• ${change}`, {
+          fontSize: '12px', color: '#99bbcc',
+          wordWrap: { width: PANEL_W - 36 },
+        }).setDepth(D + 2);
+        allItems.push(line);
+        curY += line.height + 2;
+      });
+
+      curY += 12; // 버전 간 여백
+    });
   }
 
   // ─────────────────────────────────────────────

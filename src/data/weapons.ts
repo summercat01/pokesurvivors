@@ -6,6 +6,7 @@ export interface WeaponConfig {
   pokemonId: number;
   name: string;
   type: PokemonType;
+  basePokemonId?: number;  // 진화 전 원본 pokemonId (진화 무기에만 설정)
   description?: string;   // 무기 행동 설명
   damage: number;
   cooldown: number;       // 밀리초
@@ -70,7 +71,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_grass',
     spreadAngle: 0,
     behavior: 'melee',
-    meleeRange: 90,
+    meleeRange: 45,
     meleeAngle: Math.PI * 0.75,
   },
   {
@@ -86,8 +87,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_fire',
     spreadAngle: 0,
     behavior: 'rotating_beam',
-    beamWidth: 26,
-    beamLength: 170,
+    beamWidth: 13,
+    beamLength: 85,
     rotateSpeed: 1.2,
   },
   {
@@ -118,7 +119,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     spreadAngle: 0,
     behavior: 'lightning',
     lightningChainCount: 3,
-    lightningRange: 150,
+    lightningRange: 75,
     chainCountPerLevel: 0,
   },
   {
@@ -134,7 +135,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_psychic',
     spreadAngle: 0,
     behavior: 'orbit',
-    orbitRadius: 80,
+    orbitRadius: 40,
     orbitSpeed: 2.2,
     orbitCount: 1,
   },
@@ -151,7 +152,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_rock',
     spreadAngle: 0,
     behavior: 'explosion',
-    explosionRadius: 65,
+    explosionRadius: 33,
   },
   {
     pokemonId: 396,
@@ -195,7 +196,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_fighting',
     spreadAngle: 0,
     behavior: 'nova',
-    meleeRange: 120,
+    meleeRange: 60,
   },
   {
     pokemonId: 74,
@@ -210,7 +211,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_ground',
     spreadAngle: 0,
     behavior: 'melee',
-    meleeRange: 110,
+    meleeRange: 55,
     meleeAngle: Math.PI * 2,
   },
   {
@@ -218,15 +219,15 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     name: '개무소',
     type: 'bug',
     description: '포자 함정을 주변에 설치합니다.\n적이 밟으면 폭발하며 범위 피해를 줍니다.',
-    damage: 38,
-    cooldown: 3000,
+    damage: 28,
+    cooldown: 3800,
     projectileSpeed: 0,
     projectileCount: 2,
     duration: 0,
     textureKey: 'proj_bug',
     spreadAngle: 0,
     behavior: 'trap',
-    meleeRange: 45,
+    meleeRange: 20,
   },
   {
     pokemonId: 220,
@@ -242,15 +243,15 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     spreadAngle: 0,
     behavior: 'falling',
     fallingCount: 3,
-    fallingRadius: 35,
+    fallingRadius: 18,
   },
   {
     pokemonId: 443,
     name: '딥상어동',
     type: 'dragon',
     description: '용의 파동이 적을 연쇄로 튕기며\n각 지점마다 범위 폭발을 일으킵니다.',
-    damage: 20,
-    cooldown: 2000,
+    damage: 28,
+    cooldown: 1800,
     projectileSpeed: 0,
     projectileCount: 1,
     duration: 0,
@@ -258,9 +259,9 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     spreadAngle: 0,
     pierce: 0,
     behavior: 'lightning',
-    lightningChainCount: 1,
-    lightningRange: 150,
-    explosionRadius: 50,
+    lightningChainCount: 2,
+    lightningRange: 90,
+    explosionRadius: 30,
     chainCountPerLevel: 1,
   },
   {
@@ -276,7 +277,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_poison',
     spreadAngle: 0,
     behavior: 'zone',
-    zoneRadius: 75,
+    zoneRadius: 60,
     zoneDamageInterval: 600,
   },
   {
@@ -306,8 +307,8 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_steel',
     spreadAngle: 0,
     behavior: 'beam',
-    beamWidth: 70,
-    beamLength: 110,
+    beamWidth: 35,
+    beamLength: 55,
     knockbackMult: 3.0,
   },
   {
@@ -323,7 +324,7 @@ export const ALL_WEAPONS: WeaponConfig[] = [
     textureKey: 'proj_dark',
     spreadAngle: 0,
     behavior: 'boomerang',
-    meleeRange: 140,
+    meleeRange: 70,
   },
 ];
 
@@ -444,3 +445,78 @@ export const TYPE_COLORS: Record<PokemonType, number> = {
   dark:     0x443344,
   steel:    0xaaaacc,
 };
+
+// ===== 진화 시스템 =====
+export interface WeaponEvolution {
+  fromId: number;          // 현재 pokemonId
+  toId: number;            // 진화 후 pokemonId
+  toName: string;          // 진화 후 이름
+  requireStoneLv: number;  // 필요 돌 레벨 (1차=1, 2차=5)
+  damageMult: number;      // 원본 Lv1 대비 배율
+  cooldownMult: number;    // 원본 Lv1 대비 배율
+}
+
+/** pokemonId → 진화 정보 맵 */
+export const WEAPON_EVOLUTIONS: Record<number, WeaponEvolution> = {};
+const _evo = (
+  fromId: number, toId: number, toName: string,
+  requireStoneLv: number, damageMult: number, cooldownMult: number,
+) => { WEAPON_EVOLUTIONS[fromId] = { fromId, toId, toName, requireStoneLv, damageMult, cooldownMult }; };
+
+// ── 1차 진화 (해당 타입 돌 Lv1+) ──
+// 진화 직후 Lv1이 원본 Lv5(×3.0)보다 강하도록: damageMult 3.5, cooldownMult 0.60
+_evo(174, 39,  '푸린',     1, 3.5, 0.60);  // 노말: 푸푸린→푸린
+_evo(4,   5,   '리자드',   1, 3.5, 0.60);  // 불꽃: 파이리→리자드
+_evo(393, 394, '팽태자',   1, 3.5, 0.60);  // 물:   팽도리→팽태자
+_evo(252, 253, '나무돌이', 1, 3.5, 0.60);  // 풀:   나무지기→나무돌이
+_evo(265, 266, '실쿤',     1, 3.5, 0.60);  // 벌레: 개무소→실쿤
+_evo(172, 25,  '피카츄',   1, 3.5, 0.60);  // 전기: 피츄→피카츄
+_evo(66,  67,  '근육몬',   1, 3.5, 0.60);  // 격투: 알통몬→근육몬
+_evo(246, 247, '데기라스', 1, 3.5, 0.60);  // 바위: 애버라스→데기라스
+_evo(74,  75,  '데구리',   1, 3.5, 0.60);  // 땅:   꼬마돌→데구리
+_evo(63,  64,  '윤겔라',   1, 3.5, 0.60);  // 에스퍼: 캐이시→윤겔라
+_evo(220, 221, '메꾸리',   1, 3.5, 0.60);  // 얼음: 꾸꾸리→메꾸리
+_evo(32,  33,  '니드리노', 1, 3.5, 0.60);  // 독:   니드런♂→니드리노
+_evo(396, 397, '찌르버드', 1, 3.5, 0.60);  // 비행: 찌르꼬→찌르버드
+_evo(92,  93,  '고우스트', 1, 3.5, 0.60);  // 고스트: 고오스→고우스트
+_evo(374, 375, '메탕구',   1, 3.5, 0.60);  // 강철: 메탕→메탕구
+_evo(443, 444, '한바이트', 1, 3.5, 0.60);  // 드래곤: 딥상어동→한바이트
+_evo(261, 262, '그라에나', 1, 3.5, 0.60);  // 악:   포치에나→그라에나
+
+// ── 2차 진화 (해당 타입 돌 Lv5) ──
+// 1차 Lv5 = origBase × 10.5, 진화 직후가 더 강하도록: damageMult 11.5, cooldownMult 0.36
+_evo(39,  40,  '푸크린',    5, 11.5, 0.36);  // 노말: 푸린→푸크린
+_evo(5,   6,   '리자몽',    5, 11.5, 0.36);  // 불꽃: 리자드→리자몽
+_evo(394, 395, '엠페르트',  5, 11.5, 0.36);  // 물:   팽태자→엠페르트
+_evo(253, 254, '나무킹',    5, 11.5, 0.36);  // 풀:   나무돌이→나무킹
+_evo(266, 267, '뷰티플라이',5, 11.5, 0.36);  // 벌레: 실쿤→뷰티플라이
+_evo(25,  26,  '라이츄',    5, 11.5, 0.36);  // 전기: 피카츄→라이츄
+_evo(67,  68,  '괴력몬',    5, 11.5, 0.36);  // 격투: 근육몬→괴력몬
+_evo(247, 248, '마기라스',  5, 11.5, 0.36);  // 바위: 데기라스→마기라스
+_evo(75,  76,  '딱구리',    5, 11.5, 0.36);  // 땅:   데구리→딱구리
+_evo(64,  65,  '후딘',      5, 11.5, 0.36);  // 에스퍼: 윤겔라→후딘
+_evo(221, 473, '맘모꾸리',  5, 11.5, 0.36);  // 얼음: 메꾸리→맘모꾸리
+_evo(33,  34,  '니드킹',    5, 11.5, 0.36);  // 독:   니드리노→니드킹
+_evo(397, 398, '찌르호크',  5, 11.5, 0.36);  // 비행: 찌르버드→찌르호크
+_evo(93,  94,  '팬텀',      5, 11.5, 0.36);  // 고스트: 고우스트→팬텀
+_evo(375, 376, '메타그로스', 5, 11.5, 0.36); // 강철: 메탕구→메타그로스
+_evo(444, 445, '한카리아스', 5, 11.5, 0.36); // 드래곤: 한바이트→한카리아스
+// 그라에나는 최종형 — 2차 진화 없음
+
+/** 진화 무기 생성: 원본 Lv1 스탯 기반으로 배율 적용, Lv1로 초기화 */
+export function buildEvolvedWeapon(
+  currentWeapon: WeaponConfig,
+  evo: WeaponEvolution,
+): WeaponConfig {
+  // 원본 Lv1 스탯: basePokemonId가 있으면 그것, 없으면 currentWeapon 자체
+  const origId = currentWeapon.basePokemonId ?? currentWeapon.pokemonId;
+  const base   = ALL_WEAPONS.find(w => w.pokemonId === origId) ?? currentWeapon;
+  return {
+    ...base,
+    pokemonId:    evo.toId,
+    name:         evo.toName,
+    damage:       Math.round(base.damage * evo.damageMult),
+    cooldown:     Math.round(base.cooldown * evo.cooldownMult),
+    basePokemonId: origId,
+  };
+}
