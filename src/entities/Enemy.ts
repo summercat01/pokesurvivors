@@ -56,6 +56,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.setScale(this.isBoss ? 1.6 : this.isElite ? 1.0 : 0.75);
     this.setCollideWorldBounds(true);
+    this.setData('uid', this.uid);
 
     // 엘리트 → 황금 틴트
     if (this.isElite) {

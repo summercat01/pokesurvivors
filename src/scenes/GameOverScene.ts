@@ -31,7 +31,7 @@ export class GameOverScene extends Phaser.Scene {
     const newKillRecord = killCount   >= bestKills && killCount   > 0;
     const newTimeRecord = Math.floor(surviveTime) >= bestTime    && surviveTime > 0;
 
-    const totalSec = Math.floor(surviveTime / 1000);
+    const totalSec = Math.floor((surviveTime ?? 0) / 1000);
     const min = Math.floor(totalSec / 60).toString().padStart(2, '0');
     const sec = (totalSec % 60).toString().padStart(2, '0');
     const timeStr = `${min}:${sec}`;

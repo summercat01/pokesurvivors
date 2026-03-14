@@ -178,6 +178,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponCooldowns = [];
     this.weaponLevels    = [];
     this.equippedPassives = new Map();
+    this.pokeballs    = [];
 
     // orbit/zone 그래픽 정리 (재시작 시)
     this.orbitOrbs?.forEach(s => s.graphics.forEach(g => g.destroy()));
@@ -323,8 +324,15 @@ export class GameScene extends Phaser.Scene {
       this.sound.play('bgm_game', { loop: true, volume: 0.45 });
     }
 
-    // 씬 종료 시 BGM 정지
-    this.events.once('shutdown', () => this.sound.stopByKey('bgm_game'));
+    // 씬 종료 시 정리
+    this.events.once('shutdown', () => {
+      this.sound.stopByKey('bgm_game');
+      this.orbitOrbs?.forEach(s => s.graphics.forEach(g => g.destroy()));
+      this.zoneGraphics?.forEach(s => s.graphic.destroy());
+      this.rotatingBeamGfx?.forEach(g => g.destroy());
+      this.bossIndicatorGfx?.destroy();
+      this.pokeballs = [];
+    });
   }
 
   update(_time: number, delta: number) {
@@ -1696,6 +1704,8 @@ export class GameScene extends Phaser.Scene {
     this.bossArrow.setVisible(false);
     if (IS_DEV_MODE) this.scene.stop('DevScene');
 
+    // 진행 중인 모든 Tween 정리 후 플레이어 사망 애니메이션 실행
+    this.tweens.killAll();
     this.player.setTint(0xff0000);
     this.tweens.add({ targets: this.player, alpha: 0, duration: 600 });
 
@@ -2223,10 +2233,11 @@ export class GameScene extends Phaser.Scene {
 
     const pool  = getActiveEnemyPool(this.stageId, this.waveNumber);
     const entry = pool[Phaser.Math.Between(0, pool.length - 1)];
-    const diff  = getStageData(this.stageId).difficulty;
+    // baseHp 미설정 시 minWave 기반 임시값 (스테이지 재설계 전 폴백)
+    const hp = entry.baseHp ?? (30 + entry.minWave * 40);
 
     const enemy = new Enemy(this, x, y, `pokemon_${entry.id}`, {
-      hp:           Math.round((60 + this.waveNumber * 22) * diff),
+      hp,
       moveSpeed:    Math.min(55 + this.waveNumber * 5, 160),
       exp:          2 + this.waveNumber,
       pokemonTypes: entry.types,
@@ -2241,9 +2252,9 @@ export class GameScene extends Phaser.Scene {
     const { x, y } = this.getSpawnPosition();
     const pool  = getElitePool(this.stageId);
     const entry = pool[Phaser.Math.Between(0, pool.length - 1)];
-    const diff  = getStageData(this.stageId).difficulty;
+    const baseHp = entry.baseHp ?? 200;
     const elite = new Enemy(this, x, y, `pokemon_${entry.id}`, {
-      hp:           Math.round((200 + this.waveNumber * 50) * diff),
+      hp:           baseHp * 5,
       moveSpeed:    Math.min(65 + this.waveNumber * 4, 150),
       exp:          10 + this.waveNumber * 2,
       pokemonTypes: entry.types,

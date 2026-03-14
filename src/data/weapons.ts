@@ -376,11 +376,11 @@ export function getUpgradeDescription(base: WeaponConfig, fromLevel: number, toL
     case 'lightning':
       return `${dmg} / ${cd} / 체인 ${before.lightningChainCount ?? 3}→${after.lightningChainCount ?? 3}회`;
     case 'melee':
-      return `${dmg} / ${cd} / 범위 ${before.meleeRange ?? 120}→${after.meleeRange ?? 120}px`;
+      return `${dmg} / ${cd} / 범위 ${before.meleeRange ?? 45}→${after.meleeRange ?? 45}px`;
     case 'zone':
-      return `${dmg} / ${cd} / 반경 ${before.zoneRadius ?? 70}→${after.zoneRadius ?? 70}px`;
+      return `${dmg} / ${cd} / 반경 ${before.zoneRadius ?? 60}→${after.zoneRadius ?? 60}px`;
     case 'beam':
-      return `${dmg} / ${cd} / 길이 ${before.beamLength ?? 270}→${after.beamLength ?? 270}px`;
+      return `${dmg} / ${cd} / 길이 ${before.beamLength ?? 55}→${after.beamLength ?? 55}px`;
     case 'rotating_beam':
       return `${dmg} / 회전속도 ${before.rotateSpeed?.toFixed(1) ?? 1.2}→${after.rotateSpeed?.toFixed(1) ?? 1.2}rad/s`;
     case 'explosion':
@@ -390,9 +390,9 @@ export function getUpgradeDescription(base: WeaponConfig, fromLevel: number, toL
     case 'falling':
       return `${dmg} / ${cd} / 낙하 ${before.fallingCount ?? 3}→${after.fallingCount ?? 3}개`;
     case 'nova':
-      return `${dmg} / ${cd} / 반경 ${before.meleeRange ?? 170}→${after.meleeRange ?? 170}px`;
+      return `${dmg} / ${cd} / 반경 ${before.meleeRange ?? 60}→${after.meleeRange ?? 60}px`;
     case 'boomerang':
-      return `${dmg} / ${cd} / 사거리 ${before.meleeRange ?? 200}→${after.meleeRange ?? 200}px`;
+      return `${dmg} / ${cd} / 사거리 ${before.meleeRange ?? 70}→${after.meleeRange ?? 70}px`;
     case 'scatter':
       return `${dmg} / ${cd} / ${before.projectileCount ?? 8}→${after.projectileCount ?? 8}발`;
     case 'trap':

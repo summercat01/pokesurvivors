@@ -34,7 +34,7 @@ export class DevScene extends Phaser.Scene {
     // ── 패널 ──
     const PANEL_W = 188;
     const ROWS    = Math.ceil(ALL_WEAPONS.length / 2);
-    const PANEL_H = 72 + ROWS * 22 + 8;      // 헤더+액션 + 무기그리드 + 여백
+    const PANEL_H = 98 + ROWS * 22 + 8;      // 헤더+액션2줄 + 무기그리드 + 여백
     const PX      = W - PANEL_W / 2 - 3;
     const PY      = TY - 14 - PANEL_H / 2;   // 토글 버튼 위에 붙여서
     const PL      = PX - PANEL_W / 2 + 6;    // 왼쪽 패딩
@@ -77,8 +77,24 @@ export class DevScene extends Phaser.Scene {
     makeBtn(PL + BTN_W * 1.5 + 1.5, '❤ 풀피',  0x337733, () => this.game_().devHealPlayer());
     makeBtn(PL + BTN_W * 2.5 + 3,   '⬆ LvUP', 0x775522, () => this.game_().devLevelUp());
 
+    // 무적 토글 버튼 (두 번째 줄)
+    const ACT_Y2  = ACT_Y + 26;
+    const { bg: godBg, txt: godTxt } = makeBtn(
+      PL + BTN_W,
+      '🛡 무적 OFF',
+      0x554422,
+      () => {
+        const on = this.game_().devToggleGodMode();
+        (godTxt as unknown as Phaser.GameObjects.Text).setText(on ? '🛡 무적 ON' : '🛡 무적 OFF');
+        (godBg  as unknown as Phaser.GameObjects.Rectangle).setFillStyle(on ? 0xaa6600 : 0x554422, 0.85);
+      }
+    );
+    // 버튼을 두 번째 줄 위치로 이동
+    (godBg  as unknown as Phaser.GameObjects.Rectangle).setY(ACT_Y2);
+    (godTxt as unknown as Phaser.GameObjects.Text).setY(ACT_Y2);
+
     // ── 무기 추가 섹션 ──
-    const WH_Y = ACT_Y + 18;
+    const WH_Y = ACT_Y2 + 18;
     add(this.add.text(PX, WH_Y, '── 무기 추가 ──', {
       fontSize: '10px', color: '#888899',
     }).setOrigin(0.5).setDepth(D + 1) as any);
