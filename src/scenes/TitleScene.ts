@@ -165,8 +165,10 @@ export class TitleScene extends Phaser.Scene {
   // 타이틀 로고
   // ─────────────────────────────────────────────
   private createLogo() {
+    const H = this.scale.height;
+    const W = this.scale.width;
     // ── "포켓몬" 소제목 ──
-    this.add.text(this.scale.width / 2, 120, '포켓몬', {
+    this.add.text(W / 2, Math.round(H * 0.142), '포켓몬', {
       fontSize: '22px',
       color: '#ffe040',
       fontStyle: 'bold',
@@ -176,7 +178,8 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(10);
 
     // ── 메인 타이틀 ──
-    const title = this.add.text(this.scale.width / 2, 178, '서바이버즈', {
+    const titleY = Math.round(H * 0.211);
+    const title = this.add.text(W / 2, titleY, '서바이버즈', {
       fontSize: '52px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -186,17 +189,18 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(10);
 
     // 타이틀 등장 애니메이션 (아래서 올라오며 페이드인)
-    title.setAlpha(0).setY(210);
+    title.setAlpha(0).setY(titleY + 32);
     this.tweens.add({
       targets: title,
-      y: 178,
+      y: titleY,
       alpha: 1,
       duration: 700,
       ease: 'Back.easeOut',
     });
 
     // ── 영문 서브타이틀 ──
-    this.add.text(this.scale.width / 2, 240, 'Pokémon Survivors', {
+    const subtitleY = Math.round(H * 0.285);
+    this.add.text(W / 2, subtitleY, 'Pokémon Survivors', {
       fontSize: '15px',
       color: '#cceeaa',
       stroke: '#102010',
@@ -204,8 +208,8 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(10);
 
     // ── 버전 배지 (클릭 시 패치노트) ──
-    const badgeX = this.scale.width - 50;
-    const badgeY = 240;
+    const badgeX = W - 50;
+    const badgeY = subtitleY;
     const badgeBg = this.add.rectangle(badgeX, badgeY, 48, 18, 0x3377cc)
       .setDepth(10).setInteractive({ useHandCursor: true });
     this.add.text(badgeX, badgeY, `v${__APP_VERSION__}`, {
@@ -217,7 +221,7 @@ export class TitleScene extends Phaser.Scene {
 
     // ── 트레이너 이미지 ──
     if (this.textures.exists('trainer')) {
-      const trainer = this.add.image(this.scale.width / 2, 330, 'trainer')
+      const trainer = this.add.image(W / 2, Math.round(H * 0.391), 'trainer')
         .setOrigin(0.5, 1)
         .setDepth(8);
 
@@ -236,11 +240,13 @@ export class TitleScene extends Phaser.Scene {
   // 메뉴 버튼
   // ─────────────────────────────────────────────
   private createButtons() {
-    const BTN_W  = 280;
+    const H      = this.scale.height;
+    const W      = this.scale.width;
+    const BTN_W  = Math.min(280, W - 60);
     const BTN_H  = 54;
-    const BTN_CX = this.scale.width / 2;
-    const BTN_Y0 = 490;
-    const BTN_GAP = 68;
+    const BTN_CX = W / 2;
+    const BTN_Y0 = Math.round(H * 0.58);   // 490 at H=844
+    const BTN_GAP = Math.round(H * 0.08);  // 68 at H=844
 
     this.createDPButton(
       BTN_CX, BTN_Y0,
