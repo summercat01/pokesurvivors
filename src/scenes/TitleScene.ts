@@ -686,8 +686,8 @@ export class TitleScene extends Phaser.Scene {
     bookBg.on('pointerout',  () => { bookBg.setFillStyle(0x224422); bookTxt.setColor('#88eeaa'); });
     bookBg.on('pointerdown', () => this.scene.launch('OakGuideScene'));
 
-    // ── 도감 버튼 (가이드 버튼 왼쪽) ──
-    const dexX  = W - 92 - 8 - 42; // 가이드 왼쪽 끝(W-92)에서 8px 간격 + 반폭(42)
+    // ── 도감 버튼 (화면 왼쪽, 가이드와 대칭) ──
+    const dexX  = 50; // 가이드(W-50)의 좌우 대칭
     const dexBg = this.add.rectangle(dexX, guideY, 84, 30, 0x222244, 0.9)
       .setDepth(12).setInteractive({ useHandCursor: true });
     this.add.graphics().lineStyle(1, 0x4444aa, 0.8)
