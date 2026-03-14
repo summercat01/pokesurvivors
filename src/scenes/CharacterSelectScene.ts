@@ -188,17 +188,24 @@ export class CharacterSelectScene extends Phaser.Scene {
     sideDiv.lineStyle(1, typeColor, 0.5);
     sideDiv.lineBetween(stripeRight, cardTop, stripeRight, cardBot);
 
+    // 삼각 영역 클리핑 마스크 (컨테이너 내부 → 스크롤과 함께 이동)
+    const stripeMaskGfx = this.add.graphics();
+    stripeMaskGfx.fillStyle(0xffffff);
+    stripeMaskGfx.fillTriangle(cardLeft, cardTop, stripeRight, cardTop, cardLeft, cardBot);
+    stripeMaskGfx.setVisible(false);
+    const triMask = stripeMaskGfx.createGeometryMask();
+
     const trainerCX  = cardLeft + STRIPE_W * 0.32;
     const trainerCY  = cardTop  + cardH   * 0.38;
     const trainerImg = this.textures.exists('trainer')
-      ? this.add.image(trainerCX, trainerCY, 'trainer').setDisplaySize(80, 94)
+      ? this.add.image(trainerCX, trainerCY, 'trainer').setDisplaySize(80, 94).setMask(triMask)
       : null;
 
     const pokeCX  = cardLeft + STRIPE_W * 0.68;
     const pokeCY  = cardTop  + cardH   * 0.70;
     const sprKey  = `pokemon_${String(weapon.pokemonId).padStart(3, '0')}`;
     const pokeImg = this.textures.exists(sprKey)
-      ? this.add.image(pokeCX, pokeCY, sprKey).setDisplaySize(64, 64)
+      ? this.add.image(pokeCX, pokeCY, sprKey).setDisplaySize(64, 64).setMask(triMask)
       : null;
 
     const textX = stripeRight + 16;
@@ -232,7 +239,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     const items: Phaser.GameObjects.GameObject[] = [
       shadow, cardBg, outline, bgTop, bgBot, diagLine, sideDiv,
-      nameTxt, subtitleTxt, divLine, partnerLabel, weaponNameTxt, typeBadge,
+      stripeMaskGfx, nameTxt, subtitleTxt, divLine, partnerLabel, weaponNameTxt, typeBadge,
     ];
     if (trainerImg) items.push(trainerImg);
     if (pokeImg)    items.push(pokeImg);
