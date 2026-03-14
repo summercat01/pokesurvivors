@@ -10,7 +10,7 @@ import { pushLocalToCloud } from '../lib/userDB';
 // ── 카드 그리드 상수 ──
 const COLS      = 4;
 const CARD_W    = 83;
-const CARD_H    = 142;
+const CARD_H    = 108;
 const GAP_X     = 6;
 const GAP_Y     = 6;
 const GRID_TOP  = 76;
@@ -107,18 +107,18 @@ export class UpgradeScene extends Phaser.Scene {
       this.add.rectangle(cx - CARD_W / 2 + 5, cy, 6, CARD_H - 4, upg.color);
 
       // ─ 아이콘 영역 ─
-      const iconY = cy - 22;
-      this.add.circle(cx + 4, iconY, 26, upg.color, isMaxed ? 0.5 : 0.85);
+      const iconY = cy - 14;
+      this.add.circle(cx + 4, iconY, 20, upg.color, isMaxed ? 0.5 : 0.85);
       if (isMaxed) {
-        this.add.circle(cx + 4, iconY, 22, 0xd4aa30, 0.6);
+        this.add.circle(cx + 4, iconY, 16, 0xd4aa30, 0.6);
       }
       this.add.text(cx + 4, iconY, upg.icon, {
-        fontSize: '20px', color: '#ffffff', fontStyle: 'bold',
+        fontSize: '18px', color: '#ffffff', fontStyle: 'bold',
       }).setOrigin(0.5);
 
       // ─ 카드 이름 ─
-      this.add.text(cx + 4, cy + 22, upg.name, {
-        fontSize: '11px', color: '#181810', fontStyle: 'bold',
+      this.add.text(cx + 4, cy + 14, upg.name, {
+        fontSize: '10px', color: '#181810', fontStyle: 'bold',
         wordWrap: { width: CARD_W - 14 },
         align: 'center',
       }).setOrigin(0.5, 0);

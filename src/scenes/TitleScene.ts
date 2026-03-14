@@ -362,7 +362,23 @@ export class TitleScene extends Phaser.Scene {
     const D  = 80;
 
     const allItems: Phaser.GameObjects.GameObject[] = [];
-    const close = () => allItems.forEach(o => o.destroy());
+
+    // 스크롤 상태 (휠/드래그 핸들러에서 참조)
+    let scrollY   = 0;
+    let maxScroll = 0;
+    let contentContainer: Phaser.GameObjects.Container | null = null;
+
+    const applyScroll = (newY: number) => {
+      scrollY = Phaser.Math.Clamp(newY, 0, maxScroll);
+      contentContainer?.setY(-scrollY);
+    };
+
+    const onWheel = (...args: unknown[]) => applyScroll(scrollY + (args[3] as number) * 0.5);
+
+    const close = () => {
+      this.input.off('wheel', onWheel);
+      allItems.forEach(o => o.destroy());
+    };
 
     // 반투명 배경
     const dimBg = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.78)
@@ -370,9 +386,10 @@ export class TitleScene extends Phaser.Scene {
     allItems.push(dimBg);
 
     // 패널
-    const PANEL_W = W - 28;
-    const PANEL_H = H - 100;
-    const PANEL_Y = H / 2 + 10;
+    const PANEL_W  = W - 28;
+    const PANEL_H  = H - 100;
+    const PANEL_Y  = H / 2 + 10;
+    const HEADER_H = 46;
     const panel = this.add.rectangle(CX, PANEL_Y, PANEL_W, PANEL_H, 0x0d1a2e, 0.97)
       .setDepth(D + 1).setStrokeStyle(2, 0x3377cc);
     allItems.push(panel);
@@ -402,32 +419,60 @@ export class TitleScene extends Phaser.Scene {
     closeBg.on('pointerdown', close);
     allItems.push(closeBg, closeTxt);
 
-    // 패치 내용
-    let curY = PANEL_Y - PANEL_H / 2 + 54;
-    const LEFT = CX - PANEL_W / 2 + 18;
+    // ── 스크롤 콘텐츠 영역 ──────────────────────────
+    const CONTENT_TOP = PANEL_Y - PANEL_H / 2 + HEADER_H;
+    const CONTENT_BOT = PANEL_Y + PANEL_H / 2 - 8;
+    const CONTENT_H   = CONTENT_BOT - CONTENT_TOP;
+    const LEFT        = CX - PANEL_W / 2 + 18;
 
+    // 마스크 (패널 내부만 보이게)
+    const maskShape = this.add.graphics().setDepth(D + 2);
+    maskShape.fillStyle(0xffffff);
+    maskShape.fillRect(CX - PANEL_W / 2 + 4, CONTENT_TOP, PANEL_W - 8, CONTENT_H);
+    const mask = maskShape.createGeometryMask();
+    allItems.push(maskShape);
+
+    // 콘텐츠 컨테이너
+    const container = this.add.container(0, 0).setDepth(D + 2);
+    container.setMask(mask);
+    allItems.push(container);
+
+    let localY = 0;
     PATCH_NOTES.forEach(entry => {
-      // 버전 헤더
-      const verTxt = this.add.text(LEFT, curY, entry.version, {
+      const verTxt = this.add.text(LEFT, CONTENT_TOP + localY, entry.version, {
         fontSize: '14px', color: '#55aaff', fontStyle: 'bold',
-      }).setDepth(D + 2);
-      const dateTxt = this.add.text(CX + PANEL_W / 2 - 18, curY, entry.date, {
+      });
+      const dateTxt = this.add.text(CX + PANEL_W / 2 - 18, CONTENT_TOP + localY, entry.date, {
         fontSize: '11px', color: '#556677',
-      }).setOrigin(1, 0).setDepth(D + 2);
-      allItems.push(verTxt, dateTxt);
-      curY += 20;
+      }).setOrigin(1, 0);
+      container.add([verTxt, dateTxt]);
+      localY += 20;
 
-      // 변경 항목
       entry.changes.forEach(change => {
-        const line = this.add.text(LEFT + 8, curY, `• ${change}`, {
+        const line = this.add.text(LEFT + 8, CONTENT_TOP + localY, `• ${change}`, {
           fontSize: '12px', color: '#99bbcc',
           wordWrap: { width: PANEL_W - 36 },
-        }).setDepth(D + 2);
-        allItems.push(line);
-        curY += line.height + 2;
+        });
+        container.add(line);
+        localY += line.height + 2;
       });
+      localY += 12;
+    });
 
-      curY += 12; // 버전 간 여백
+    maxScroll        = Math.max(0, localY - CONTENT_H);
+    contentContainer = container;
+
+    // 마우스 휠
+    this.input.on('wheel', onWheel);
+
+    // 터치 드래그
+    let dragStartY = 0, dragStartScroll = 0;
+    const scrollArea = this.add.rectangle(CX, CONTENT_TOP + CONTENT_H / 2, PANEL_W - 8, CONTENT_H, 0xffffff, 0)
+      .setDepth(D + 5).setInteractive();
+    allItems.push(scrollArea);
+    scrollArea.on('pointerdown', (ptr: Phaser.Input.Pointer) => { dragStartY = ptr.y; dragStartScroll = scrollY; });
+    scrollArea.on('pointermove', (ptr: Phaser.Input.Pointer) => {
+      if (ptr.isDown) applyScroll(dragStartScroll + (dragStartY - ptr.y));
     });
   }
 
