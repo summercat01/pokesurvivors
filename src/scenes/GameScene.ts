@@ -3319,6 +3319,9 @@ export class GameScene extends Phaser.Scene {
         }
       }
     });
+
+    // 오버레이는 gameCam에서 무시 (cameras.main에서만 렌더링)
+    this.gameCam.ignore(this.pauseOverlayItems);
   }
 
   private pauseGame() {
