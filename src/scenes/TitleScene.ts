@@ -425,10 +425,11 @@ export class TitleScene extends Phaser.Scene {
     const CONTENT_H   = CONTENT_BOT - CONTENT_TOP;
     const LEFT        = CX - PANEL_W / 2 + 18;
 
-    // 마스크 (패널 내부만 보이게)
-    const maskShape = this.add.graphics().setDepth(D + 2);
+    // 마스크 (패널 내부만 보이게 — 마스크 오브젝트 자체는 숨김)
+    const maskShape = this.add.graphics();
     maskShape.fillStyle(0xffffff);
     maskShape.fillRect(CX - PANEL_W / 2 + 4, CONTENT_TOP, PANEL_W - 8, CONTENT_H);
+    maskShape.setVisible(false);
     const mask = maskShape.createGeometryMask();
     allItems.push(maskShape);
 
