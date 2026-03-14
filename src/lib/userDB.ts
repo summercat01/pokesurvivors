@@ -7,6 +7,7 @@ export interface UserRecord {
   best_wave:  number;
   best_kills: number;
   best_time:  number;
+  best_stage: number;
   upgrades:   Record<string, number>;
 }
 
@@ -23,6 +24,7 @@ export async function saveUserRecord(userId: string, record: Partial<UserRecord>
     p_best_wave:  record.best_wave  ?? 0,
     p_best_kills: record.best_kills ?? 0,
     p_best_time:  record.best_time  ?? 0,
+    p_best_stage: record.best_stage ?? 0,
     p_upgrades:   record.upgrades   ?? {},
   });
   if (error) console.error('[userDB] save error:', error.message);
@@ -53,6 +55,7 @@ export async function overwriteLocalWithCloud(userId: string) {
   localStorage.setItem('bestWave',   String(cloud?.best_wave  ?? 0));
   localStorage.setItem('bestKills',  String(cloud?.best_kills ?? 0));
   localStorage.setItem('bestTime',   String(cloud?.best_time  ?? 0));
+  localStorage.setItem('bestStage',  String(cloud?.best_stage ?? 0));
 }
 
 /** 로그인 시: 클라우드↔로컬 병합 (더 높은 값 유지) */
@@ -63,6 +66,7 @@ export async function syncLocalWithCloud(userId: string) {
   const localWave  = parseInt(localStorage.getItem('bestWave')   ?? '0', 10);
   const localKills = parseInt(localStorage.getItem('bestKills')  ?? '0', 10);
   const localTime  = parseInt(localStorage.getItem('bestTime')   ?? '0', 10);
+  const localStage = parseInt(localStorage.getItem('bestStage')  ?? '0', 10);
 
   const cloudUpgrades = cloud?.upgrades ?? {};
   applyCloudUpgrades(cloudUpgrades);
@@ -73,6 +77,7 @@ export async function syncLocalWithCloud(userId: string) {
     best_wave:  Math.max(localWave,  cloud?.best_wave  ?? 0),
     best_kills: Math.max(localKills, cloud?.best_kills ?? 0),
     best_time:  Math.max(localTime,  cloud?.best_time  ?? 0),
+    best_stage: Math.max(localStage, cloud?.best_stage ?? 0),
     upgrades:   getLocalUpgrades(),
   };
 
@@ -80,6 +85,7 @@ export async function syncLocalWithCloud(userId: string) {
   localStorage.setItem('bestWave',   String(merged.best_wave));
   localStorage.setItem('bestKills',  String(merged.best_kills));
   localStorage.setItem('bestTime',   String(merged.best_time));
+  localStorage.setItem('bestStage',  String(merged.best_stage));
 
   await saveUserRecord(userId, merged);
   return merged;
@@ -92,6 +98,7 @@ export async function pushLocalToCloud(userId: string) {
     best_wave:  parseInt(localStorage.getItem('bestWave')   ?? '0', 10),
     best_kills: parseInt(localStorage.getItem('bestKills')  ?? '0', 10),
     best_time:  parseInt(localStorage.getItem('bestTime')   ?? '0', 10),
+    best_stage: parseInt(localStorage.getItem('bestStage')  ?? '0', 10),
     upgrades:   getLocalUpgrades(),
   });
 }

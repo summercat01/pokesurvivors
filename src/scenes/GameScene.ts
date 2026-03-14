@@ -17,6 +17,7 @@ import { applyPermanentUpgrades } from '../data/upgrades';
 import { getStageData, getActiveEnemyPool, getElitePool } from '../data/stages';
 import type { LevelUpOption, PokemonType, PlayerStats } from '../types';
 import { IS_DEV_MODE } from '../main';
+import { clearStage } from '../lib/stageProgress';
 
 // 퍼센트 기반 배율로 적용되는 스탯 목록
 const PERCENT_STATS = new Set(['attackPower', 'moveSpeed', 'projectileSpeed', 'knockback']);
@@ -93,6 +94,7 @@ export class GameScene extends Phaser.Scene {
   private eliteTimer: number = 0;
   private readonly MAX_ENEMIES = 80;
   private darkraiSpawned: boolean = false;
+  private stageCleared: boolean = false;
   isGodMode: boolean = false;
   private currentBossWave: number = 0;         // 10 or 20
   private pokeballs: PokeballItem[] = [];
@@ -162,6 +164,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnTimer     = 0;
     this.eliteTimer     = 0;
     this.darkraiSpawned   = false;
+    this.stageCleared     = false;
     this.bossPatternTimer = 0;
     this.bossPatternState = 'walk';
     this.bossRollTarget   = null;
@@ -1731,6 +1734,8 @@ export class GameScene extends Phaser.Scene {
         totalGold:    newTotal,
         waveNumber:   this.waveNumber + 1,
         weaponDamageLog: Object.fromEntries(this.weaponDamageLog),
+        stageId:      this.stageId,
+        stageCleared: this.stageCleared,
       });
     });
   }
@@ -2296,6 +2301,9 @@ export class GameScene extends Phaser.Scene {
   private spawnDarkrai() {
     if (this.darkraiSpawned) return;
     this.darkraiSpawned = true;
+    // 15분 생존 = 스테이지 클리어
+    this.stageCleared = true;
+    clearStage(this.stageId);
 
     // ── 1. 기존 모든 적 제거 ──
     this.enemies.getChildren().slice().forEach(e => (e as Enemy).destroy());

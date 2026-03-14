@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TYPE_COLORS } from '../data/weapons';
 import type { PokemonType } from '../types';
+import { isStageUnlocked, isStageCleared } from '../lib/stageProgress';
 
 interface StageConfig {
   id: number;
@@ -8,28 +9,27 @@ interface StageConfig {
   subtitle: string;
   enemyTypes: PokemonType[];
   bgColor: number;
-  locked: boolean;
   bgPokemon: string[];
 }
 
 const STAGES: StageConfig[] = [
-  { id:  1, name: '태초마을',    subtitle: 'Pallet Town',    enemyTypes: ['normal'],               bgColor: 0x2a5c1a, locked: false, bgPokemon: ['pokemon_040', 'pokemon_143', 'pokemon_039'] },
-  { id:  2, name: '벌레숲',      subtitle: 'Bug Forest',     enemyTypes: ['bug'],                  bgColor: 0x2d5c1a, locked: false, bgPokemon: ['pokemon_267', 'pokemon_127', 'pokemon_012'] },
-  { id:  3, name: '풀밭 지대',   subtitle: 'Grass Fields',   enemyTypes: ['grass'],                bgColor: 0x1a4a10, locked: false, bgPokemon: ['pokemon_254', 'pokemon_003', 'pokemon_389'] },
-  { id:  4, name: '불꽃 산지',   subtitle: 'Fire Mountain',  enemyTypes: ['fire'],                 bgColor: 0x8a2010, locked: false, bgPokemon: ['pokemon_006', 'pokemon_059', 'pokemon_157'] },
-  { id:  5, name: '수로 지대',   subtitle: 'Water Route',    enemyTypes: ['water'],                bgColor: 0x1a3a8a, locked: false, bgPokemon: ['pokemon_395', 'pokemon_130', 'pokemon_009'] },
-  { id:  6, name: '전기 평원',   subtitle: 'Electric Plains', enemyTypes: ['electric'],            bgColor: 0x7a6010, locked: false, bgPokemon: ['pokemon_026', 'pokemon_466', 'pokemon_181'] },
-  { id:  7, name: '구름 위',     subtitle: 'Sky Ruins',      enemyTypes: ['flying'],               bgColor: 0x3a6a9a, locked: false, bgPokemon: ['pokemon_398', 'pokemon_142', 'pokemon_227'] },
-  { id:  8, name: '독 늪지',     subtitle: 'Poison Marsh',   enemyTypes: ['poison'],               bgColor: 0x5a1a7a, locked: false, bgPokemon: ['pokemon_034', 'pokemon_089', 'pokemon_452'] },
-  { id:  9, name: '사막 지대',   subtitle: 'Desert Sands',   enemyTypes: ['ground'],               bgColor: 0x8a5a10, locked: false, bgPokemon: ['pokemon_076', 'pokemon_450', 'pokemon_208'] },
-  { id: 10, name: '암석 지대',   subtitle: 'Rocky Cavern',   enemyTypes: ['rock'],                 bgColor: 0x4a4a4a, locked: false, bgPokemon: ['pokemon_248', 'pokemon_409', 'pokemon_306'] },
-  { id: 11, name: '격투 도장',   subtitle: 'Fighting Dojo',  enemyTypes: ['fighting'],             bgColor: 0x8a2020, locked: false, bgPokemon: ['pokemon_068', 'pokemon_448', 'pokemon_297'] },
-  { id: 12, name: '에스퍼 궁전', subtitle: 'Psychic Palace', enemyTypes: ['psychic'],              bgColor: 0x8a206a, locked: false, bgPokemon: ['pokemon_065', 'pokemon_282', 'pokemon_376'] },
-  { id: 13, name: '보라타운',    subtitle: 'Lavender Town',    enemyTypes: ['ghost'],                bgColor: 0x2a0a4a, locked: false, bgPokemon: ['pokemon_094', 'pokemon_429', 'pokemon_477'] },
-  { id: 14, name: '강철 공장',   subtitle: 'Steel Factory',  enemyTypes: ['steel'],                bgColor: 0x3a4a5a, locked: false, bgPokemon: ['pokemon_376', 'pokemon_306', 'pokemon_212'] },
-  { id: 15, name: '용의 소굴',   subtitle: "Dragon's Den",   enemyTypes: ['dragon'],               bgColor: 0x2a1a7a, locked: false, bgPokemon: ['pokemon_445', 'pokemon_149', 'pokemon_373'] },
-  { id: 16, name: '설산',        subtitle: 'Ice Mountain',   enemyTypes: ['ice'],                  bgColor: 0x4a7a9a, locked: false, bgPokemon: ['pokemon_473', 'pokemon_131', 'pokemon_461'] },
-  { id: 17, name: '신월섬',      subtitle: 'Newmoon Island',     enemyTypes: ['dark'],                 bgColor: 0x0a0a1a, locked: false, bgPokemon: ['pokemon_442', 'pokemon_262', 'pokemon_197'] },
+  { id:  1, name: '태초마을',    subtitle: 'Pallet Town',    enemyTypes: ['normal'],               bgColor: 0x2a5c1a, bgPokemon: ['pokemon_040', 'pokemon_143', 'pokemon_039'] },
+  { id:  2, name: '벌레숲',      subtitle: 'Bug Forest',     enemyTypes: ['bug'],                  bgColor: 0x2d5c1a, bgPokemon: ['pokemon_267', 'pokemon_127', 'pokemon_012'] },
+  { id:  3, name: '풀밭 지대',   subtitle: 'Grass Fields',   enemyTypes: ['grass'],                bgColor: 0x1a4a10, bgPokemon: ['pokemon_254', 'pokemon_003', 'pokemon_389'] },
+  { id:  4, name: '불꽃 산지',   subtitle: 'Fire Mountain',  enemyTypes: ['fire'],                 bgColor: 0x8a2010, bgPokemon: ['pokemon_006', 'pokemon_059', 'pokemon_157'] },
+  { id:  5, name: '수로 지대',   subtitle: 'Water Route',    enemyTypes: ['water'],                bgColor: 0x1a3a8a, bgPokemon: ['pokemon_395', 'pokemon_130', 'pokemon_009'] },
+  { id:  6, name: '전기 평원',   subtitle: 'Electric Plains', enemyTypes: ['electric'],            bgColor: 0x7a6010, bgPokemon: ['pokemon_026', 'pokemon_466', 'pokemon_181'] },
+  { id:  7, name: '구름 위',     subtitle: 'Sky Ruins',      enemyTypes: ['flying'],               bgColor: 0x3a6a9a, bgPokemon: ['pokemon_398', 'pokemon_142', 'pokemon_227'] },
+  { id:  8, name: '독 늪지',     subtitle: 'Poison Marsh',   enemyTypes: ['poison'],               bgColor: 0x5a1a7a, bgPokemon: ['pokemon_034', 'pokemon_089', 'pokemon_452'] },
+  { id:  9, name: '사막 지대',   subtitle: 'Desert Sands',   enemyTypes: ['ground'],               bgColor: 0x8a5a10, bgPokemon: ['pokemon_076', 'pokemon_450', 'pokemon_208'] },
+  { id: 10, name: '암석 지대',   subtitle: 'Rocky Cavern',   enemyTypes: ['rock'],                 bgColor: 0x4a4a4a, bgPokemon: ['pokemon_248', 'pokemon_409', 'pokemon_306'] },
+  { id: 11, name: '격투 도장',   subtitle: 'Fighting Dojo',  enemyTypes: ['fighting'],             bgColor: 0x8a2020, bgPokemon: ['pokemon_068', 'pokemon_448', 'pokemon_297'] },
+  { id: 12, name: '에스퍼 궁전', subtitle: 'Psychic Palace', enemyTypes: ['psychic'],              bgColor: 0x8a206a, bgPokemon: ['pokemon_065', 'pokemon_282', 'pokemon_376'] },
+  { id: 13, name: '보라타운',    subtitle: 'Lavender Town',    enemyTypes: ['ghost'],                bgColor: 0x2a0a4a, bgPokemon: ['pokemon_094', 'pokemon_429', 'pokemon_477'] },
+  { id: 14, name: '강철 공장',   subtitle: 'Steel Factory',  enemyTypes: ['steel'],                bgColor: 0x3a4a5a, bgPokemon: ['pokemon_376', 'pokemon_306', 'pokemon_212'] },
+  { id: 15, name: '용의 소굴',   subtitle: "Dragon's Den",   enemyTypes: ['dragon'],               bgColor: 0x2a1a7a, bgPokemon: ['pokemon_445', 'pokemon_149', 'pokemon_373'] },
+  { id: 16, name: '설산',        subtitle: 'Ice Mountain',   enemyTypes: ['ice'],                  bgColor: 0x4a7a9a, bgPokemon: ['pokemon_473', 'pokemon_131', 'pokemon_461'] },
+  { id: 17, name: '신월섬',      subtitle: 'Newmoon Island',     enemyTypes: ['dark'],                 bgColor: 0x0a0a1a, bgPokemon: ['pokemon_442', 'pokemon_262', 'pokemon_197'] },
 ];
 
 const CARD_H   = 150;
@@ -139,6 +139,9 @@ export class StageSelectScene extends Phaser.Scene {
     container: Phaser.GameObjects.Container,
     getHasDragged: () => boolean,
   ) {
+    const unlocked = isStageUnlocked(stage.id);
+    const cleared  = isStageCleared(stage.id);
+
     const cardLeft = cx - cardW / 2;
     const cardTop  = cy - cardH / 2;
 
@@ -146,25 +149,25 @@ export class StageSelectScene extends Phaser.Scene {
     const shadow = this.add.rectangle(cx + 3, cy + 4, cardW + 4, cardH + 4, 0x000000, 0.5);
 
     // 카드 배경
-    const fillColor = stage.locked ? 0x0d0d1a : 0x111827;
+    const fillColor = unlocked ? 0x111827 : 0x0d0d1a;
     const cardBg    = this.add.rectangle(cx, cy, cardW, cardH, fillColor);
-    if (!stage.locked) cardBg.setInteractive({ useHandCursor: true });
+    if (unlocked) cardBg.setInteractive({ useHandCursor: true });
 
     // 타입 컬러 사이드바
     const typeColor = TYPE_COLORS[stage.enemyTypes[0]] ?? 0x888888;
-    const sidebar   = this.add.rectangle(cardLeft + 4, cy, 6, cardH - 4, stage.locked ? 0x333333 : typeColor);
+    const sidebar   = this.add.rectangle(cardLeft + 4, cy, 6, cardH - 4, unlocked ? typeColor : 0x333333);
 
     // 테두리
     const outline = this.add.graphics();
-    outline.lineStyle(2, stage.locked ? 0x333344 : typeColor, stage.locked ? 0.3 : 0.6);
+    outline.lineStyle(2, unlocked ? typeColor : 0x333344, unlocked ? 0.6 : 0.3);
     outline.strokeRect(cardLeft, cardTop, cardW, cardH);
 
     container.add([shadow, cardBg, sidebar, outline]);
 
-    if (stage.locked) {
+    if (!unlocked) {
       const lockIcon = this.add.text(cx, cy - 14, '🔒', { fontSize: '28px' }).setOrigin(0.5);
-      const lockText = this.add.text(cx, cy + 18, `${stage.name}  —  준비 중`, {
-        fontSize: '14px', color: '#555566',
+      const lockText = this.add.text(cx, cy + 18, `${stage.name}  —  STAGE ${stage.id - 1} 클리어 필요`, {
+        fontSize: '13px', color: '#555566',
       }).setOrigin(0.5);
       container.add([lockIcon, lockText]);
       return;
@@ -226,7 +229,17 @@ export class StageSelectScene extends Phaser.Scene {
       pkmImages.push(img);
     });
 
-    container.add([badge, badgeTxt, nameTxt, subtitleTxt, line, typeLabel, ...typeBadges, ...pkmImages]);
+    // ✓ CLEAR 뱃지 (클리어 시)
+    const clearItems: Phaser.GameObjects.GameObject[] = [];
+    if (cleared) {
+      const clearBg = this.add.rectangle(R - 28, cardTop + 16, 60, 20, 0x1a8a1a, 0.9);
+      const clearTxt = this.add.text(R - 28, cardTop + 16, '✓ CLEAR', {
+        fontSize: '11px', color: '#aaffaa', fontStyle: 'bold',
+      }).setOrigin(0.5);
+      clearItems.push(clearBg, clearTxt);
+    }
+
+    container.add([badge, badgeTxt, nameTxt, subtitleTxt, line, typeLabel, ...typeBadges, ...pkmImages, ...clearItems]);
 
     // 호버 / 클릭
     cardBg.on('pointerover', () => {
