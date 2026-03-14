@@ -36,6 +36,11 @@ const CARD_H   = 150;
 const CARD_GAP = 10;
 const CARD_STRIDE = CARD_H + CARD_GAP;
 
+interface CardControl {
+  select: () => void;
+  deselect: () => void;
+}
+
 export class StageSelectScene extends Phaser.Scene {
   constructor() {
     super({ key: 'StageSelectScene' });
@@ -64,14 +69,20 @@ export class StageSelectScene extends Phaser.Scene {
       fontSize: '12px', color: '#aaaaaa',
     }).setOrigin(0.5).setDepth(10);
 
-    // ── 뒤로 버튼 (고정) ──
-    const backY  = H - 44;
-    const backBg = this.add.rectangle(CX, backY, 160, 40, 0x222233).setDepth(10)
+    // ── 하단 버튼 2개: [뒤로] [다음] ──
+    const BTN_Y  = H - 44;
+    const BTN_W  = Math.floor((W - 20) / 2) - 4;
+    const backX  = CX - BTN_W / 2 - 4;
+    const nextX  = CX + BTN_W / 2 + 4;
+
+    // 뒤로 버튼
+    const backBg = this.add.rectangle(backX, BTN_Y, BTN_W, 40, 0x222233).setDepth(10)
       .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(1, 0x445566).strokeRect(CX - 80, backY - 20, 160, 40).setDepth(10);
-    const backTxt = this.add.text(CX, backY, '← 뒤로', {
+    this.add.graphics().lineStyle(1, 0x445566)
+      .strokeRect(backX - BTN_W / 2, BTN_Y - 20, BTN_W, 40).setDepth(10);
+    const backTxt = this.add.text(backX, BTN_Y, '← 뒤로', {
       fontSize: '15px', color: '#aaaacc', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(10);
+    }).setOrigin(0.5).setDepth(11);
 
     backBg.on('pointerover', () => { backBg.setFillStyle(0x333355); backTxt.setColor('#ffffff'); });
     backBg.on('pointerout',  () => { backBg.setFillStyle(0x222233); backTxt.setColor('#aaaacc'); });
@@ -80,23 +91,52 @@ export class StageSelectScene extends Phaser.Scene {
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
     });
 
+    // 다음 버튼
+    const nextBg = this.add.rectangle(nextX, BTN_Y, BTN_W, 40, 0x223355).setDepth(10)
+      .setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(1, 0x4488aa)
+      .strokeRect(nextX - BTN_W / 2, BTN_Y - 20, BTN_W, 40).setDepth(10);
+    const nextTxt = this.add.text(nextX, BTN_Y, '다음 →', {
+      fontSize: '15px', color: '#88ccff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(11);
+
+    nextBg.on('pointerover', () => { nextBg.setFillStyle(0x334466); nextTxt.setColor('#ffffff'); });
+    nextBg.on('pointerout',  () => { nextBg.setFillStyle(0x223355); nextTxt.setColor('#88ccff'); });
+    nextBg.on('pointerdown', () => {
+      if (selectedStageId === 0) return;
+      this.cameras.main.fadeOut(250, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('CharacterSelectScene', { stageId: selectedStageId });
+      });
+    });
+
     // ── 스크롤 영역 ──
     const SCROLL_TOP = 88;
-    const SCROLL_BOT = backY - 16;
+    const SCROLL_BOT = BTN_Y - 16;
     const viewH      = SCROLL_BOT - SCROLL_TOP;
     const totalH     = STAGES.length * CARD_STRIDE;
     const maxScroll  = Math.max(0, totalH - viewH);
 
-    // 마스크
     const maskGfx = this.add.graphics();
     maskGfx.fillRect(0, SCROLL_TOP, W, viewH);
     const mask = new Phaser.Display.Masks.GeometryMask(this, maskGfx);
 
-    // 카드 컨테이너
     const container = this.add.container(0, SCROLL_TOP);
     container.setMask(mask);
 
     const CARD_W = W - 32;
+
+    // 선택 상태
+    const firstUnlocked = STAGES.find(s => isStageUnlocked(s.id))?.id ?? 0;
+    let selectedStageId = firstUnlocked;
+    const cardControls: Map<number, CardControl> = new Map();
+
+    const selectStage = (id: number) => {
+      cardControls.get(selectedStageId)?.deselect();
+      selectedStageId = id;
+      cardControls.get(id)?.select();
+    };
+
     // ── 드래그 스크롤 ──
     let lastY      = 0;
     let isDragging = false;
@@ -106,8 +146,12 @@ export class StageSelectScene extends Phaser.Scene {
 
     STAGES.forEach((stage, i) => {
       const cy = i * CARD_STRIDE + CARD_H / 2;
-      this.createStageCard(stage, CX, cy, CARD_W, CARD_H, container, () => hasDragged);
+      const ctrl = this.createStageCard(stage, CX, cy, CARD_W, CARD_H, container, () => hasDragged, () => selectStage(stage.id));
+      if (ctrl) cardControls.set(stage.id, ctrl);
     });
+
+    // 초기 선택 하이라이트
+    if (selectedStageId > 0) cardControls.get(selectedStageId)?.select();
 
     this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
       if (ptr.y < SCROLL_TOP || ptr.y > SCROLL_BOT) return;
@@ -138,26 +182,22 @@ export class StageSelectScene extends Phaser.Scene {
     cardW: number, cardH: number,
     container: Phaser.GameObjects.Container,
     getHasDragged: () => boolean,
-  ) {
+    onSelect: () => void,
+  ): CardControl | null {
     const unlocked = isStageUnlocked(stage.id);
     const cleared  = isStageCleared(stage.id);
 
     const cardLeft = cx - cardW / 2;
     const cardTop  = cy - cardH / 2;
 
-    // 그림자
     const shadow = this.add.rectangle(cx + 3, cy + 4, cardW + 4, cardH + 4, 0x000000, 0.5);
-
-    // 카드 배경
     const fillColor = unlocked ? 0x111827 : 0x0d0d1a;
     const cardBg    = this.add.rectangle(cx, cy, cardW, cardH, fillColor);
     if (unlocked) cardBg.setInteractive({ useHandCursor: true });
 
-    // 타입 컬러 사이드바
     const typeColor = TYPE_COLORS[stage.enemyTypes[0]] ?? 0x888888;
     const sidebar   = this.add.rectangle(cardLeft + 4, cy, 6, cardH - 4, unlocked ? typeColor : 0x333333);
 
-    // 테두리
     const outline = this.add.graphics();
     outline.lineStyle(2, unlocked ? typeColor : 0x333344, unlocked ? 0.6 : 0.3);
     outline.strokeRect(cardLeft, cardTop, cardW, cardH);
@@ -170,69 +210,56 @@ export class StageSelectScene extends Phaser.Scene {
         fontSize: '13px', color: '#555566',
       }).setOrigin(0.5);
       container.add([lockIcon, lockText]);
-      return;
+      return null;
     }
 
     const L = cardLeft + 16;
     const R = cardLeft + cardW - 16;
 
-    // Row 1: STAGE 배지 + 이름
     const row1Y = cardTop + 26;
-    const badge = this.add.rectangle(L + 32, row1Y, 64, 22, typeColor, 0.9);
+    const badge    = this.add.rectangle(L + 32, row1Y, 64, 22, typeColor, 0.9);
     const badgeTxt = this.add.text(L + 32, row1Y, `STAGE ${stage.id}`, {
-      fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
-      padding: { top: 2 },
+      fontSize: '11px', color: '#ffffff', fontStyle: 'bold', padding: { top: 2 },
     }).setOrigin(0.5);
-
     const nameTxt = this.add.text(L + 72, row1Y, stage.name, {
       fontSize: '26px', color: '#ffffff', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 4,
-      padding: { top: 4 },
+      stroke: '#000000', strokeThickness: 4, padding: { top: 4 },
     }).setOrigin(0, 0.5);
 
-    // Row 2: 영문명
     const subtitleTxt = this.add.text(L + 72, cardTop + 56, stage.subtitle, {
       fontSize: '15px', color: '#aabbdd', fontStyle: 'bold',
     }).setOrigin(0, 0.5);
 
-    // 구분선
     const line = this.add.graphics().lineStyle(1, 0x2a3a50)
       .lineBetween(L, cardTop + 76, R, cardTop + 76);
 
-    // Row 3: 출현 타입 라벨
     const typeLabel = this.add.text(L, cardTop + 97, '출현 타입', {
       fontSize: '13px', color: '#7788aa',
     }).setOrigin(0, 0.5);
 
-    // Row 4: 타입 배지들
     const typeBadges: Phaser.GameObjects.Text[] = [];
     let bx = 0;
     stage.enemyTypes.forEach(t => {
-      const hex   = `#${(TYPE_COLORS[t] ?? 0x888888).toString(16).padStart(6, '0')}`;
+      const hex    = `#${(TYPE_COLORS[t] ?? 0x888888).toString(16).padStart(6, '0')}`;
       const tbadge = this.add.text(L + bx, cardTop + 124, `  ${t.toUpperCase()}  `, {
         fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
-        backgroundColor: hex,
-        padding: { x: 6, y: 4 },
+        backgroundColor: hex, padding: { x: 6, y: 4 },
       }).setOrigin(0, 0.5);
       typeBadges.push(tbadge);
       bx += tbadge.width + 8;
     });
 
-    // 포켓몬 미리보기
     const pkmImages: Phaser.GameObjects.Image[] = [];
     const shown = stage.bgPokemon.filter(k => this.textures.exists(k)).slice(0, 2);
     shown.forEach((key, idx) => {
       const img = this.add.image(R - idx * 56, cy - 4, key)
-        .setDisplaySize(60, 60)
-        .setOrigin(1, 0.5)
-        .setAlpha(0.55 - idx * 0.15);
+        .setDisplaySize(60, 60).setOrigin(1, 0.5).setAlpha(0.55 - idx * 0.15);
       pkmImages.push(img);
     });
 
-    // ✓ CLEAR 뱃지 (클리어 시)
     const clearItems: Phaser.GameObjects.GameObject[] = [];
     if (cleared) {
-      const clearBg = this.add.rectangle(R - 28, cardTop + 16, 60, 20, 0x1a8a1a, 0.9);
+      const clearBg  = this.add.rectangle(R - 28, cardTop + 16, 60, 20, 0x1a8a1a, 0.9);
       const clearTxt = this.add.text(R - 28, cardTop + 16, '✓ CLEAR', {
         fontSize: '11px', color: '#aaffaa', fontStyle: 'bold',
       }).setOrigin(0.5);
@@ -241,25 +268,40 @@ export class StageSelectScene extends Phaser.Scene {
 
     container.add([badge, badgeTxt, nameTxt, subtitleTxt, line, typeLabel, ...typeBadges, ...pkmImages, ...clearItems]);
 
-    // 호버 / 클릭
-    cardBg.on('pointerover', () => {
+    // 선택 하이라이트 오버레이
+    const selOverlay = this.add.rectangle(cx, cy, cardW, cardH, typeColor, 0).setDepth(1);
+    container.add(selOverlay);
+
+    const select = () => {
       cardBg.setFillStyle(0x1a2840);
+      outline.clear();
+      outline.lineStyle(3, typeColor, 1.0);
+      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
+      selOverlay.setFillStyle(typeColor, 0.08);
+    };
+    const deselect = () => {
+      cardBg.setFillStyle(0x111827);
+      outline.clear();
+      outline.lineStyle(2, typeColor, 0.6);
+      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
+      selOverlay.setFillStyle(typeColor, 0);
+    };
+
+    cardBg.on('pointerover', () => {
       outline.clear();
       outline.lineStyle(2, typeColor, 1.0);
       outline.strokeRect(cardLeft, cardTop, cardW, cardH);
     });
     cardBg.on('pointerout', () => {
-      cardBg.setFillStyle(0x111827);
       outline.clear();
       outline.lineStyle(2, typeColor, 0.6);
       outline.strokeRect(cardLeft, cardTop, cardW, cardH);
     });
     cardBg.on('pointerup', () => {
       if (getHasDragged()) return;
-      this.cameras.main.fadeOut(250, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('CharacterSelectScene', { stageId: stage.id });
-      });
+      onSelect();
     });
+
+    return { select, deselect };
   }
 }

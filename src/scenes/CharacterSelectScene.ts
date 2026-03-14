@@ -5,6 +5,11 @@ const CARD_H      = 160;
 const CARD_GAP    = 12;
 const CARD_STRIDE = CARD_H + CARD_GAP;
 
+interface CardControl {
+  select: () => void;
+  deselect: () => void;
+}
+
 export class CharacterSelectScene extends Phaser.Scene {
   private stageId: number = 1;
 
@@ -36,14 +41,20 @@ export class CharacterSelectScene extends Phaser.Scene {
       fontSize: '12px', color: '#aaaaaa',
     }).setOrigin(0.5).setDepth(10);
 
-    // ── 뒤로 버튼 (고정) ──
-    const backY  = H - 44;
-    const backBg = this.add.rectangle(CX, backY, 160, 40, 0x222233).setDepth(10)
+    // ── 하단 버튼 2개: [뒤로] [게임 시작] ──
+    const BTN_Y  = H - 44;
+    const BTN_W  = Math.floor((W - 20) / 2) - 4;
+    const backX  = CX - BTN_W / 2 - 4;
+    const startX = CX + BTN_W / 2 + 4;
+
+    // 뒤로 버튼
+    const backBg = this.add.rectangle(backX, BTN_Y, BTN_W, 40, 0x222233).setDepth(10)
       .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(1, 0x445566).strokeRect(CX - 80, backY - 20, 160, 40).setDepth(10);
-    const backTxt = this.add.text(CX, backY, '← 뒤로', {
+    this.add.graphics().lineStyle(1, 0x445566)
+      .strokeRect(backX - BTN_W / 2, BTN_Y - 20, BTN_W, 40).setDepth(10);
+    const backTxt = this.add.text(backX, BTN_Y, '← 뒤로', {
       fontSize: '15px', color: '#aaaacc', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(10);
+    }).setOrigin(0.5).setDepth(11);
 
     backBg.on('pointerover', () => { backBg.setFillStyle(0x333355); backTxt.setColor('#ffffff'); });
     backBg.on('pointerout',  () => { backBg.setFillStyle(0x222233); backTxt.setColor('#aaaacc'); });
@@ -52,9 +63,27 @@ export class CharacterSelectScene extends Phaser.Scene {
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('StageSelectScene'));
     });
 
+    // 게임 시작 버튼
+    const startBg = this.add.rectangle(startX, BTN_Y, BTN_W, 40, 0x1a4422).setDepth(10)
+      .setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(1, 0x44aa66)
+      .strokeRect(startX - BTN_W / 2, BTN_Y - 20, BTN_W, 40).setDepth(10);
+    const startTxt = this.add.text(startX, BTN_Y, '▶ 게임 시작', {
+      fontSize: '15px', color: '#88ffaa', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(11);
+
+    startBg.on('pointerover', () => { startBg.setFillStyle(0x266633); startTxt.setColor('#ffffff'); });
+    startBg.on('pointerout',  () => { startBg.setFillStyle(0x1a4422); startTxt.setColor('#88ffaa'); });
+    startBg.on('pointerdown', () => {
+      this.cameras.main.fadeOut(250, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('GameScene', { weaponIndex: selectedWeaponIndex, stageId: this.stageId });
+      });
+    });
+
     // ── 스크롤 영역 ──
     const SCROLL_TOP = 88;
-    const SCROLL_BOT = backY - 16;
+    const SCROLL_BOT = BTN_Y - 16;
     const viewH      = SCROLL_BOT - SCROLL_TOP;
     const totalH     = ALL_WEAPONS.length * CARD_STRIDE;
     const maxScroll  = Math.max(0, totalH - viewH);
@@ -67,10 +96,25 @@ export class CharacterSelectScene extends Phaser.Scene {
     container.setMask(mask);
 
     const CARD_W = W - 32;
+
+    // 선택 상태
+    let selectedWeaponIndex = 0;
+    const cardControls: CardControl[] = [];
+
+    const selectWeapon = (idx: number) => {
+      cardControls[selectedWeaponIndex]?.deselect();
+      selectedWeaponIndex = idx;
+      cardControls[idx]?.select();
+    };
+
     ALL_WEAPONS.forEach((_, i) => {
-      const cy = i * CARD_STRIDE + CARD_H / 2;
-      this.createCharacterCard(i, CX, cy, CARD_W, CARD_H, container, () => hasDragged);
+      const cy   = i * CARD_STRIDE + CARD_H / 2;
+      const ctrl = this.createCharacterCard(i, CX, cy, CARD_W, CARD_H, container, () => hasDragged, () => selectWeapon(i));
+      cardControls.push(ctrl);
     });
+
+    // 초기 선택
+    cardControls[0]?.select();
 
     // ── 드래그 스크롤 ──
     let lastY      = 0;
@@ -109,7 +153,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     cardW: number, cardH: number,
     container: Phaser.GameObjects.Container,
     getHasDragged: () => boolean,
-  ) {
+    onSelect: () => void,
+  ): CardControl {
     const weapon    = ALL_WEAPONS[weaponIndex];
     const typeColor = TYPE_COLORS[weapon.type] ?? 0x888888;
 
@@ -119,19 +164,14 @@ export class CharacterSelectScene extends Phaser.Scene {
     const cardBot     = cy + cardH / 2;
     const stripeRight = cardLeft + STRIPE_W;
 
-    // 그림자
-    const shadow = this.add.rectangle(cx + 3, cy + 4, cardW + 4, cardH + 4, 0x000000, 0.5);
-
-    // 카드 배경
-    const cardBg = this.add.rectangle(cx, cy, cardW, cardH, 0x111827)
+    const shadow  = this.add.rectangle(cx + 3, cy + 4, cardW + 4, cardH + 4, 0x000000, 0.5);
+    const cardBg  = this.add.rectangle(cx, cy, cardW, cardH, 0x111827)
       .setInteractive({ useHandCursor: true });
 
-    // 테두리
     const outline = this.add.graphics();
     outline.lineStyle(2, typeColor, 0.6);
     outline.strokeRect(cardLeft, cardTop, cardW, cardH);
 
-    // 삼각 배경
     const bgTop = this.add.graphics();
     bgTop.fillStyle(typeColor, 0.22);
     bgTop.fillTriangle(cardLeft, cardTop, stripeRight, cardTop, cardLeft, cardBot);
@@ -148,22 +188,19 @@ export class CharacterSelectScene extends Phaser.Scene {
     sideDiv.lineStyle(1, typeColor, 0.5);
     sideDiv.lineBetween(stripeRight, cardTop, stripeRight, cardBot);
 
-    // 트레이너 이미지
-    const trainerCX = cardLeft + STRIPE_W * 0.32;
-    const trainerCY = cardTop  + cardH   * 0.38;
+    const trainerCX  = cardLeft + STRIPE_W * 0.32;
+    const trainerCY  = cardTop  + cardH   * 0.38;
     const trainerImg = this.textures.exists('trainer')
       ? this.add.image(trainerCX, trainerCY, 'trainer').setDisplaySize(80, 94)
       : null;
 
-    // 파트너 포켓몬 이미지
-    const pokeCX = cardLeft + STRIPE_W * 0.68;
-    const pokeCY = cardTop  + cardH   * 0.70;
-    const sprKey = `pokemon_${String(weapon.pokemonId).padStart(3, '0')}`;
+    const pokeCX  = cardLeft + STRIPE_W * 0.68;
+    const pokeCY  = cardTop  + cardH   * 0.70;
+    const sprKey  = `pokemon_${String(weapon.pokemonId).padStart(3, '0')}`;
     const pokeImg = this.textures.exists(sprKey)
       ? this.add.image(pokeCX, pokeCY, sprKey).setDisplaySize(64, 64)
       : null;
 
-    // 텍스트 영역
     const textX = stripeRight + 16;
 
     const nameTxt = this.add.text(textX, cardTop + 26, '광휘', {
@@ -187,32 +224,11 @@ export class CharacterSelectScene extends Phaser.Scene {
       fontSize: '17px', color: '#ccddaa', fontStyle: 'bold', padding: { top: 4 },
     }).setOrigin(0, 0.5);
 
-    const hex = `#${typeColor.toString(16).padStart(6, '0')}`;
+    const hex       = `#${typeColor.toString(16).padStart(6, '0')}`;
     const typeBadge = this.add.text(textX, cardTop + 126, `  ${weapon.type.toUpperCase()}  `, {
       fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
       backgroundColor: hex, padding: { x: 4, y: 3 },
     }).setOrigin(0, 0.5);
-
-    // 호버 / 클릭
-    cardBg.on('pointerover', () => {
-      cardBg.setFillStyle(0x1a2840);
-      outline.clear();
-      outline.lineStyle(2, typeColor, 1.0);
-      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
-    });
-    cardBg.on('pointerout', () => {
-      cardBg.setFillStyle(0x111827);
-      outline.clear();
-      outline.lineStyle(2, typeColor, 0.6);
-      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
-    });
-    cardBg.on('pointerup', () => {
-      if (getHasDragged()) return;
-      this.cameras.main.fadeOut(250, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('GameScene', { weaponIndex, stageId: this.stageId });
-      });
-    });
 
     const items: Phaser.GameObjects.GameObject[] = [
       shadow, cardBg, outline, bgTop, bgBot, diagLine, sideDiv,
@@ -221,5 +237,36 @@ export class CharacterSelectScene extends Phaser.Scene {
     if (trainerImg) items.push(trainerImg);
     if (pokeImg)    items.push(pokeImg);
     container.add(items);
+
+    // 선택 상태
+    const select = () => {
+      cardBg.setFillStyle(0x1a2840);
+      outline.clear();
+      outline.lineStyle(3, typeColor, 1.0);
+      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
+    };
+    const deselect = () => {
+      cardBg.setFillStyle(0x111827);
+      outline.clear();
+      outline.lineStyle(2, typeColor, 0.6);
+      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
+    };
+
+    cardBg.on('pointerover', () => {
+      outline.clear();
+      outline.lineStyle(2, typeColor, 1.0);
+      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
+    });
+    cardBg.on('pointerout', () => {
+      outline.clear();
+      outline.lineStyle(2, typeColor, 0.6);
+      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
+    });
+    cardBg.on('pointerup', () => {
+      if (getHasDragged()) return;
+      onSelect();
+    });
+
+    return { select, deselect };
   }
 }
