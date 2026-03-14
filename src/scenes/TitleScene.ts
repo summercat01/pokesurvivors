@@ -6,6 +6,15 @@ import { loadUserRecord } from '../lib/userDB';
 interface PatchEntry { version: string; date: string; changes: string[] }
 const PATCH_NOTES: PatchEntry[] = [
   {
+    version: 'v0.5.0', date: '2026-03-15',
+    changes: [
+      '스테이지 해금 시스템 — 이전 스테이지 15분 생존 시 다음 스테이지 개방',
+      '랭킹 시스템 추가 — 최고 스테이지 + 최고 생존 시간 기준',
+      '다크라이 HP 대폭 상향',
+      '버그 수정: Pierce 관통 판정, 게임오버 메모리 누수',
+    ],
+  },
+  {
     version: 'v0.4.0', date: '2026-03-11',
     changes: [
       '전체 무기 범위 50% 너프 조정',
@@ -271,7 +280,7 @@ export class TitleScene extends Phaser.Scene {
       HALF_W, BTN_H,
       '⚙ 설정',
       null,
-      () => this.showComingSoon(BTN_CX, BTN_Y0 + BTN_GAP * 2 - 35),
+      () => this.showSettingsModal(),
     );
   }
 
@@ -408,6 +417,116 @@ export class TitleScene extends Phaser.Scene {
 
       curY += 12; // 버전 간 여백
     });
+  }
+
+  // ─────────────────────────────────────────────
+  // 설정 모달
+  // ─────────────────────────────────────────────
+  private showSettingsModal() {
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const CX = W / 2;
+    const D  = 80;
+
+    const allItems: Phaser.GameObjects.GameObject[] = [];
+    const close = () => allItems.forEach(o => o.destroy());
+
+    // 반투명 배경
+    const dimBg = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.78)
+      .setDepth(D).setInteractive();
+    allItems.push(dimBg);
+
+    // 패널
+    const PANEL_W = W - 28;
+    const PANEL_H = 260;
+    const PANEL_Y = H / 2;
+    const panel = this.add.rectangle(CX, PANEL_Y, PANEL_W, PANEL_H, 0x0d1a2e, 0.97)
+      .setDepth(D + 1).setStrokeStyle(2, 0x3377cc);
+    allItems.push(panel);
+
+    // 타이틀
+    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + 22, '⚙ 설정', {
+      fontSize: '16px', color: '#88bbff', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(D + 2);
+    allItems.push(titleTxt);
+
+    // 구분선
+    const divLine = this.add.graphics()
+      .lineStyle(1, 0x3377cc, 0.5)
+      .lineBetween(CX - PANEL_W / 2 + 12, PANEL_Y - PANEL_H / 2 + 40,
+                   CX + PANEL_W / 2 - 12, PANEL_Y - PANEL_H / 2 + 40)
+      .setDepth(D + 2);
+    allItems.push(divLine);
+
+    // 닫기 버튼
+    const closeBg = this.add.rectangle(CX + PANEL_W / 2 - 18, PANEL_Y - PANEL_H / 2 + 18, 28, 28, 0x223355)
+      .setDepth(D + 2).setInteractive({ useHandCursor: true });
+    const closeTxt = this.add.text(CX + PANEL_W / 2 - 18, PANEL_Y - PANEL_H / 2 + 18, '✕', {
+      fontSize: '14px', color: '#aabbcc',
+    }).setOrigin(0.5).setDepth(D + 3);
+    closeBg.on('pointerover', () => { closeBg.setFillStyle(0x334466); closeTxt.setColor('#ffffff'); });
+    closeBg.on('pointerout',  () => { closeBg.setFillStyle(0x223355); closeTxt.setColor('#aabbcc'); });
+    closeBg.on('pointerdown', close);
+    allItems.push(closeBg, closeTxt);
+
+    // 슬라이더 헬퍼
+    const SLIDER_W  = PANEL_W - 80;
+    const SLIDER_X  = CX - SLIDER_W / 2 + 20;
+    const makeSlider = (labelText: string, storageKey: string, rowY: number) => {
+      const savedVal = parseFloat(localStorage.getItem(storageKey) ?? '1');
+      let curVal     = savedVal;
+
+      this.add.text(CX - PANEL_W / 2 + 18, rowY, labelText, {
+        fontSize: '13px', color: '#ccddee',
+      }).setOrigin(0, 0.5).setDepth(D + 2);
+      allItems.push(...this.children.list.slice(-1));
+
+      // 트랙
+      const track = this.add.rectangle(CX + 20, rowY, SLIDER_W, 6, 0x223355)
+        .setDepth(D + 2);
+      allItems.push(track);
+
+      // 채움 바
+      const fillBar = this.add.rectangle(SLIDER_X, rowY, SLIDER_W * curVal, 6, 0x3399ff)
+        .setOrigin(0, 0.5).setDepth(D + 3);
+      allItems.push(fillBar);
+
+      // 핸들
+      const handle = this.add.circle(SLIDER_X + SLIDER_W * curVal, rowY, 10, 0x55bbff)
+        .setDepth(D + 4).setInteractive({ useHandCursor: true, draggable: true });
+      allItems.push(handle);
+
+      // 퍼센트 텍스트
+      const pctTxt = this.add.text(CX + PANEL_W / 2 - 18, rowY, `${Math.round(curVal * 100)}%`, {
+        fontSize: '12px', color: '#aabbcc',
+      }).setOrigin(1, 0.5).setDepth(D + 2);
+      allItems.push(pctTxt);
+
+      const updateSlider = (ratio: number) => {
+        curVal = Phaser.Math.Clamp(ratio, 0, 1);
+        fillBar.setSize(SLIDER_W * curVal, 6);
+        handle.setX(SLIDER_X + SLIDER_W * curVal);
+        pctTxt.setText(`${Math.round(curVal * 100)}%`);
+        localStorage.setItem(storageKey, String(curVal));
+      };
+
+      this.input.setDraggable(handle);
+      handle.on('drag', (_: unknown, x: number) => {
+        const ratio = (x - SLIDER_X) / SLIDER_W;
+        updateSlider(ratio);
+      });
+
+      // 트랙 클릭으로도 조정
+      track.setInteractive({ useHandCursor: true });
+      track.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+        const ratio = (ptr.x - SLIDER_X) / SLIDER_W;
+        updateSlider(ratio);
+      });
+    };
+
+    const BASE_Y = PANEL_Y - PANEL_H / 2 + 80;
+    makeSlider('BGM 볼륨',  'bgmVolume',  BASE_Y);
+    makeSlider('효과음 볼륨', 'sfxVolume', BASE_Y + 70);
   }
 
   // ─────────────────────────────────────────────

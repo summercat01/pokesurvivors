@@ -179,7 +179,7 @@ export class GameOverScene extends Phaser.Scene {
 
     makeBtn(CX - BTN_W / 2 - 6, '▶ 다시 도전', () => {
       this.cameras.main.fadeOut(300, 24, 16, 40);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('GameScene'));
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('GameScene', { stageId }));
     });
     makeBtn(CX + BTN_W / 2 + 6, '⌂ 타이틀로', () => {
       this.cameras.main.fadeOut(300, 24, 16, 40);

@@ -20,7 +20,7 @@ import { IS_DEV_MODE } from '../main';
 import { clearStage } from '../lib/stageProgress';
 
 // 퍼센트 기반 배율로 적용되는 스탯 목록
-const PERCENT_STATS = new Set(['attackPower', 'moveSpeed', 'projectileSpeed', 'knockback']);
+const PERCENT_STATS = new Set(['attackPower', 'moveSpeed', 'projectileSpeed', 'knockback', 'projectileRange']);
 
 export class GameScene extends Phaser.Scene {
   player!: Player;
@@ -323,8 +323,9 @@ export class GameScene extends Phaser.Scene {
 
     // BGM
     if (this.cache.audio.exists('bgm_game')) {
+      const bgmVolume = parseFloat(localStorage.getItem('bgmVolume') ?? '1');
       this.sound.stopAll();
-      this.sound.play('bgm_game', { loop: true, volume: 0.45 });
+      this.sound.play('bgm_game', { loop: true, volume: 0.45 * bgmVolume });
     }
 
     // 씬 종료 시 정리
@@ -2343,7 +2344,7 @@ export class GameScene extends Phaser.Scene {
       const spawnY = this.player.y - 300;
 
       const darkrai = new Enemy(this, spawnX, spawnY, 'pokemon_491', {
-        hp:              999999,
+        hp:              99990000,
         moveSpeed:       210,
         exp:             0,
         isBoss:          true,
@@ -2722,12 +2723,14 @@ export class GameScene extends Phaser.Scene {
 
   // ===== 가상 조이스틱 =====
   private setupJoystick() {
-    // 탭 비활성화 시 자동 일시정지
-    this.game.events.on('hidden', () => {
+    // 탭 비활성화 시 자동 일시정지 (game 전역 이벤트 → shutdown 시 명시적 제거)
+    const onHidden = () => {
       if (!this.isGameOver && !this.isLevelingUp && !this.isPaused) {
         this.pauseGame();
       }
-    });
+    };
+    this.game.events.on('hidden', onHidden);
+    this.events.once('shutdown', () => this.game.events.off('hidden', onHidden));
 
     // 키보드 일시정지 (ESC / P)
     this.input.keyboard!.on('keydown-ESC', () => {

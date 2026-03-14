@@ -29,10 +29,8 @@ const config: Phaser.Types.Core.GameConfig = {
   },
   scene: [BootScene, LoginScene, TitleScene, OakGuideScene, StageSelectScene, CharacterSelectScene, UpgradeScene, GameScene, GameOverScene, LevelUpScene, DevScene, RankingScene],
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 390,
-    height: 844,
   },
 };
 

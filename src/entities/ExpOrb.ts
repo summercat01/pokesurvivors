@@ -22,13 +22,15 @@ export class ExpOrb extends Phaser.GameObjects.Image {
     // 경험치 양에 따라 구슬 크기 결정
     const orbScale = expValue >= 9 ? 1.5 : expValue >= 5 ? 1.2 : 1.0;
     this.setDepth(12).setScale(0);
-    if (key === 'rare_candy') {
-      this.setDisplaySize(22, 22);
-    }
+
+    // rare_candy 텍스처는 크기가 크므로 22px 기준으로 목표 scale 계산
+    const targetScale = key === 'rare_candy'
+      ? (22 / this.width) * orbScale
+      : orbScale * 1.1;
 
     scene.tweens.add({
       targets: this,
-      scale: key === 'rare_candy' ? orbScale : orbScale * 1.1,
+      scale: targetScale,
       duration: 100,
       ease: 'Back.easeOut',
       onComplete: () => this.flyToPlayer(scene, expValue),
