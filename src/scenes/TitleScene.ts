@@ -255,10 +255,21 @@ export class TitleScene extends Phaser.Scene {
       },
     );
 
+    const HALF_W = (BTN_W - 8) / 2;
     this.createDPButton(
-      BTN_CX, BTN_Y0 + BTN_GAP * 2,
-      BTN_W, BTN_H,
-      '⚙  설  정',
+      BTN_CX - HALF_W / 2 - 4, BTN_Y0 + BTN_GAP * 2,
+      HALF_W, BTN_H,
+      '🏆 랭킹',
+      null,
+      () => {
+        this.cameras.main.fadeOut(200, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('RankingScene'));
+      },
+    );
+    this.createDPButton(
+      BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP * 2,
+      HALF_W, BTN_H,
+      '⚙ 설정',
       null,
       () => this.showComingSoon(BTN_CX, BTN_Y0 + BTN_GAP * 2 - 35),
     );

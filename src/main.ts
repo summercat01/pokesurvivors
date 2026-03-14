@@ -10,6 +10,7 @@ import { TitleScene } from './scenes/TitleScene';
 import { UpgradeScene } from './scenes/UpgradeScene';
 import { DevScene } from './scenes/DevScene';
 import { LoginScene } from './scenes/LoginScene';
+import { RankingScene } from './scenes/RankingScene';
 
 // URL에 /dev 포함되거나 ?dev 쿼리파라미터가 있으면 개발자 모드
 export const IS_DEV_MODE =
@@ -26,7 +27,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, LoginScene, TitleScene, OakGuideScene, StageSelectScene, CharacterSelectScene, UpgradeScene, GameScene, GameOverScene, LevelUpScene, DevScene],
+  scene: [BootScene, LoginScene, TitleScene, OakGuideScene, StageSelectScene, CharacterSelectScene, UpgradeScene, GameScene, GameOverScene, LevelUpScene, DevScene, RankingScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
