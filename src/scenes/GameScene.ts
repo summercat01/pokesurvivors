@@ -1725,6 +1725,16 @@ export class GameScene extends Phaser.Scene {
     if (this.killCount   > bestKills)    localStorage.setItem('bestKills', String(this.killCount));
     if (this.gameTime    > bestTime)     localStorage.setItem('bestTime',  String(Math.floor(this.gameTime)));
 
+    // 랭킹 기준 갱신: 최고 스테이지 + 그 스테이지에서의 최고 생존 시간
+    const rankStage = parseInt(localStorage.getItem('rankStage') ?? '1', 10);
+    const rankTime  = parseInt(localStorage.getItem('rankTime')  ?? '0', 10);
+    if (this.stageId > rankStage) {
+      localStorage.setItem('rankStage', String(this.stageId));
+      localStorage.setItem('rankTime',  String(Math.floor(this.gameTime)));
+    } else if (this.stageId === rankStage && Math.floor(this.gameTime) > rankTime) {
+      localStorage.setItem('rankTime', String(Math.floor(this.gameTime)));
+    }
+
     this.time.delayedCall(1000, () => {
       this.scene.start('GameOverScene', {
         level:        this.level,

@@ -8,6 +8,8 @@ export interface UserRecord {
   best_kills: number;
   best_time:  number;
   best_stage: number;
+  rank_stage: number;
+  rank_time:  number;
   upgrades:   Record<string, number>;
 }
 
@@ -25,6 +27,8 @@ export async function saveUserRecord(userId: string, record: Partial<UserRecord>
     p_best_kills: record.best_kills ?? 0,
     p_best_time:  record.best_time  ?? 0,
     p_best_stage: record.best_stage ?? 0,
+    p_rank_stage: record.rank_stage ?? 1,
+    p_rank_time:  record.rank_time  ?? 0,
     p_upgrades:   record.upgrades   ?? {},
   });
   if (error) console.error('[userDB] save error:', error.message);
@@ -56,6 +60,8 @@ export async function overwriteLocalWithCloud(userId: string) {
   localStorage.setItem('bestKills',  String(cloud?.best_kills ?? 0));
   localStorage.setItem('bestTime',   String(cloud?.best_time  ?? 0));
   localStorage.setItem('bestStage',  String(cloud?.best_stage ?? 0));
+  localStorage.setItem('rankStage',  String(cloud?.rank_stage ?? 1));
+  localStorage.setItem('rankTime',   String(cloud?.rank_time  ?? 0));
 }
 
 /** 로그인 시: 클라우드↔로컬 병합 (더 높은 값 유지) */
@@ -66,7 +72,9 @@ export async function syncLocalWithCloud(userId: string) {
   const localWave  = parseInt(localStorage.getItem('bestWave')   ?? '0', 10);
   const localKills = parseInt(localStorage.getItem('bestKills')  ?? '0', 10);
   const localTime  = parseInt(localStorage.getItem('bestTime')   ?? '0', 10);
-  const localStage = parseInt(localStorage.getItem('bestStage')  ?? '0', 10);
+  const localStage     = parseInt(localStorage.getItem('bestStage')  ?? '0', 10);
+  const localRankStage = parseInt(localStorage.getItem('rankStage') ?? '1', 10);
+  const localRankTime  = parseInt(localStorage.getItem('rankTime')  ?? '0', 10);
 
   const cloudUpgrades = cloud?.upgrades ?? {};
   applyCloudUpgrades(cloudUpgrades);
@@ -78,6 +86,10 @@ export async function syncLocalWithCloud(userId: string) {
     best_kills: Math.max(localKills, cloud?.best_kills ?? 0),
     best_time:  Math.max(localTime,  cloud?.best_time  ?? 0),
     best_stage: Math.max(localStage, cloud?.best_stage ?? 0),
+    rank_stage: Math.max(localRankStage, cloud?.rank_stage ?? 1),
+    rank_time:  localRankStage >= (cloud?.rank_stage ?? 1)
+      ? Math.max(localRankTime, cloud?.rank_stage === localRankStage ? (cloud?.rank_time ?? 0) : 0)
+      : (cloud?.rank_time ?? 0),
     upgrades:   getLocalUpgrades(),
   };
 
@@ -86,6 +98,8 @@ export async function syncLocalWithCloud(userId: string) {
   localStorage.setItem('bestKills',  String(merged.best_kills));
   localStorage.setItem('bestTime',   String(merged.best_time));
   localStorage.setItem('bestStage',  String(merged.best_stage));
+  localStorage.setItem('rankStage',  String(merged.rank_stage));
+  localStorage.setItem('rankTime',   String(merged.rank_time));
 
   await saveUserRecord(userId, merged);
   return merged;
@@ -99,6 +113,8 @@ export async function pushLocalToCloud(userId: string) {
     best_kills: parseInt(localStorage.getItem('bestKills')  ?? '0', 10),
     best_time:  parseInt(localStorage.getItem('bestTime')   ?? '0', 10),
     best_stage: parseInt(localStorage.getItem('bestStage')  ?? '0', 10),
+    rank_stage: parseInt(localStorage.getItem('rankStage') ?? '1', 10),
+    rank_time:  parseInt(localStorage.getItem('rankTime')  ?? '0', 10),
     upgrades:   getLocalUpgrades(),
   });
 }
