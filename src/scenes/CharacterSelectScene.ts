@@ -188,8 +188,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     sideDiv.lineStyle(1, typeColor, 0.5);
     sideDiv.lineBetween(stripeRight, cardTop, stripeRight, cardBot);
 
-    const trainerCX  = cardLeft + STRIPE_W * 0.32;
-    const trainerCY  = cardTop  + cardH   * 0.38;
+    const trainerCX  = cardLeft + STRIPE_W * 0.22;
+    const trainerCY  = cardTop  + cardH   * 0.30;
     const trainerImg = this.textures.exists('trainer')
       ? this.add.image(trainerCX, trainerCY, 'trainer').setDisplaySize(80, 94)
       : null;
