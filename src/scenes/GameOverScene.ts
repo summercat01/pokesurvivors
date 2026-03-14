@@ -20,8 +20,8 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   create(data: GameOverData) {
-    const W  = this.scale.width;   // 390
-    const H  = this.scale.height;  // 844
+    const W  = this.scale.width;
+    const H  = this.scale.height;
     const CX = W / 2;
     const { level, killCount, goldEarned, totalGold, waveNumber, weaponDamageLog } = data;
     const surviveTime  = data.surviveTime ?? 0;
@@ -55,9 +55,14 @@ export class GameOverScene extends Phaser.Scene {
       );
     }
 
-    // ── 타이틀 박스 (최상단) ──────────────────────────
-    const MSG_CY = 70;
-    const MSG_H  = 76;
+    // ── 버튼 (항상 최하단 고정) ───────────────────────
+    const BTN_Y = H - 38;
+    const BTN_W = Math.min(162, W / 2 - 14);
+    const BTN_H = 48;
+
+    // ── 타이틀 박스 ──────────────────────────────────
+    const MSG_H  = Math.min(76, Math.round(H * 0.09));
+    const MSG_CY = 16 + MSG_H / 2;
     const msgBgColor  = stageCleared ? 0xd0f8d0 : 0xf8f8d0;
     const msgTxtColor = stageCleared ? '#1a6a1a' : '#383030';
     const msgContent  = stageCleared ? `STAGE ${stageId}\n클리어!` : '트레이너가\n쓰러졌다!';
@@ -70,23 +75,24 @@ export class GameOverScene extends Phaser.Scene {
     }).setOrigin(0.5).setAlpha(0);
     this.tweens.add({ targets: msgText, alpha: 1, duration: 400, delay: 200 });
 
-    // ── 결과 패널 (넓고 길게) ─────────────────────────
-    const PANEL_TOP = 122;
-    const PANEL_H   = 560;
+    // ── 결과 패널 (버튼 위~타이틀 아래) ──────────────
+    const PANEL_TOP = MSG_CY + MSG_H / 2 + 8;
+    const PANEL_BOT = BTN_Y - BTN_H / 2 - 10;
+    const PANEL_H   = PANEL_BOT - PANEL_TOP;
     const panelCY   = PANEL_TOP + PANEL_H / 2;
 
     this.add.rectangle(CX, panelCY, W - 20, PANEL_H, 0xf8f8d0)
       .setStrokeStyle(4, 0x383030);
 
     // 결과 헤더
-    this.add.text(CX, PANEL_TOP + 20, '— 결과 —', {
-      fontSize: '16px', color: '#383030', fontStyle: 'bold',
+    this.add.text(CX, PANEL_TOP + 16, '— 결과 —', {
+      fontSize: '15px', color: '#383030', fontStyle: 'bold',
     }).setOrigin(0.5, 0);
-    this.add.rectangle(CX, PANEL_TOP + 46, W - 60, 2, 0x383030);
+    this.add.rectangle(CX, PANEL_TOP + 38, W - 60, 2, 0x383030);
 
-    // ── 스탯 6행 (최고 스테이지 추가) ──────────────────
-    const STAT_START = PANEL_TOP + 62;
-    const STAT_GAP   = 48;
+    // ── 스탯 6행 ─────────────────────────────────────
+    const STAT_START = PANEL_TOP + 50;
+    const STAT_GAP   = Math.max(34, Math.min(44, Math.floor((PANEL_H - 180) / 6)));
 
     const stats = [
       { label: '최고 스테이지', value: bestStage > 0 ? `${bestStage} STAGE` : '-', icon: '🏆', isRecord: newStageRecord },
@@ -103,21 +109,21 @@ export class GameOverScene extends Phaser.Scene {
         fontSize: '13px', color: '#606060',
       }).setOrigin(0, 0.5);
       this.add.text(W - 28, y, stat.value, {
-        fontSize: '17px', color: '#383030', fontStyle: 'bold',
+        fontSize: '16px', color: '#383030', fontStyle: 'bold',
       }).setOrigin(1, 0.5);
       if (stat.isRecord) {
         this.add.text(CX - 6, y, '신기록!', {
-          fontSize: '12px', color: '#ff4400', fontStyle: 'bold',
+          fontSize: '11px', color: '#ff4400', fontStyle: 'bold',
           stroke: '#ffffff', strokeThickness: 2,
         }).setOrigin(0.5);
       }
     });
 
     // ── 무기 딜 순위 ──────────────────────────────────
-    const RANK_TOP = STAT_START + 6 * STAT_GAP + 10;
+    const RANK_TOP = STAT_START + 6 * STAT_GAP + 8;
 
     this.add.rectangle(CX, RANK_TOP, W - 60, 1, 0x888888, 0.6);
-    this.add.text(28, RANK_TOP + 12, '무기 딜 순위', {
+    this.add.text(28, RANK_TOP + 10, '무기 딜 순위', {
       fontSize: '12px', color: '#888888',
     }).setOrigin(0, 0);
 
@@ -125,31 +131,31 @@ export class GameOverScene extends Phaser.Scene {
       const sorted = Object.entries(weaponDamageLog).sort((a, b) => b[1] - a[1]).slice(0, 3);
       const medals = ['🥇', '🥈', '🥉'];
       sorted.forEach(([name, dmg], i) => {
-        const ry = RANK_TOP + 32 + i * 26;
+        const ry = RANK_TOP + 28 + i * 24;
         this.add.text(34, ry, `${medals[i]}  ${name}`, {
-          fontSize: '14px', color: '#303030', fontStyle: 'bold',
+          fontSize: '13px', color: '#303030', fontStyle: 'bold',
         }).setOrigin(0, 0.5);
         this.add.text(W - 28, ry, dmg.toLocaleString(), {
-          fontSize: '14px', color: '#303030', fontStyle: 'bold',
+          fontSize: '13px', color: '#303030', fontStyle: 'bold',
         }).setOrigin(1, 0.5);
       });
     }
 
     // ── 보유 골드 ─────────────────────────────────────
-    const GOLD_TOP = RANK_TOP + 110;
+    const GOLD_TOP = RANK_TOP + 94;
 
     this.add.rectangle(CX, GOLD_TOP, W - 60, 2, 0xc8b860);
-    this.add.text(CX, GOLD_TOP + 14, `보유 골드   ★  ${totalGold} G`, {
-      fontSize: '15px', color: '#9a7a10', fontStyle: 'bold',
+    this.add.text(CX, GOLD_TOP + 12, `보유 골드   ★  ${totalGold} G`, {
+      fontSize: '14px', color: '#9a7a10', fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
     // ── 다음 스테이지 해금 알림 (클리어 시) ────────────
     if (stageCleared && stageId < 17) {
-      const unlockY = GOLD_TOP + 38;
-      const unlockBg = this.add.rectangle(CX, unlockY, W - 40, 28, 0x1a6a1a, 0.9)
+      const unlockY = GOLD_TOP + 34;
+      const unlockBg = this.add.rectangle(CX, unlockY, W - 40, 26, 0x1a6a1a, 0.9)
         .setStrokeStyle(1, 0x44cc44);
       this.add.text(CX, unlockY, `🔓  STAGE ${stageId + 1}  해금!`, {
-        fontSize: '14px', color: '#aaffaa', fontStyle: 'bold',
+        fontSize: '13px', color: '#aaffaa', fontStyle: 'bold',
       }).setOrigin(0.5);
       this.tweens.add({
         targets: [unlockBg],
@@ -159,11 +165,6 @@ export class GameOverScene extends Phaser.Scene {
         delay: 600,
       });
     }
-
-    // ── 버튼 2개 (최하단) ─────────────────────────────
-    const BTN_Y = 766;
-    const BTN_W = 162;
-    const BTN_H = 54;
 
     const makeBtn = (x: number, label: string, onTap: () => void) => {
       const bg = this.add.rectangle(x, BTN_Y, BTN_W, BTN_H, 0xf8f8d0)

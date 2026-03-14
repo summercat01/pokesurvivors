@@ -3,12 +3,13 @@ import type { LevelUpOption } from '../types';
 import { TYPE_COLORS, getWeaponByPokemonId } from '../data/weapons';
 import type { GameScene } from './GameScene';
 
-const CARD_W   = 360;
 const CARD_H   = 100;
 const CARD_GAP = 14;
 
 
 export class LevelUpScene extends Phaser.Scene {
+  private CARD_W = 360;
+
   constructor() {
     super({ key: 'LevelUpScene' });
   }
@@ -18,11 +19,13 @@ export class LevelUpScene extends Phaser.Scene {
     const H = this.scale.height;
     const { options } = data;
 
+    this.CARD_W = W - 20;
+
     // ── 어두운 반투명 오버레이 ──
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.72);
 
     // ── 헤더 ──
-    this.add.text(W / 2, 70, '레벨이 올랐다!', {
+    this.add.text(W / 2, Math.round(H * 0.08), '레벨이 올랐다!', {
       fontSize: '30px',
       color: '#ffdd00',
       fontStyle: 'bold',
@@ -31,7 +34,7 @@ export class LevelUpScene extends Phaser.Scene {
       padding: { top: 8 },
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 118, '강화할 능력을 고르세요', {
+    this.add.text(W / 2, Math.round(H * 0.14), '강화할 능력을 고르세요', {
       fontSize: '15px',
       color: '#ccccbb',
       stroke: '#000000',
@@ -40,8 +43,9 @@ export class LevelUpScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // ── 카드 ──
+    const CARD_START = Math.round(H * 0.18);
     options.forEach((opt, i) => {
-      const cy = 155 + i * (CARD_H + CARD_GAP) + CARD_H / 2;
+      const cy = CARD_START + i * (CARD_H + CARD_GAP) + CARD_H / 2;
       this.createCard(opt, W / 2, cy);
     });
   }
@@ -56,6 +60,7 @@ export class LevelUpScene extends Phaser.Scene {
     const isNew     = opt.type === 'newPokemon' || opt.type === 'newPassive';
     const sprKey    = this.resolveSprite(opt);
 
+    const CARD_W = this.CARD_W;
     // 그림자
     this.add.rectangle(cx + 2, cy + 3, CARD_W + 4, CARD_H + 4, 0x000000, 0.5);
 
@@ -139,6 +144,7 @@ export class LevelUpScene extends Phaser.Scene {
 
   // ─────────────────────────────────────────
   private createGoldCard(cx: number, cy: number) {
+    const CARD_W = this.CARD_W;
     const GOLD = 0xf0a800;
 
     this.add.rectangle(cx + 2, cy + 3, CARD_W + 4, CARD_H + 4, 0x000000, 0.5);

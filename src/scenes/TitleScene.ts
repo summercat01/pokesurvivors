@@ -245,8 +245,14 @@ export class TitleScene extends Phaser.Scene {
     const BTN_W  = Math.min(280, W - 60);
     const BTN_H  = 54;
     const BTN_CX = W / 2;
-    const BTN_Y0 = Math.round(H * 0.58);   // 490 at H=844
-    const BTN_GAP = Math.round(H * 0.08);  // 68 at H=844
+
+    // 버튼 영역: 로고 하단(H*0.41)과 푸터 상단(H-170) 사이에 균등 배치
+    const FOOTER_TOP   = H - 170;
+    const logoBottom   = Math.round(H * 0.41) + 10;
+    const btnSpan      = FOOTER_TOP - logoBottom;
+    const spaceBetween = Math.max(10, Math.floor((btnSpan - BTN_H * 3) / 4));
+    const BTN_GAP      = BTN_H + spaceBetween;
+    const BTN_Y0       = logoBottom + spaceBetween + Math.floor(BTN_H / 2);
 
     this.createDPButton(
       BTN_CX, BTN_Y0,
@@ -475,38 +481,41 @@ export class TitleScene extends Phaser.Scene {
     closeBg.on('pointerdown', close);
     allItems.push(closeBg, closeTxt);
 
-    // 슬라이더 헬퍼
-    const SLIDER_W  = PANEL_W - 80;
-    const SLIDER_X  = CX - SLIDER_W / 2 + 20;
-    const makeSlider = (labelText: string, storageKey: string, rowY: number) => {
+    // 슬라이더 헬퍼 — 레이블은 위, 트랙은 아래
+    const LEFT      = CX - PANEL_W / 2 + 18;
+    const SLIDER_W  = PANEL_W - 40;
+    const SLIDER_X  = CX - SLIDER_W / 2;
+    const makeSlider = (labelText: string, storageKey: string, labelY: number) => {
+      const trackY   = labelY + 24;
       const savedVal = parseFloat(localStorage.getItem(storageKey) ?? '1');
       let curVal     = savedVal;
 
-      this.add.text(CX - PANEL_W / 2 + 18, rowY, labelText, {
+      // 레이블
+      const labelTxt = this.add.text(LEFT, labelY, labelText, {
         fontSize: '13px', color: '#ccddee',
       }).setOrigin(0, 0.5).setDepth(D + 2);
-      allItems.push(...this.children.list.slice(-1));
+      allItems.push(labelTxt);
+
+      // 퍼센트 텍스트 (레이블 오른쪽)
+      const pctTxt = this.add.text(CX + PANEL_W / 2 - 18, labelY, `${Math.round(curVal * 100)}%`, {
+        fontSize: '12px', color: '#aabbcc',
+      }).setOrigin(1, 0.5).setDepth(D + 2);
+      allItems.push(pctTxt);
 
       // 트랙
-      const track = this.add.rectangle(CX + 20, rowY, SLIDER_W, 6, 0x223355)
+      const track = this.add.rectangle(CX, trackY, SLIDER_W, 6, 0x223355)
         .setDepth(D + 2);
       allItems.push(track);
 
       // 채움 바
-      const fillBar = this.add.rectangle(SLIDER_X, rowY, SLIDER_W * curVal, 6, 0x3399ff)
+      const fillBar = this.add.rectangle(SLIDER_X, trackY, SLIDER_W * curVal, 6, 0x3399ff)
         .setOrigin(0, 0.5).setDepth(D + 3);
       allItems.push(fillBar);
 
       // 핸들
-      const handle = this.add.circle(SLIDER_X + SLIDER_W * curVal, rowY, 10, 0x55bbff)
+      const handle = this.add.circle(SLIDER_X + SLIDER_W * curVal, trackY, 10, 0x55bbff)
         .setDepth(D + 4).setInteractive({ useHandCursor: true, draggable: true });
       allItems.push(handle);
-
-      // 퍼센트 텍스트
-      const pctTxt = this.add.text(CX + PANEL_W / 2 - 18, rowY, `${Math.round(curVal * 100)}%`, {
-        fontSize: '12px', color: '#aabbcc',
-      }).setOrigin(1, 0.5).setDepth(D + 2);
-      allItems.push(pctTxt);
 
       const updateSlider = (ratio: number) => {
         curVal = Phaser.Math.Clamp(ratio, 0, 1);
@@ -522,7 +531,6 @@ export class TitleScene extends Phaser.Scene {
         updateSlider(ratio);
       });
 
-      // 트랙 클릭으로도 조정
       track.setInteractive({ useHandCursor: true });
       track.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
         const ratio = (ptr.x - SLIDER_X) / SLIDER_W;
@@ -530,9 +538,9 @@ export class TitleScene extends Phaser.Scene {
       });
     };
 
-    const BASE_Y = PANEL_Y - PANEL_H / 2 + 80;
+    const BASE_Y = PANEL_Y - PANEL_H / 2 + 72;
     makeSlider('BGM 볼륨',  'bgmVolume',  BASE_Y);
-    makeSlider('효과음 볼륨', 'sfxVolume', BASE_Y + 70);
+    makeSlider('효과음 볼륨', 'sfxVolume', BASE_Y + 80);
   }
 
   // ─────────────────────────────────────────────
@@ -611,52 +619,56 @@ export class TitleScene extends Phaser.Scene {
   // 하단 푸터
   // ─────────────────────────────────────────────
   private createFooter() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    const W           = this.scale.width;
+    const H           = this.scale.height;
+    const FOOTER_TOP  = H - 170;   // 버튼 영역과 동일 기준
 
+    // ── 배경 오버레이 ──
+    this.add.rectangle(W / 2, FOOTER_TOP + 85, W, 170, 0x000000, 0.60).setDepth(9);
 
-    this.add.rectangle(W / 2, H - 58, W, 112, 0x000000, 0.60).setDepth(9);
-
-    // ── 오박사 가이드 책 버튼 (저작권 박스 위 우측) ──
-    const bookBg = this.add.rectangle(W - 50, H - 138, 84, 32, 0x224422, 0.9)
+    // ── 오박사 가이드 버튼 (푸터 최상단) ──
+    const guideY  = FOOTER_TOP + 18;
+    const bookBg  = this.add.rectangle(W - 50, guideY, 84, 30, 0x224422, 0.9)
       .setDepth(12).setInteractive({ useHandCursor: true });
     this.add.graphics().lineStyle(1, 0x44aa44, 0.8)
-      .strokeRect(W - 92, H - 154, 84, 32).setDepth(12);  // border around bookBg
-    const bookTxt = this.add.text(W - 50, H - 138, '📖 가이드', {
+      .strokeRect(W - 92, guideY - 15, 84, 30).setDepth(12);
+    const bookTxt = this.add.text(W - 50, guideY, '📖 가이드', {
       fontSize: '12px', color: '#88eeaa', fontStyle: 'bold',
-      padding: { top: 3 },
+      padding: { top: 2 },
     }).setOrigin(0.5).setDepth(13);
-    bookBg.on('pointerover', () => { bookBg.setFillStyle(0x336633); bookTxt.setStyle({ fontSize: '13px', color: '#aaffcc', fontStyle: 'bold', padding: { top: 3 } }); });
-    bookBg.on('pointerout',  () => { bookBg.setFillStyle(0x224422); bookTxt.setStyle({ fontSize: '13px', color: '#88eeaa', fontStyle: 'bold', padding: { top: 3 } }); });
+    bookBg.on('pointerover', () => { bookBg.setFillStyle(0x336633); bookTxt.setColor('#aaffcc'); });
+    bookBg.on('pointerout',  () => { bookBg.setFillStyle(0x224422); bookTxt.setColor('#88eeaa'); });
     bookBg.on('pointerdown', () => this.scene.launch('OakGuideScene'));
-    this.add.text(W / 2, H - 108,
+
+    // ── 저작권 텍스트 ──
+    this.add.text(W / 2, FOOTER_TOP + 48,
       'Pokémon and all related names are trademarks of Nintendo / Creatures Inc. / GAME FREAK inc.\n이 게임은 닌텐도와 무관한 비영리 팬 게임입니다.', {
-        fontSize: '15px', color: '#aabbaa', align: 'center',
-        lineSpacing: 6,
+        fontSize: '11px', color: '#aabbaa', align: 'center',
+        lineSpacing: 4,
         wordWrap: { width: W - 24 },
       }).setOrigin(0.5, 0).setDepth(10);
 
-    const GAP = 8;
-    const ICON_SIZE = 18;
-    const devTxt = this.add.text(0, 0, 'Developed by  SummerCat', {
-      fontSize: '15px', color: '#88bbff', fontStyle: 'bold',
-      padding: { top: 4 },
+    // ── 개발자 정보 ──
+    const DEV_Y    = H - 20;
+    const GAP      = 6;
+    const ICON_SIZE = 16;
+    const devTxt   = this.add.text(0, 0, 'Developed by  SummerCat', {
+      fontSize: '13px', color: '#88bbff', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(10);
     const totalW = devTxt.width + GAP + ICON_SIZE;
-    devTxt.setPosition(W / 2 - (GAP + ICON_SIZE) / 2, H - 16);
+    devTxt.setPosition(W / 2 - (GAP + ICON_SIZE) / 2, DEV_Y);
 
     const iconX = W / 2 - totalW / 2 + devTxt.width + GAP + ICON_SIZE / 2;
     if (this.textures.exists('icon_github')) {
-      this.add.image(iconX, H - 16, 'icon_github').setDisplaySize(ICON_SIZE, ICON_SIZE).setDepth(10);
+      this.add.image(iconX, DEV_Y, 'icon_github').setDisplaySize(ICON_SIZE, ICON_SIZE).setDepth(10);
     } else {
-      this.add.text(iconX, H - 16, '🐙', { fontSize: '15px' }).setOrigin(0.5).setDepth(10);
+      this.add.text(iconX, DEV_Y, '🐙', { fontSize: '13px' }).setOrigin(0.5).setDepth(10);
     }
 
-    // 전체 영역 히트박스
-    const devHit = this.add.rectangle(W / 2, H - 16, totalW + 16, 28, 0xffffff, 0)
+    const devHit = this.add.rectangle(W / 2, DEV_Y, totalW + 16, 26, 0xffffff, 0)
       .setDepth(11).setInteractive({ useHandCursor: true });
-    devHit.on('pointerover', () => devTxt.setStyle({ fontSize: '15px', color: '#bbddff', fontStyle: 'bold' }));
-    devHit.on('pointerout',  () => devTxt.setStyle({ fontSize: '15px', color: '#88bbff', fontStyle: 'bold' }));
+    devHit.on('pointerover', () => devTxt.setColor('#bbddff'));
+    devHit.on('pointerout',  () => devTxt.setColor('#88bbff'));
     devHit.on('pointerdown', () => window.open('https://github.com/summercat01', '_blank'));
   }
 }

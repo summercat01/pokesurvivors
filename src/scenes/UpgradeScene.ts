@@ -169,8 +169,9 @@ export class UpgradeScene extends Phaser.Scene {
 
   // ── 하단 정보 패널 생성 ───────────────────────────────
   private createInfoPanel() {
-    const PANEL_Y  = 390;
-    const PANEL_H  = 220;
+    const H        = this.scale.height;
+    const PANEL_Y  = Math.round(H * 0.55);
+    const PANEL_H  = Math.max(180, Math.round(H - 89 - 20) - PANEL_Y);
     const CX       = this.scale.width / 2;
     const W        = this.scale.width;
     const panelCY  = PANEL_Y + PANEL_H / 2;
