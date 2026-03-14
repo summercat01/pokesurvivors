@@ -3336,6 +3336,8 @@ export class GameScene extends Phaser.Scene {
     this.joystickActive = false;
     this.joystickDx     = 0;
     this.joystickDy     = 0;
+    // gameCam을 숨겨 오버레이가 cameras.main 위에 올라오게 함
+    this.gameCam.setVisible(false);
     // 오버레이 표시
     this.pauseOverlayItems.forEach(obj => (obj as any).setVisible(true));
     this.events.emit('pause-opened');
@@ -3347,6 +3349,8 @@ export class GameScene extends Phaser.Scene {
     this.closeWeaponPopup();
     this.isPaused = false;
     this.physics.resume();
+    // gameCam 복원
+    this.gameCam.setVisible(true);
     // 오버레이 숨김
     this.pauseOverlayItems.forEach(obj => (obj as any).setVisible(false));
     // BGM 재개
