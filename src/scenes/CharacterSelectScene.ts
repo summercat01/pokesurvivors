@@ -188,24 +188,19 @@ export class CharacterSelectScene extends Phaser.Scene {
     sideDiv.lineStyle(1, typeColor, 0.5);
     sideDiv.lineBetween(stripeRight, cardTop, stripeRight, cardBot);
 
-    // 삼각 영역 클리핑 마스크 (컨테이너 내부 → 스크롤과 함께 이동)
-    const stripeMaskGfx = this.add.graphics();
-    stripeMaskGfx.fillStyle(0xffffff);
-    stripeMaskGfx.fillTriangle(cardLeft, cardTop, stripeRight, cardTop, cardLeft, cardBot);
-    stripeMaskGfx.setVisible(false);
-    const triMask = stripeMaskGfx.createGeometryMask();
-
-    const trainerCX  = cardLeft + STRIPE_W * 0.32;
-    const trainerCY  = cardTop  + cardH   * 0.38;
+    // 트레이너: 대각선 안쪽에 자연스럽게 맞는 크기/위치로 조정
+    const trainerCX  = cardLeft + STRIPE_W * 0.26;
+    const trainerCY  = cardTop  + cardH   * 0.34;
     const trainerImg = this.textures.exists('trainer')
-      ? this.add.image(trainerCX, trainerCY, 'trainer').setDisplaySize(80, 94).setMask(triMask)
+      ? this.add.image(trainerCX, trainerCY, 'trainer').setDisplaySize(62, 74)
       : null;
 
-    const pokeCX  = cardLeft + STRIPE_W * 0.68;
-    const pokeCY  = cardTop  + cardH   * 0.70;
+    // 파트너 포켓몬: 대각선 근처에 배치
+    const pokeCX  = cardLeft + STRIPE_W * 0.60;
+    const pokeCY  = cardTop  + cardH   * 0.68;
     const sprKey  = `pokemon_${String(weapon.pokemonId).padStart(3, '0')}`;
     const pokeImg = this.textures.exists(sprKey)
-      ? this.add.image(pokeCX, pokeCY, sprKey).setDisplaySize(64, 64).setMask(triMask)
+      ? this.add.image(pokeCX, pokeCY, sprKey).setDisplaySize(52, 52)
       : null;
 
     const textX = stripeRight + 16;
@@ -239,7 +234,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     const items: Phaser.GameObjects.GameObject[] = [
       shadow, cardBg, outline, bgTop, bgBot, diagLine, sideDiv,
-      stripeMaskGfx, nameTxt, subtitleTxt, divLine, partnerLabel, weaponNameTxt, typeBadge,
+      nameTxt, subtitleTxt, divLine, partnerLabel, weaponNameTxt, typeBadge,
     ];
     if (trainerImg) items.push(trainerImg);
     if (pokeImg)    items.push(pokeImg);
