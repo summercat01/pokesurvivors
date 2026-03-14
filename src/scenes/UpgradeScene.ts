@@ -47,7 +47,7 @@ export class UpgradeScene extends Phaser.Scene {
     super({ key: 'UpgradeScene' });
   }
 
-  create() {
+  create(data?: { selectedIdx?: number }) {
     this.selectedIdx = 0;
 
     // ── 배경 ──
@@ -64,8 +64,8 @@ export class UpgradeScene extends Phaser.Scene {
     this.createInfoPanel();
     this.createBackButton();
 
-    // 첫 카드 선택 상태로 초기화
-    this.selectCard(0);
+    // 구매 후 재시작 시 이전 선택 유지, 아니면 0번
+    this.selectCard(data?.selectedIdx ?? 0);
     this.cameras.main.fadeIn(220, 24, 16, 40);
   }
 
@@ -314,7 +314,7 @@ export class UpgradeScene extends Phaser.Scene {
 
     // 구매 플래시 연출 후 씬 재시작
     this.cameras.main.flash(130, 255, 220, 80);
-    this.time.delayedCall(160, () => this.scene.restart());
+    this.time.delayedCall(160, () => this.scene.restart({ selectedIdx: this.selectedIdx }));
   }
 
   // ── 돌아가기 버튼 ─────────────────────────────────────
