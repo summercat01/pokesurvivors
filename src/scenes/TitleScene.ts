@@ -672,7 +672,7 @@ export class TitleScene extends Phaser.Scene {
     // ── 배경 오버레이 ──
     this.add.rectangle(W / 2, FOOTER_TOP + 85, W, 170, 0x000000, 0.60).setDepth(9);
 
-    // ── 오박사 가이드 버튼 (푸터 최상단) ──
+    // ── 오박사 가이드 버튼 (푸터 최상단 우측) ──
     const guideY  = FOOTER_TOP + 18;
     const bookBg  = this.add.rectangle(W - 50, guideY, 84, 30, 0x224422, 0.9)
       .setDepth(12).setInteractive({ useHandCursor: true });
@@ -685,6 +685,23 @@ export class TitleScene extends Phaser.Scene {
     bookBg.on('pointerover', () => { bookBg.setFillStyle(0x336633); bookTxt.setColor('#aaffcc'); });
     bookBg.on('pointerout',  () => { bookBg.setFillStyle(0x224422); bookTxt.setColor('#88eeaa'); });
     bookBg.on('pointerdown', () => this.scene.launch('OakGuideScene'));
+
+    // ── 도감 버튼 (가이드 버튼 왼쪽) ──
+    const dexX  = W - 92 - 8 - 42; // 가이드 왼쪽 끝(W-92)에서 8px 간격 + 반폭(42)
+    const dexBg = this.add.rectangle(dexX, guideY, 84, 30, 0x222244, 0.9)
+      .setDepth(12).setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(1, 0x4444aa, 0.8)
+      .strokeRect(dexX - 42, guideY - 15, 84, 30).setDepth(12);
+    const dexTxt = this.add.text(dexX, guideY, '📋 도감', {
+      fontSize: '12px', color: '#88aaee', fontStyle: 'bold',
+      padding: { top: 2 },
+    }).setOrigin(0.5).setDepth(13);
+    dexBg.on('pointerover',  () => { dexBg.setFillStyle(0x333366); dexTxt.setColor('#bbccff'); });
+    dexBg.on('pointerout',   () => { dexBg.setFillStyle(0x222244); dexTxt.setColor('#88aaee'); });
+    dexBg.on('pointerdown',  () => {
+      this.cameras.main.fadeOut(200, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('PokedexScene'));
+    });
 
     // ── 저작권 텍스트 ──
     this.add.text(W / 2, FOOTER_TOP + 48,

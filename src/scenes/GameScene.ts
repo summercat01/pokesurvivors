@@ -18,6 +18,7 @@ import { getStageData, getActiveEnemyPool, getElitePool } from '../data/stages';
 import type { LevelUpOption, PokemonType, PlayerStats } from '../types';
 import { IS_DEV_MODE } from '../main';
 import { clearStage } from '../lib/stageProgress';
+import { recordDefeatedId } from '../data/pokedex';
 
 // 퍼센트 기반 배율로 적용되는 스탯 목록
 const PERCENT_STATS = new Set(['attackPower', 'moveSpeed', 'projectileSpeed', 'knockback', 'projectileRange']);
@@ -1310,6 +1311,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.killCount++;
+    // 도감 처치 기록
+    const texKey = enemy.texture.key; // e.g. 'pokemon_025'
+    if (texKey.startsWith('pokemon_')) {
+      recordDefeatedId(texKey.replace('pokemon_', ''));
+    }
     if (!enemy.isElite && !enemy.isBoss) {
       this.gold += Math.ceil(enemy.goldValue * this.player.stats.goldGain);
     }
