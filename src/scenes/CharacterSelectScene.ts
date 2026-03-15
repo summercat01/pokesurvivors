@@ -27,7 +27,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
     if (this.cache.audio.exists('bgm_select') && !this.sound.get('bgm_select')?.isPlaying) {
       this.sound.stopAll();
-      this.sound.play('bgm_select', { loop: true, volume: vol });
+      const play = () => { if (this.cache.audio.exists('bgm_select')) this.sound.play('bgm_select', { loop: true, volume: vol }); };
+      if ((this.sound as any).locked) { this.sound.once('unlocked', play); } else { play(); }
     }
 
     // ── 배경 ──

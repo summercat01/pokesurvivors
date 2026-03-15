@@ -51,11 +51,18 @@ export class OakGuideScene extends Phaser.Scene {
     const H  = this.scale.height;
     const CX = W / 2;
 
-    // BGM
+    // BGM (locked이면 unlock 후 재생)
     const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
-    if (this.cache.audio.exists('bgm_oak')) {
-      this.sound.stopAll();
-      this.sound.play('bgm_oak', { loop: true, volume: vol });
+    const playOakBgm = () => {
+      if (this.cache.audio.exists('bgm_oak')) {
+        this.sound.stopAll();
+        this.sound.play('bgm_oak', { loop: true, volume: vol });
+      }
+    };
+    if ((this.sound as any).locked) {
+      this.sound.once('unlocked', playOakBgm);
+    } else {
+      playOakBgm();
     }
     this.events.once('shutdown', () => { this.sound.stopByKey('bgm_oak'); });
 

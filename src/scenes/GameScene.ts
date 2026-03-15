@@ -3514,7 +3514,13 @@ export class GameScene extends Phaser.Scene {
   private playBgm(key: string) {
     const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.45;
     this.sound.stopAll();
-    if (this.cache.audio.exists(key)) {
+    if (!this.cache.audio.exists(key)) return;
+    if ((this.sound as any).locked) {
+      this.sound.once('unlocked', () => {
+        this.sound.stopAll();
+        if (this.cache.audio.exists(key)) this.sound.play(key, { loop: true, volume: vol });
+      });
+    } else {
       this.sound.play(key, { loop: true, volume: vol });
     }
   }

@@ -103,29 +103,40 @@ export class TitleScene extends Phaser.Scene {
     this.createFooter();
     this.createUserBadge();
 
-    // BGM 재생
+    // BGM 재생 (locked이면 unlock 이후 재생)
     this.playBGM();
 
     // 첫 실행 시 오박사 가이드 표시
     if (!localStorage.getItem('guideShown')) {
       this.scene.launch('OakGuideScene');
+      // OakGuideScene이 닫히면 타이틀 BGM 재개
+      this.scene.get('OakGuideScene')?.events.once('shutdown', () => {
+        if (!this.sound.get('bgm_title')?.isPlaying && !this.sound.get('bgm_title_intro')?.isPlaying) {
+          this.playBGM();
+        }
+      });
     }
   }
 
   private playBGM() {
+    // 오디오 컨텍스트가 잠겨있으면 unlock 이후 재시도
+    if ((this.sound as any).locked) {
+      this.sound.once('unlocked', () => this.playBGM());
+      return;
+    }
     const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
     // 타이틀 BGM이 이미 재생 중이면 스킵
-    if (this.sound.get('bgm_title')?.isPlaying) return;
+    if (this.sound.get('bgm_title')?.isPlaying || this.sound.get('bgm_title_intro')?.isPlaying) return;
     this.sound.stopAll();
-    // 인트로(1번)가 있으면 먼저 재생 후 타이틀 루프
+    // 인트로(1번) 재생 후 타이틀 루프
     if (this.cache.audio.exists('bgm_title_intro')) {
       const intro = this.sound.add('bgm_title_intro', { loop: false, volume: vol });
-      intro.play();
       intro.once('complete', () => {
         if (this.cache.audio.exists('bgm_title') && this.scene.isActive('TitleScene')) {
           this.sound.play('bgm_title', { loop: true, volume: vol });
         }
       });
+      intro.play();
     } else if (this.cache.audio.exists('bgm_title')) {
       this.sound.play('bgm_title', { loop: true, volume: vol });
     }
