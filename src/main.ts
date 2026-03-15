@@ -12,6 +12,7 @@ import { DevScene } from './scenes/DevScene';
 import { LoginScene } from './scenes/LoginScene';
 import { RankingScene } from './scenes/RankingScene';
 import { PokedexScene } from './scenes/PokedexScene';
+import { TypeMatchupScene } from './scenes/TypeMatchupScene';
 
 // URL에 /dev 포함되거나 ?dev 쿼리파라미터가 있으면 개발자 모드
 export const IS_DEV_MODE =
@@ -48,7 +49,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, LoginScene, TitleScene, OakGuideScene, StageSelectScene, CharacterSelectScene, UpgradeScene, GameScene, GameOverScene, LevelUpScene, DevScene, RankingScene, PokedexScene],
+  scene: [BootScene, LoginScene, TitleScene, OakGuideScene, StageSelectScene, CharacterSelectScene, UpgradeScene, GameScene, GameOverScene, LevelUpScene, DevScene, RankingScene, PokedexScene, TypeMatchupScene],
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,

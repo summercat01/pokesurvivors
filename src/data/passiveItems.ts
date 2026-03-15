@@ -50,14 +50,14 @@ export const PASSIVE_ITEMS: PassiveStatBonus[] = [
     type: 'ice',
     name: '얼음의 돌',
     statKey: 'cooldownReduction',
-    values: [0.05, 0.1, 0.15, 0.22, 0.3], // 쿨다운 5% ~ 30% 감소
+    values: [0.04, 0.09, 0.13, 0.19, 0.26], // 쿨다운 4% ~ 26% 감소 (너프)
     description: '쿨다운 감소',
   },
   {
     type: 'fighting',
     name: '격투의 돌',
     statKey: 'critDamage',
-    values: [0.2, 0.4, 0.6, 0.9, 1.2],   // 치명타 데미지 배율 추가
+    values: [0.17, 0.34, 0.51, 0.77, 1.02],   // 치명타 데미지 배율 추가 (너프)
     description: '치명타 데미지 증가',
   },
   {
@@ -78,7 +78,7 @@ export const PASSIVE_ITEMS: PassiveStatBonus[] = [
     type: 'flying',
     name: '비행의 돌',
     statKey: 'moveSpeed',
-    values: [0.05, 0.1, 0.15, 0.22, 0.3],
+    values: [0.04, 0.09, 0.13, 0.19, 0.26],
     description: '이동속도 증가',
   },
   {
@@ -92,7 +92,7 @@ export const PASSIVE_ITEMS: PassiveStatBonus[] = [
     type: 'bug',
     name: '벌레의 돌',
     statKey: 'evasion',
-    values: [0.03, 0.06, 0.1, 0.15, 0.2], // 회피율 3% ~ 20%
+    values: [0.025, 0.05, 0.085, 0.13, 0.17], // 회피율 2.5% ~ 17% (너프)
     description: '회피율 증가',
   },
   {

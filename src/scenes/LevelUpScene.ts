@@ -3,6 +3,13 @@ import type { LevelUpOption } from '../types';
 import { TYPE_COLORS, getWeaponByPokemonId } from '../data/weapons';
 import type { GameScene } from './GameScene';
 
+const TYPE_KR: Record<string, string> = {
+  normal: '노말', fire: '불꽃', water: '물', grass: '풀',
+  electric: '전기', ice: '얼음', fighting: '격투', poison: '독',
+  ground: '땅', flying: '비행', psychic: '에스퍼', bug: '벌레',
+  rock: '바위', ghost: '고스트', dragon: '드래곤', dark: '악', steel: '강철',
+};
+
 const CARD_H   = 100;
 const CARD_GAP = 14;
 
@@ -80,17 +87,21 @@ export class LevelUpScene extends Phaser.Scene {
 
     // 포켓몬 스프라이트 or 타입 심볼
     if (sprKey && this.textures.exists(sprKey)) {
-      this.add.image(stripeX, cy, sprKey).setDisplaySize(64, 64);
+      this.add.image(stripeX, cy - 6, sprKey).setDisplaySize(56, 56);
+      // 무기 타입 텍스트 (스프라이트 아래)
+      if (opt.pokemonId != null) {
+        const w = getWeaponByPokemonId(opt.pokemonId);
+        if (w) {
+          this.add.text(stripeX, cy + 30, `[${TYPE_KR[w.type] ?? w.type}]`, {
+            fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 2,
+          }).setOrigin(0.5);
+        }
+      }
     } else if (opt.passiveType) {
       // 타입 이름 심볼 (한글 타입명)
-      const typeKr: Record<string, string> = {
-        normal: '노말', fire: '불꽃', water: '물', grass: '풀',
-        electric: '전기', ice: '얼음', fighting: '격투', poison: '독',
-        ground: '땅', flying: '비행', psychic: '에스퍼', bug: '벌레',
-        rock: '바위', ghost: '고스트', dragon: '드래곤', dark: '악', steel: '강철',
-      };
       this.add.text(stripeX, cy - 8, '💎', { fontSize: '28px' }).setOrigin(0.5);
-      this.add.text(stripeX, cy + 20, typeKr[opt.passiveType] ?? opt.passiveType, {
+      this.add.text(stripeX, cy + 20, TYPE_KR[opt.passiveType] ?? opt.passiveType, {
         fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5);
@@ -110,6 +121,23 @@ export class LevelUpScene extends Phaser.Scene {
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
+
+    // ── 추천/비추천 배지 ──
+    if (opt.recommendation === 'good') {
+      const recBadgeX = cx - CARD_W / 2 + STRIPE_W + 8;
+      const recBadgeY = cy + CARD_H / 2 - 12;
+      this.add.rectangle(recBadgeX + 20, recBadgeY, 44, 18, 0x227744);
+      this.add.text(recBadgeX + 20, recBadgeY, '★ 추천', {
+        fontSize: '10px', color: '#aaffcc', fontStyle: 'bold',
+      }).setOrigin(0.5);
+    } else if (opt.recommendation === 'bad') {
+      const recBadgeX = cx - CARD_W / 2 + STRIPE_W + 8;
+      const recBadgeY = cy + CARD_H / 2 - 12;
+      this.add.rectangle(recBadgeX + 24, recBadgeY, 52, 18, 0x553333);
+      this.add.text(recBadgeX + 24, recBadgeY, '▼ 비추천', {
+        fontSize: '10px', color: '#ffaaaa', fontStyle: 'bold',
+      }).setOrigin(0.5);
+    }
 
     // ── 이름 텍스트 ──
     const textX = cx - CARD_W / 2 + STRIPE_W + 12;

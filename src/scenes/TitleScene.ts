@@ -686,6 +686,25 @@ export class TitleScene extends Phaser.Scene {
     bookBg.on('pointerout',  () => { bookBg.setFillStyle(0x224422); bookTxt.setColor('#88eeaa'); });
     bookBg.on('pointerdown', () => this.scene.launch('OakGuideScene'));
 
+    // ── 상성표 버튼 (가이드 왼쪽) ──
+    const matchupX = W - 142;
+    const matchupBg = this.add.rectangle(matchupX, guideY, 84, 30, 0x224444, 0.9)
+      .setDepth(12).setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(1, 0x44aaaa, 0.8)
+      .strokeRect(matchupX - 42, guideY - 15, 84, 30).setDepth(12);
+    const matchupTxt = this.add.text(matchupX, guideY, '⚡ 상성표', {
+      fontSize: '12px', color: '#88eeee', fontStyle: 'bold',
+      padding: { top: 2 },
+    }).setOrigin(0.5).setDepth(13);
+    matchupBg.on('pointerover', () => { matchupBg.setFillStyle(0x336666); matchupTxt.setColor('#aaffff'); });
+    matchupBg.on('pointerout',  () => { matchupBg.setFillStyle(0x224444); matchupTxt.setColor('#88eeee'); });
+    matchupBg.on('pointerdown', () => {
+      this.cameras.main.fadeOut(200, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () =>
+        this.scene.start('TypeMatchupScene', { caller: 'TitleScene' })
+      );
+    });
+
     // ── 도감 버튼 (화면 왼쪽, 가이드와 대칭) ──
     const dexX  = 50; // 가이드(W-50)의 좌우 대칭
     const dexBg = this.add.rectangle(dexX, guideY, 84, 30, 0x222244, 0.9)

@@ -19,6 +19,8 @@ import type { LevelUpOption, PokemonType, PlayerStats } from '../types';
 import { IS_DEV_MODE } from '../main';
 import { clearStage } from '../lib/stageProgress';
 import { recordDefeatedId } from '../data/pokedex';
+import { getCurrentUser } from '../lib/auth';
+import { pushLocalToCloud } from '../lib/userDB';
 
 // 퍼센트 기반 배율로 적용되는 스탯 목록
 const PERCENT_STATS = new Set(['attackPower', 'moveSpeed', 'projectileSpeed', 'knockback', 'projectileRange']);
@@ -53,6 +55,15 @@ export class GameScene extends Phaser.Scene {
   private isPaused: boolean = false;
   private pauseOverlayItems: Phaser.GameObjects.GameObject[] = [];
 
+  // 일시정지 슬롯 UI (클래스 필드로 관리 — 세션 재시작 시 갱신)
+  private pausePokeSlotBgs:   Phaser.GameObjects.Rectangle[] = [];
+  private pausePokeSlotImgs:  Phaser.GameObjects.Image[]     = [];
+  private pausePokeSlotTypes: Phaser.GameObjects.Rectangle[] = [];
+  private pausePokeSlotLvs:   Phaser.GameObjects.Text[]      = [];
+  private pauseDpsNameTexts:  Phaser.GameObjects.Text[]      = [];
+  private pauseDpsDmgTexts:   Phaser.GameObjects.Text[]      = [];
+  private pauseStatValueFns:  Array<{ text: Phaser.GameObjects.Text; fn: () => string }> = [];
+
   // UI
   private hpBar!: Phaser.GameObjects.Rectangle;
   private expBar!: Phaser.GameObjects.Rectangle;
@@ -60,6 +71,7 @@ export class GameScene extends Phaser.Scene {
   private levelText!: Phaser.GameObjects.Text;
   private goldText!: Phaser.GameObjects.Text;
   private waveText!: Phaser.GameObjects.Text;
+  private stageText!: Phaser.GameObjects.Text;
   private killText!: Phaser.GameObjects.Text;
 
   private hpBarMaxW = 0;
@@ -99,6 +111,7 @@ export class GameScene extends Phaser.Scene {
   isGodMode: boolean = false;
   private currentBossWave: number = 0;         // 10 or 20
   private pokeballs: PokeballItem[] = [];
+  private pokeballArrows: Map<PokeballItem, Phaser.GameObjects.Text> = new Map();
 
   // 보스 패턴
   private bossPatternTimer: number = 0;
@@ -183,6 +196,8 @@ export class GameScene extends Phaser.Scene {
     this.weaponLevels    = [];
     this.equippedPassives = new Map();
     this.pokeballs    = [];
+    this.pokeballArrows?.forEach(a => a.destroy());
+    this.pokeballArrows = new Map();
 
     // orbit/zone 그래픽 정리 (재시작 시)
     this.orbitOrbs?.forEach(s => s.graphics.forEach(g => g.destroy()));
@@ -204,6 +219,16 @@ export class GameScene extends Phaser.Scene {
     this.joystickPointerId  = -1;
     this.joystickDx         = 0;
     this.joystickDy         = 0;
+
+    // 일시정지 오버레이 초기화 (재시작 시 이전 세션 항목 제거)
+    this.pauseOverlayItems   = [];
+    this.pausePokeSlotBgs    = [];
+    this.pausePokeSlotImgs   = [];
+    this.pausePokeSlotTypes  = [];
+    this.pausePokeSlotLvs    = [];
+    this.pauseDpsNameTexts   = [];
+    this.pauseDpsDmgTexts    = [];
+    this.pauseStatValueFns   = [];
 
     // 슬롯 배열 초기화 (createUI에서 push하므로 미리 비워야 함)
     this.pokemonSlotBgs   = [];
@@ -337,6 +362,8 @@ export class GameScene extends Phaser.Scene {
       this.rotatingBeamGfx?.forEach(g => g.destroy());
       this.bossIndicatorGfx?.destroy();
       this.pokeballs = [];
+      this.pokeballArrows.forEach(a => a.destroy());
+      this.pokeballArrows.clear();
     });
   }
 
@@ -392,6 +419,7 @@ export class GameScene extends Phaser.Scene {
     this.renderEnemyHpBars();
     this.updateCombo(delta);
     this.checkPokeballPickup();
+    this.updatePokeballArrows();
 
     if (!this.darkraiSpawned && this.waveTimer >= 30000) {
       this.waveTimer -= 30000;
@@ -1260,7 +1288,7 @@ export class GameScene extends Phaser.Scene {
   private onPlayerHitEnemy(_player: any, _enemy: any) {
     const player = _player as Player;
     const enemy  = _enemy as Enemy;
-    const dmg    = enemy.contactDamage ?? (5 + this.waveNumber * 2);
+    const dmg    = enemy.contactDamage ?? Math.round(3 + this.waveNumber * 1.5 + this.waveNumber * this.waveNumber * 0.1);
     const actual = player.takeDamage(dmg);
     if (actual <= 0) return;
 
@@ -1341,9 +1369,12 @@ export class GameScene extends Phaser.Scene {
       this.showBossDefeated();
       // 5분 보스 → 슈퍼볼 3개, 10분 보스 → 하이퍼볼 5개
       if (this.currentBossWave === 10) {
-        this.spawnPokeball(enemy.x, enemy.y, 'superball', 3);
+        this.spawnPokeball(enemy.x, enemy.y, 'superball', 1);
       } else if (this.currentBossWave === 20) {
-        this.spawnPokeball(enemy.x, enemy.y, 'hyperball', 5);
+        this.spawnPokeball(enemy.x, enemy.y, 'hyperball', 1);
+      } else if (this.darkraiSpawned) {
+        // 다크라이 처치 → 스테이지 클리어 결과 화면으로 이동
+        this.time.delayedCall(2500, () => this.triggerGameOver());
       }
     }
 
@@ -1364,6 +1395,14 @@ export class GameScene extends Phaser.Scene {
       const ball = new PokeballItem(this, ox, oy, type);
       this.cameras.main.ignore(ball);
       this.pokeballs.push(ball);
+
+      // 오프스크린 화살표 (UI 카메라에 표시)
+      const arrow = this.add.text(0, 0, '▲', {
+        fontSize: '18px', color: '#ffdd44',
+        stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(84).setVisible(false);
+      this.gameCam.ignore(arrow);
+      this.pokeballArrows.set(ball, arrow);
     }
   }
 
@@ -1376,6 +1415,8 @@ export class GameScene extends Phaser.Scene {
       if (Phaser.Math.Distance.Between(px, py, ball.x, ball.y) <= 40) {
         ball.collect();
         this.applyPokeballEffect(ball.ballType, ball.x, ball.y);
+        this.pokeballArrows.get(ball)?.destroy();
+        this.pokeballArrows.delete(ball);
         ball.destroy();
         this.pokeballs.splice(i, 1);
       }
@@ -1647,29 +1688,31 @@ export class GameScene extends Phaser.Scene {
     const CX = W / 2;
     const CY = H / 2;
 
-    // 반투명 배경
-    const overlay = this.add.rectangle(CX, CY, W, H, 0x000000, 0.75).setDepth(200);
-    this.cameras.main.ignore(overlay);
+    // 반투명 배경 (scrollFactor 0 → cameras.main 기준 고정, gameCam 제외)
+    const overlay = this.add.rectangle(CX, CY, W, H, 0x000000, 0.75)
+      .setScrollFactor(0).setDepth(200);
+    this.gameCam.ignore(overlay);
 
     // 텍스트
     const titleTxt = this.add.text(CX, CY - 110, '당신은 쓰러졌습니다', {
       fontSize: '20px', color: '#ff4444', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(201);
-    this.cameras.main.ignore(titleTxt);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
+    this.gameCam.ignore(titleTxt);
 
     const hasRevive = this.player.stats.revives > 0;
 
     // 부활 버튼
-    const reviveBg = this.add.rectangle(CX, CY - 30, 200, 50, hasRevive ? 0x226633 : 0x333333).setDepth(201);
-    this.cameras.main.ignore(reviveBg);
+    const reviveBg = this.add.rectangle(CX, CY - 30, 200, 50, hasRevive ? 0x226633 : 0x333333)
+      .setScrollFactor(0).setDepth(201);
+    this.gameCam.ignore(reviveBg);
     const reviveLabel = hasRevive
       ? `부활 (남은 횟수: ${this.player.stats.revives})`
       : '부활 불가';
     const reviveTxt = this.add.text(CX, CY - 30, reviveLabel, {
       fontSize: '15px', color: hasRevive ? '#88ffaa' : '#666666', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(202);
-    this.cameras.main.ignore(reviveTxt);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+    this.gameCam.ignore(reviveTxt);
 
     if (hasRevive) {
       reviveBg.setInteractive({ useHandCursor: true });
@@ -1688,13 +1731,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     // 종료 버튼
-    const quitBg = this.add.rectangle(CX, CY + 40, 200, 50, 0x442222).setDepth(201)
+    const quitBg = this.add.rectangle(CX, CY + 40, 200, 50, 0x442222)
+      .setScrollFactor(0).setDepth(201)
       .setInteractive({ useHandCursor: true });
-    this.cameras.main.ignore(quitBg);
+    this.gameCam.ignore(quitBg);
     const quitTxt = this.add.text(CX, CY + 40, '종료', {
       fontSize: '15px', color: '#ffaaaa', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(202);
-    this.cameras.main.ignore(quitTxt);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+    this.gameCam.ignore(quitTxt);
 
     quitBg.on('pointerover', () => quitBg.setFillStyle(0x773333));
     quitBg.on('pointerout',  () => quitBg.setFillStyle(0x442222));
@@ -1704,22 +1748,9 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  // ===== 게임오버 =====
-  private triggerGameOver() {
-    this.isGameOver = true;
-    this.physics.pause();
-    this.sound.stopByKey('bgm_game');
-    this.cameras.main.shake(400, 0.02);
-    // UI 정리
-    this.bossArrow.setVisible(false);
-    if (IS_DEV_MODE) this.scene.stop('DevScene');
-
-    // 진행 중인 모든 Tween 정리 후 플레이어 사망 애니메이션 실행
-    this.tweens.killAll();
-    this.player.setTint(0xff0000);
-    this.tweens.add({ targets: this.player, alpha: 0, duration: 600 });
-
-    // 골드 누적 저장
+  // ===== 결과 저장 (게임오버 / 타이틀 귀환 공통) =====
+  /** totalGold·베스트 기록·랭킹을 localStorage에 저장하고 클라우드 동기화. 새 totalGold 반환 */
+  private saveResults(): number {
     const prevTotal = parseInt(localStorage.getItem('totalGold') ?? '0', 10);
     const newTotal  = prevTotal + this.gold;
     localStorage.setItem('totalGold', String(newTotal));
@@ -1741,6 +1772,31 @@ export class GameScene extends Phaser.Scene {
     } else if (this.stageId === rankStage && Math.floor(this.gameTime) > rankTime) {
       localStorage.setItem('rankTime', String(Math.floor(this.gameTime)));
     }
+
+    const user = getCurrentUser();
+    if (user) {
+      pushLocalToCloud(user.id).catch(e => console.warn('[GameScene] cloud sync failed:', e));
+    }
+
+    return newTotal;
+  }
+
+  // ===== 게임오버 =====
+  private triggerGameOver() {
+    this.isGameOver = true;
+    this.physics.pause();
+    this.sound.stopByKey('bgm_game');
+    this.cameras.main.shake(400, 0.02);
+    // UI 정리
+    this.bossArrow.setVisible(false);
+    if (IS_DEV_MODE) this.scene.stop('DevScene');
+
+    // 진행 중인 모든 Tween 정리 후 플레이어 사망 애니메이션 실행
+    this.tweens.killAll();
+    this.player.setTint(0xff0000);
+    this.tweens.add({ targets: this.player, alpha: 0, duration: 600 });
+
+    const newTotal = this.saveResults();
 
     this.time.delayedCall(1000, () => {
       this.scene.start('GameOverScene', {
@@ -1823,6 +1879,14 @@ export class GameScene extends Phaser.Scene {
     const equippedIds   = this.weapons.map(w => w.pokemonId);
     const equippedTypes = Array.from(this.equippedPassives.keys());
 
+    const stageType = getStageData(this.stageId).stageType;
+
+    const getWeaponRec = (wType: PokemonType): 'good' | 'bad' | undefined => {
+      if (isSuperEffective(wType, stageType)) return 'good';
+      if (isSuperEffective(stageType, wType)) return 'bad';
+      return undefined;
+    };
+
     // ① 신규 무기 (슬롯 여유 있을 때)
     if (this.weapons.length < MAX_WEAPON_SLOTS) {
       ALL_WEAPONS.forEach(w => {
@@ -1833,6 +1897,7 @@ export class GameScene extends Phaser.Scene {
             label: w.name,
             description: w.description ?? `새로운 포켓몬! ${w.type} 타입`,
             levelTo: 1,
+            recommendation: getWeaponRec(w.type),
           });
         }
       });
@@ -1851,6 +1916,7 @@ export class GameScene extends Phaser.Scene {
           description: getUpgradeDescription(base, curLv, nextLv),
           levelFrom: curLv,
           levelTo: nextLv,
+          recommendation: getWeaponRec(w.type),
         });
       }
     });
@@ -2217,7 +2283,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const count = 12 + this.waveNumber * 4;
+    const count = Math.round(6 + this.waveNumber * 2 + this.waveNumber * this.waveNumber * 0.3);
     for (let i = 0; i < count; i++) {
       this.time.delayedCall(i * 160, () => this.spawnEnemy());
     }
@@ -2260,7 +2326,7 @@ export class GameScene extends Phaser.Scene {
 
     const enemy = new Enemy(this, x, y, `pokemon_${entry.id}`, {
       hp,
-      moveSpeed:    Math.min(55 + this.waveNumber * 5, 160),
+      moveSpeed:    Math.min(Math.round(40 + this.waveNumber * 4 + this.waveNumber * this.waveNumber * 0.3), 180),
       exp:          2 + this.waveNumber,
       pokemonTypes: entry.types,
       isElite:      false,
@@ -2960,6 +3026,11 @@ export class GameScene extends Phaser.Scene {
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D);
 
+    this.stageText = this.add.text(Math.round(W * 0.72), ROW_Y, 'STAGE 1', {
+      fontSize: '12px', color: '#88ccff', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D);
+
     this.waveText = this.add.text(W - 8, ROW_Y, 'WAVE 0', {
       fontSize: '12px', color: '#aaaaaa', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
@@ -3010,7 +3081,7 @@ export class GameScene extends Phaser.Scene {
 
     // cameras.main은 이 아이템들을 무시 → gameCam만 렌더링 (위치 중복 방지)
     this.cameras.main.ignore([
-      this.goldText, this.killText, this.waveText,
+      this.goldText, this.killText, this.stageText, this.waveText,
       pnlBg, pnlBorder, bossLabel, barTrack,
       this.bossHpNameText, this.bossHpNumText,
       this.bossHpBarBg, this.bossHpBar,
@@ -3133,7 +3204,7 @@ export class GameScene extends Phaser.Scene {
       [3, 1, '투사체 수', () => `${this.player.stats.projectileCount}`],
     ];
 
-    const statValueTexts: Array<{ text: Phaser.GameObjects.Text; fn: () => string }> = [];
+    // statValueFns → 클래스 필드에 저장
 
     cells.forEach(([row, col, label, fn]) => {
       const cellX = col === 0 ? COL_L : COL_R;
@@ -3151,7 +3222,7 @@ export class GameScene extends Phaser.Scene {
         fontSize: '18px', color: '#ffffff', fontStyle: 'bold',
       }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
       this.pauseOverlayItems.push(val);
-      statValueTexts.push({ text: val, fn });
+      this.pauseStatValueFns.push({ text: val, fn });
     });
 
     // ── 장착 포켓몬 슬롯 섹션 ──
@@ -3169,11 +3240,7 @@ export class GameScene extends Phaser.Scene {
     addOverlay(this.add.graphics().lineStyle(1, 0x444466)
       .lineBetween(COL_L, POKE_TOP + 22, COL_L + PW - 20, POKE_TOP + 22));
 
-    // 포켓몬 슬롯 6개 (클릭 → 무기 팝업)
-    const pausePokeSlotImgs:  Phaser.GameObjects.Image[]     = [];
-    const pausePokeSlotLvs:   Phaser.GameObjects.Text[]      = [];
-    const pausePokeSlotBgs:   Phaser.GameObjects.Rectangle[] = [];
-    const pausePokeSlotTypes: Phaser.GameObjects.Rectangle[] = [];
+    // 포켓몬 슬롯 6개 (클릭 → 무기 팝업) — 클래스 필드에 저장
 
     for (let i = 0; i < 6; i++) {
       const sx = POKE_X0 + i * (POKE_SLOT_W + POKE_GAP);
@@ -3192,23 +3259,23 @@ export class GameScene extends Phaser.Scene {
       slotBg.on('pointerout',  () => slotBg.setFillStyle(
         this.weapons[capturedIdx] ? 0x2a3a50 : 0x2a3040
       ));
-      pausePokeSlotBgs.push(slotBg);
+      this.pausePokeSlotBgs.push(slotBg);
       this.pauseOverlayItems.push(slotBg);
 
       const img = this.add.image(sx, sy - 4, 'pokemon_001')
         .setDisplaySize(36, 36).setScrollFactor(0).setDepth(D + 4).setVisible(false);
-      pausePokeSlotImgs.push(img);
+      this.pausePokeSlotImgs.push(img);
       this.pauseOverlayItems.push(img);
 
       const typeBar = this.add.rectangle(sx, sy + POKE_SLOT_H / 2 - 3, POKE_SLOT_W - 2, 4, 0x000000, 0)
         .setScrollFactor(0).setDepth(D + 5).setVisible(false);
-      pausePokeSlotTypes.push(typeBar);
+      this.pausePokeSlotTypes.push(typeBar);
       this.pauseOverlayItems.push(typeBar);
 
       const lv = this.add.text(sx + POKE_SLOT_W / 2 - 2, sy + POKE_SLOT_H / 2 - 2, '', {
         fontSize: '9px', color: '#ffffff', stroke: '#000000', strokeThickness: 2,
       }).setOrigin(1, 1).setScrollFactor(0).setDepth(D + 5).setVisible(false);
-      pausePokeSlotLvs.push(lv);
+      this.pausePokeSlotLvs.push(lv);
       this.pauseOverlayItems.push(lv);
     }
 
@@ -3224,9 +3291,7 @@ export class GameScene extends Phaser.Scene {
     addOverlay(this.add.graphics().lineStyle(1, 0x444466)
       .lineBetween(CX, DMG_TOP + 20, CX, DMG_TOP + 20 + 3 * 22 + 4));
 
-    // 6슬롯 × 2텍스트(이름/딜)
-    const dpsNameTexts: Phaser.GameObjects.Text[] = [];
-    const dpsDmgTexts:  Phaser.GameObjects.Text[] = [];
+    // 6슬롯 × 2텍스트(이름/딜) — 클래스 필드에 저장
     const RIGHT_END_X = COL_L + PW - 20;
 
     for (let i = 0; i < 6; i++) {
@@ -3239,19 +3304,19 @@ export class GameScene extends Phaser.Scene {
       const nameTxt = this.add.text(nameX, ry, '', {
         fontSize: '12px', color: '#aaaacc',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
-      dpsNameTexts.push(nameTxt);
+      this.pauseDpsNameTexts.push(nameTxt);
       this.pauseOverlayItems.push(nameTxt);
 
       const dpsTxt = this.add.text(dpsX, ry, '', {
         fontSize: '12px', color: '#eeeeff', fontStyle: 'bold',
       }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
-      dpsDmgTexts.push(dpsTxt);
+      this.pauseDpsDmgTexts.push(dpsTxt);
       this.pauseOverlayItems.push(dpsTxt);
     }
 
     // ── 버튼 섹션 (나란히 배치) ──
     const BTN_TOP  = DMG_TOP + 30 + 3 * 20 + 8;
-    const BTN_H2   = 48;
+    const BTN_H2   = 40;
     const BTN_GAP  = 8;
     const BTN_W2   = (PW - 20 - BTN_GAP) / 2;
     const BTN_Y    = BTN_TOP + BTN_H2 / 2;
@@ -3287,50 +3352,39 @@ export class GameScene extends Phaser.Scene {
     titleBg.on('pointerover',  () => { titleBg.setFillStyle(0xd8d8c8); titleTxt.setStyle({ color: '#003399', fontSize: '16px', fontStyle: 'bold' }); });
     titleBg.on('pointerout',   () => { titleBg.setFillStyle(0xeeeee0); titleTxt.setStyle({ color: '#181810', fontSize: '16px', fontStyle: 'bold' }); });
     titleBg.on('pointerdown',  () => {
-      const prevTotal = parseInt(localStorage.getItem('totalGold') ?? '0', 10);
-      localStorage.setItem('totalGold', String(prevTotal + this.gold));
+      this.saveResults();
       this.scene.start('TitleScene');
     });
 
-    // 일시정지 열릴 때 스탯 + 슬롯 + 딜 순위 갱신
-    this.events.on('pause-opened', () => {
-      statValueTexts.forEach(({ text, fn }) => text.setText(fn()));
+    // 상성표 보기 버튼 (계속하기/메인으로 아래)
+    const matchupBtnY = BTN_Y + BTN_H2 / 2 + BTN_GAP + 18;
+    const matchupBg = this.add.rectangle(CX, matchupBtnY, PW - 20, 36, 0x1a3355)
+      .setScrollFactor(0).setDepth(D + 2).setVisible(false)
+      .setInteractive({ useHandCursor: true });
+    this.pauseOverlayItems.push(matchupBg);
+    addOverlay(this.add.graphics().lineStyle(1, 0x3366aa, 0.7)
+      .strokeRect(CX - (PW - 20) / 2, matchupBtnY - 18, PW - 20, 36));
+    const matchupTxt = this.add.text(CX, matchupBtnY, '⚡ 상성표 보기', {
+      fontSize: '14px', color: '#88ccff', fontStyle: 'bold',
+      padding: { top: 6 },
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
+    this.pauseOverlayItems.push(matchupTxt);
 
-      // 슬롯별 DPS 갱신 (1~6)
-      for (let i = 0; i < 6; i++) {
-        const w = this.weapons[i];
-        if (w) {
-          const dmg = this.weaponDamageLog.get(w.name) ?? 0;
-          dpsNameTexts[i].setText(`${i + 1}. ${w.name}`);
-          dpsDmgTexts[i].setText(dmg.toLocaleString());
-        } else {
-          dpsNameTexts[i].setText(`${i + 1}. —`);
-          dpsDmgTexts[i].setText('');
-        }
-      }
-
-      for (let i = 0; i < 6; i++) {
-        const w = this.weapons[i];
-        if (w) {
-          const sprKey = `pokemon_${String(w.pokemonId).padStart(3, '0')}`;
-          pausePokeSlotBgs[i].setFillStyle(0x2a3a50);
-          pausePokeSlotImgs[i].setTexture(sprKey).setVisible(true);
-          pausePokeSlotTypes[i].setFillStyle(TYPE_COLORS[w.type] ?? 0x888888, 1);
-          pausePokeSlotLvs[i].setText(`Lv${this.weaponLevels[i] ?? 1}`);
-        } else {
-          pausePokeSlotBgs[i].setFillStyle(0x2a3040);
-          pausePokeSlotImgs[i].setVisible(false);
-          pausePokeSlotTypes[i].setFillStyle(0x000000, 0);
-          pausePokeSlotLvs[i].setText('');
-        }
-      }
+    matchupBg.on('pointerover', () => { matchupBg.setFillStyle(0x224466); matchupTxt.setColor('#bbddff'); });
+    matchupBg.on('pointerout',  () => { matchupBg.setFillStyle(0x1a3355); matchupTxt.setColor('#88ccff'); });
+    matchupBg.on('pointerdown', () => {
+      // 오버레이 숨기고 TypeMatchupScene 실행 (gameCam은 숨긴 채로 유지)
+      this.pauseOverlayItems.forEach(obj => (obj as any).setVisible(false));
+      this.scene.launch('TypeMatchupScene', { caller: 'GameScene' });
     });
+
+    // (슬롯/DPS 갱신은 pauseGame()에서 클래스 필드로 직접 처리)
 
     // 오버레이는 gameCam에서 무시 (cameras.main에서만 렌더링)
     this.gameCam.ignore(this.pauseOverlayItems);
   }
 
-  private pauseGame() {
+  pauseGame() {
     this.isPaused = true;
     this.physics.pause();
     this.joystickActive = false;
@@ -3340,12 +3394,53 @@ export class GameScene extends Phaser.Scene {
     this.gameCam.setVisible(false);
     // 오버레이 표시
     this.pauseOverlayItems.forEach(obj => (obj as any).setVisible(true));
-    this.events.emit('pause-opened');
+
+    // ── 스탯 값 갱신 ──
+    this.pauseStatValueFns.forEach(({ text, fn }) => text.setText(fn()));
+
+    // ── 장착 포켓몬 슬롯 갱신 ──
+    for (let i = 0; i < 6; i++) {
+      const w = this.weapons[i];
+      if (w) {
+        const sprKey = `pokemon_${String(w.pokemonId).padStart(3, '0')}`;
+        this.pausePokeSlotBgs[i]?.setFillStyle(0x2a3a50);
+        if (this.textures.exists(sprKey)) {
+          this.pausePokeSlotImgs[i]?.setTexture(sprKey).setVisible(true);
+        } else {
+          this.pausePokeSlotImgs[i]?.setVisible(false);
+        }
+        this.pausePokeSlotTypes[i]?.setFillStyle(TYPE_COLORS[w.type] ?? 0x888888, 1);
+        const lv = this.weaponLevels[i] ?? 1;
+        this.pausePokeSlotLvs[i]?.setText(`Lv${lv}`);
+      } else {
+        this.pausePokeSlotBgs[i]?.setFillStyle(0x2a3040);
+        this.pausePokeSlotImgs[i]?.setVisible(false);
+        this.pausePokeSlotTypes[i]?.setFillStyle(0x000000, 0);
+        this.pausePokeSlotLvs[i]?.setText('');
+      }
+    }
+
+    // ── DPS 텍스트 갱신 ──
+    for (let i = 0; i < 6; i++) {
+      const w = this.weapons[i];
+      if (w) {
+        const lv  = this.weaponLevels[i] ?? 1;
+        const upg = getUpgradedWeapon(w, lv);
+        const cnt = upg.projectileCount ?? 1;
+        const dps = Math.round(upg.damage * cnt / (upg.cooldown / 1000));
+        this.pauseDpsNameTexts[i]?.setText(w.name);
+        this.pauseDpsDmgTexts[i]?.setText(`${dps}`);
+      } else {
+        this.pauseDpsNameTexts[i]?.setText('');
+        this.pauseDpsDmgTexts[i]?.setText('');
+      }
+    }
+
     // BGM 일시정지
     this.sound.get('bgm_game')?.pause();
   }
 
-  private resumeGame() {
+  resumeGame() {
     this.closeWeaponPopup();
     this.isPaused = false;
     this.physics.resume();
@@ -3396,6 +3491,7 @@ export class GameScene extends Phaser.Scene {
 
     this.levelText.setText(`Lv  ${this.level}`);
     this.goldText.setText(`★  ${this.gold} G`);
+    this.stageText.setText(`STAGE ${this.stageId}`);
     this.waveText.setText(`WAVE ${this.waveNumber + 1}`);
     this.killText.setText(`⚔ ${this.killCount}`);
 
@@ -3474,5 +3570,57 @@ export class GameScene extends Phaser.Scene {
     this.bossArrow.setPosition(ax, ay);
     this.bossArrow.setRotation(angle - Math.PI / 2);
     this.bossArrow.setVisible(true);
+  }
+
+  private updatePokeballArrows() {
+    const margin = 28;
+    const TOP_H  = 70;
+    const BOT_H  = 132;
+    const minY   = TOP_H  + margin;
+    const maxY   = this.scale.height - BOT_H - margin;
+    const minX   = margin;
+    const maxX   = this.scale.width  - margin;
+    const cx     = this.scale.width  / 2;
+    const cy     = this.scale.height / 2;
+
+    const camLeft   = this.gameCam.scrollX;
+    const camTop    = this.gameCam.scrollY;
+    const camRight  = camLeft + this.gameCam.width;
+    const camBottom = camTop  + this.gameCam.height;
+
+    this.pokeballArrows.forEach((arrow, ball) => {
+      if (!ball.active) { arrow.setVisible(false); return; }
+
+      // 화면 안에 있으면 숨김
+      if (ball.x >= camLeft && ball.x <= camRight && ball.y >= camTop && ball.y <= camBottom) {
+        arrow.setVisible(false);
+        return;
+      }
+
+      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, ball.x, ball.y);
+      const cos   = Math.cos(angle);
+      const sin   = Math.sin(angle);
+      let ax: number, ay: number;
+      if (Math.abs(cos) > 1e-6) {
+        const tx = cos > 0 ? maxX : minX;
+        const t  = (tx - cx) / cos;
+        ay = cy + sin * t;
+        if (ay >= minY && ay <= maxY) {
+          ax = tx; ay = Phaser.Math.Clamp(ay, minY, maxY);
+        } else {
+          const ty = sin > 0 ? maxY : minY;
+          const t2 = (ty - cy) / (sin || 1e-6);
+          ax = Phaser.Math.Clamp(cx + cos * t2, minX, maxX);
+          ay = ty;
+        }
+      } else {
+        ay = sin > 0 ? maxY : minY;
+        ax = Phaser.Math.Clamp(cx, minX, maxX);
+      }
+
+      arrow.setPosition(ax, ay);
+      arrow.setRotation(angle - Math.PI / 2);
+      arrow.setVisible(true);
+    });
   }
 }

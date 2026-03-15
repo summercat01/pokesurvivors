@@ -64,4 +64,5 @@ export interface LevelUpOption {
   description: string;
   levelFrom?: number;   // 업그레이드 시 현재 레벨
   levelTo?: number;     // 적용 후 레벨 (신규=1)
+  recommendation?: 'good' | 'bad';
 }

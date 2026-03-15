@@ -128,7 +128,7 @@ export class BootScene extends Phaser.Scene {
       '313': 'volbeat',   '314': 'illumise',
       // Stage 2 — Gen4 벌레
       '401': 'kricketot', '402': 'kricketune',
-      '412': 'burmy',     '413': 'wormadam',  '414': 'mothim',
+      '412': 'burmy',     '413': 'wormadam-plant', '414': 'mothim',
       '415': 'combee',    '416': 'vespiquen',
       // Stage 3 — Gen1 풀
       '043': 'oddish',    '044': 'gloom',     '045': 'vileplume',
@@ -291,6 +291,49 @@ export class BootScene extends Phaser.Scene {
       '197': 'umbreon',
       '318': 'carvanha',  '319': 'sharpedo',
       '359': 'absol',
+      // ── 도감 표시용 (게임 미사용, 스프라이트만) ──
+      // Gen1 미포함분
+      '119': 'seaking',   '120': 'staryu',    '121': 'starmie',
+      '132': 'ditto',
+      '144': 'articuno',  '145': 'zapdos',    '146': 'moltres',
+      '150': 'mewtwo',    '151': 'mew',
+      // Gen2 미포함분
+      '154': 'meganium',
+      '171': 'lanturn',   '173': 'cleffa',    '182': 'bellossom',
+      '186': 'politoed',  '190': 'aipom',     '201': 'unown',
+      '206': 'dunsparce', '209': 'snubbull',  '210': 'granbull',
+      '222': 'corsola',   '223': 'remoraid',  '224': 'octillery',
+      '226': 'mantine',   '233': 'porygon2',  '235': 'smeargle',
+      '242': 'blissey',
+      '243': 'raikou',    '244': 'entei',     '245': 'suicune',
+      '249': 'lugia',     '250': 'ho-oh',     '251': 'celebi',
+      // Gen3 미포함분
+      '285': 'shroomish', '286': 'breloom',
+      '287': 'slakoth',   '288': 'vigoroth',  '289': 'slaking',
+      '293': 'whismur',   '294': 'loudred',   '295': 'exploud',
+      '298': 'azurill',   '303': 'mawile',
+      '320': 'wailmer',   '321': 'wailord',
+      '327': 'spinda',    '328': 'trapinch',  '335': 'zangoose',
+      '349': 'feebas',    '351': 'castform',  '352': 'kecleon',
+      '353': 'shuppet',   '354': 'banette',   '358': 'chimecho',
+      '361': 'snorunt',   '362': 'glalie',
+      '366': 'clamperl',  '367': 'huntail',   '368': 'gorebyss',
+      '369': 'relicanth', '370': 'luvdisc',   '375': 'metang',
+      '377': 'regirock',  '378': 'regice',    '379': 'registeel',
+      '380': 'latias',    '381': 'latios',
+      '382': 'kyogre',    '383': 'groudon',   '384': 'rayquaza',
+      '385': 'jirachi',   '386': 'deoxys-normal',
+      // Gen4 미포함분
+      '423': 'gastrodon', '424': 'ambipom',
+      '438': 'bonsly',    '440': 'happiny',   '446': 'munchlax',
+      '455': 'carnivine', '456': 'finneon',   '457': 'lumineon',
+      '458': 'mantyke',   '463': 'lickilicky',
+      '474': 'porygon-z', '479': 'rotom',
+      '480': 'uxie',      '481': 'mesprit',   '482': 'azelf',
+      '483': 'dialga',    '484': 'palkia',
+      '485': 'heatran',   '486': 'regigigas', '487': 'giratina-altered',
+      '488': 'cresselia', '489': 'phione',    '490': 'manaphy',
+      '492': 'shaymin-land', '493': 'arceus',
     };
     Object.entries(POKEMON_NAMES).forEach(([id, name]) => {
       this.load.image(`pokemon_${id}`, `/pokemon_gen4_sprites/${id}_${name}.png`);
