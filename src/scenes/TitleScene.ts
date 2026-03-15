@@ -6,6 +6,19 @@ import { loadUserRecord } from '../lib/userDB';
 interface PatchEntry { version: string; date: string; changes: string[] }
 const PATCH_NOTES: PatchEntry[] = [
   {
+    version: 'v0.6.0', date: '2026-03-15',
+    changes: [
+      '타입 상성표 추가 — 17×17 매트릭스, 타이틀·일시정지에서 접근 가능',
+      '레벨업 카드 개선 — 무기 타입 표시, 스테이지 상성 기반 추천/비추천 배지',
+      'HUD 스테이지 번호 표시 추가',
+      '포켓볼 오프스크린 방향 화살표',
+      '슈퍼볼/하이퍼볼 드롭 수 감소 (3/5 → 1개)',
+      '얼음·격투·비행·벌레 타입 너프 (무기 + 패시브)',
+      '웨이브 난이도 곡선 완화 (이차항 적용)',
+      '일시정지 무기 슬롯/DPS 갱신 버그 수정',
+    ],
+  },
+  {
     version: 'v0.5.0', date: '2026-03-15',
     changes: [
       '스테이지 해금 시스템 — 이전 스테이지 15분 생존 시 다음 스테이지 개방',
