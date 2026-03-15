@@ -28,6 +28,14 @@ export class GameOverScene extends Phaser.Scene {
     const stageId      = data.stageId ?? 1;
     const stageCleared = data.stageCleared ?? false;
 
+    // BGM
+    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    const endKey = stageCleared ? 'bgm_clear' : 'bgm_gameover';
+    if (this.cache.audio.exists(endKey)) {
+      this.sound.stopAll();
+      this.sound.play(endKey, { loop: false, volume: vol });
+    }
+
     // 베스트 기록
     const bestWave  = parseInt(localStorage.getItem('bestWave')  ?? '0', 10);
     const bestKills = parseInt(localStorage.getItem('bestKills') ?? '0', 10);

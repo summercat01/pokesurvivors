@@ -113,11 +113,22 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private playBGM() {
-    if (!this.cache.audio.exists('bgm_title')) return;
-    const existing = this.sound.get('bgm_title');
-    if (existing?.isPlaying) return;
+    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    // 타이틀 BGM이 이미 재생 중이면 스킵
+    if (this.sound.get('bgm_title')?.isPlaying) return;
     this.sound.stopAll();
-    this.sound.play('bgm_title', { loop: true, volume: 0.5 });
+    // 인트로(1번)가 있으면 먼저 재생 후 타이틀 루프
+    if (this.cache.audio.exists('bgm_title_intro')) {
+      const intro = this.sound.add('bgm_title_intro', { loop: false, volume: vol });
+      intro.play();
+      intro.once('complete', () => {
+        if (this.cache.audio.exists('bgm_title') && this.scene.isActive('TitleScene')) {
+          this.sound.play('bgm_title', { loop: true, volume: vol });
+        }
+      });
+    } else if (this.cache.audio.exists('bgm_title')) {
+      this.sound.play('bgm_title', { loop: true, volume: vol });
+    }
   }
 
   // ─────────────────────────────────────────────

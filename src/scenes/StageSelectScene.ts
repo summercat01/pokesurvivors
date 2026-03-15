@@ -51,6 +51,13 @@ export class StageSelectScene extends Phaser.Scene {
     const H  = this.scale.height;
     const CX = W / 2;
 
+    // BGM
+    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    if (this.cache.audio.exists('bgm_select') && !this.sound.get('bgm_select')?.isPlaying) {
+      this.sound.stopAll();
+      this.sound.play('bgm_select', { loop: true, volume: vol });
+    }
+
     // ── 배경 ──
     this.add.rectangle(0, 0, W, H, 0x0d1a2e).setOrigin(0, 0);
     const g = this.add.graphics();

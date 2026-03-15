@@ -51,6 +51,14 @@ export class OakGuideScene extends Phaser.Scene {
     const H  = this.scale.height;
     const CX = W / 2;
 
+    // BGM
+    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    if (this.cache.audio.exists('bgm_oak')) {
+      this.sound.stopAll();
+      this.sound.play('bgm_oak', { loop: true, volume: vol });
+    }
+    this.events.once('shutdown', () => { this.sound.stopByKey('bgm_oak'); });
+
     // ── 반투명 배경 (interactive로 뒤 씬 입력 차단) ──
     this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.88).setInteractive();
 

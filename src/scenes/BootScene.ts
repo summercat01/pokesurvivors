@@ -22,7 +22,13 @@ export class BootScene extends Phaser.Scene {
     });
 
     // 로드 에러 무시 목록 (없는 에셋 폴백 처리)
-    const OPTIONAL_KEYS = new Set(['rare_candy', 'prof_oak', 'bgm_title', 'bgm_game', 'icon_github']);
+    const OPTIONAL_KEYS = new Set([
+      'rare_candy', 'prof_oak', 'icon_github',
+      'bgm_title_intro', 'bgm_title', 'bgm_oak', 'bgm_select',
+      'bgm_boss', 'bgm_evolution', 'bgm_levelup', 'bgm_pokeball',
+      'bgm_clear', 'bgm_gameover',
+      ...Array.from({ length: 17 }, (_, i) => `bgm_stage_${i + 1}`),
+    ]);
     this.load.on('loaderror', (file: { key: string }) => {
       if (OPTIONAL_KEYS.has(file.key)) { /* 옵셔널 에셋, 폴백으로 처리 */ }
     });
@@ -33,9 +39,20 @@ export class BootScene extends Phaser.Scene {
     // 오박사 초상화 (없으면 폴백)
     this.load.image('prof_oak', '/Spr_DP_Oak.png');
 
-    // BGM (파일이 없으면 무시 — 추후 추가)
-    this.load.audio('bgm_title', ['/audio/bgm_title.mp3']);
-    this.load.audio('bgm_game',  ['/audio/bgm_game.mp3']);
+    // BGM
+    this.load.audio('bgm_title_intro', ['/audio/bgm_title_intro.mp3']);
+    this.load.audio('bgm_title',       ['/audio/bgm_title.mp3']);
+    this.load.audio('bgm_oak',         ['/audio/bgm_oak.mp3']);
+    this.load.audio('bgm_select',      ['/audio/bgm_select.mp3']);
+    this.load.audio('bgm_boss',        ['/audio/bgm_boss.mp3']);
+    this.load.audio('bgm_evolution',   ['/audio/bgm_evolution.mp3']);
+    this.load.audio('bgm_levelup',     ['/audio/bgm_levelup.mp3']);
+    this.load.audio('bgm_pokeball',    ['/audio/bgm_pokeball.mp3']);
+    this.load.audio('bgm_clear',       ['/audio/bgm_clear.mp3']);
+    this.load.audio('bgm_gameover',    ['/audio/bgm_gameover.mp3']);
+    for (let i = 1; i <= 17; i++) {
+      this.load.audio(`bgm_stage_${i}`, [`/audio/bgm_stage_${i}.mp3`]);
+    }
 
     // GitHub 아이콘 (Simple Icons CDN — 실패 시 폴백)
     this.load.image('icon_github', 'https://cdn.simpleicons.org/github/88bbff');

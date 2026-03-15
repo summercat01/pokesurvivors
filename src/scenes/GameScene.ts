@@ -25,6 +25,27 @@ import { pushLocalToCloud } from '../lib/userDB';
 // 퍼센트 기반 배율로 적용되는 스탯 목록
 const PERCENT_STATS = new Set(['attackPower', 'moveSpeed', 'projectileSpeed', 'knockback', 'projectileRange']);
 
+// 스테이지별 BGM 키
+const STAGE_BGM: Record<number, string> = {
+   1: 'bgm_stage_1',   // Pallet Town
+   2: 'bgm_stage_2',   // Viridian Forest
+   3: 'bgm_stage_3',   // Route 24
+   4: 'bgm_stage_4',   // Cinnabar Island
+   5: 'bgm_stage_5',   // Surf
+   6: 'bgm_stage_6',   // Pokémon Gym
+   7: 'bgm_stage_7',   // Route 3
+   8: 'bgm_stage_8',   // Rocket Hideout
+   9: 'bgm_stage_9',   // Mt. Moon
+  10: 'bgm_stage_10',  // Victory Road
+  11: 'bgm_stage_11',  // Route 11
+  12: 'bgm_stage_12',  // Lavender Town
+  13: 'bgm_stage_13',  // Pokémon Tower
+  14: 'bgm_stage_14',  // Silph Co.
+  15: 'bgm_stage_15',  // Battle! (Legendary)
+  16: 'bgm_stage_16',  // S.S. Anne
+  17: 'bgm_stage_17',  // Pokémon Mansion
+};
+
 export class GameScene extends Phaser.Scene {
   player!: Player;
   enemies!: Phaser.Physics.Arcade.Group;
@@ -50,6 +71,10 @@ export class GameScene extends Phaser.Scene {
   // 레벨업 흐름 제어
   private isLevelingUp: boolean = false;
   private needsLevelUp: boolean = false;
+
+  // BGM
+  private stageBgmKey: string = '';
+  private bossBgmActive: boolean = false;
 
   // 일시정지
   private isPaused: boolean = false;
@@ -348,15 +373,13 @@ export class GameScene extends Phaser.Scene {
     this.gameCam.fadeIn(400, 0, 0, 0);
 
     // BGM
-    if (this.cache.audio.exists('bgm_game')) {
-      const bgmVolume = parseFloat(localStorage.getItem('bgmVolume') ?? '1');
-      this.sound.stopAll();
-      this.sound.play('bgm_game', { loop: true, volume: 0.45 * bgmVolume });
-    }
+    this.stageBgmKey = STAGE_BGM[this.stageId] ?? 'bgm_stage_1';
+    this.bossBgmActive = false;
+    this.playBgm(this.stageBgmKey);
 
     // 씬 종료 시 정리
     this.events.once('shutdown', () => {
-      this.sound.stopByKey('bgm_game');
+      this.sound.stopAll();
       this.orbitOrbs?.forEach(s => s.graphics.forEach(g => g.destroy()));
       this.zoneGraphics?.forEach(s => s.graphic.destroy());
       this.rotatingBeamGfx?.forEach(g => g.destroy());
@@ -1367,13 +1390,15 @@ export class GameScene extends Phaser.Scene {
       this.setBossPanelVisible(false);
       this.bossArrow.setVisible(false);
       this.showBossDefeated();
-      // 5분 보스 → 슈퍼볼 3개, 10분 보스 → 하이퍼볼 5개
+      // 5분/10분 보스 처치 → 스테이지 BGM 복귀
       if (this.currentBossWave === 10) {
         this.spawnPokeball(enemy.x, enemy.y, 'superball', 1);
+        this.stopBossBgm();
       } else if (this.currentBossWave === 20) {
         this.spawnPokeball(enemy.x, enemy.y, 'hyperball', 1);
+        this.stopBossBgm();
       } else if (this.darkraiSpawned) {
-        // 다크라이 처치 → 스테이지 클리어 결과 화면으로 이동
+        // 다크라이 처치 → 스테이지 클리어 (bgm은 triggerGameOver에서 처리)
         this.time.delayedCall(2500, () => this.triggerGameOver());
       }
     }
@@ -1467,6 +1492,13 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = true;
     this.physics.pause();
 
+    // 진화 BGM (스테이지 BGM 멈추고 진화 음악 재생)
+    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    this.sound.stopAll();
+    if (this.cache.audio.exists('bgm_evolution')) {
+      this.sound.play('bgm_evolution', { loop: false, volume: vol });
+    }
+
     // 강한 플래시 + 카메라 진동
     this.cameras.main.flash(700, 255, 255, 200, false);
     this.gameCam.shake(500, 0.022);
@@ -1542,6 +1574,9 @@ export class GameScene extends Phaser.Scene {
     btnBg.on('pointerout',  () => btnBg.setFillStyle(0x113355));
     btnBg.on('pointerdown', () => {
       allItems.forEach(o => o.destroy());
+      // 진화 BGM 중지 + 스테이지 BGM 재개
+      this.sound.stopByKey('bgm_evolution');
+      this.playBgm(this.bossBgmActive ? 'bgm_boss' : this.stageBgmKey);
       this.isPaused = false;
       this.physics.resume();
     });
@@ -1558,6 +1593,12 @@ export class GameScene extends Phaser.Scene {
     // ── 진화 체크: 조건 충족 무기 있으면 진화 우선 ──
     const evolved = this.checkAndApplyEvolution(x, y);
     if (evolved) return;
+
+    // 몬스터볼 픽업 BGM (진화가 아닌 경우)
+    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.6;
+    if (this.cache.audio.exists('bgm_pokeball')) {
+      this.sound.add('bgm_pokeball', { loop: false, volume: vol }).play();
+    }
 
     const upgradeCount = type === 'hyperball' ? 5 : type === 'superball' ? 3 : 1;
     const goldBonus    = type === 'hyperball' ? 60 : type === 'superball' ? 30 : 10;
@@ -1785,7 +1826,7 @@ export class GameScene extends Phaser.Scene {
   private triggerGameOver() {
     this.isGameOver = true;
     this.physics.pause();
-    this.sound.stopByKey('bgm_game');
+    this.sound.stopAll();
     this.cameras.main.shake(400, 0.02);
     // UI 정리
     this.bossArrow.setVisible(false);
@@ -1868,6 +1909,17 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(300, () => {
       this.closeWeaponPopup();
       const options = this.generateLevelUpOptions();
+      // 레벨업 BGM (짧은 징글, 1회)
+      const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.6;
+      if (this.cache.audio.exists('bgm_levelup')) {
+        const lvlSnd = this.sound.get(this.stageBgmKey);
+        lvlSnd?.pause();
+        const jingle = this.sound.add('bgm_levelup', { loop: false, volume: vol });
+        jingle.play();
+        jingle.once('complete', () => {
+          if (!this.isGameOver && !this.isPaused) lvlSnd?.resume();
+        });
+      }
       this.scene.pause('GameScene');
       this.scene.launch('LevelUpScene', { options });
     });
@@ -2376,6 +2428,7 @@ export class GameScene extends Phaser.Scene {
     this.bossHpRatioDisplayed = 1;
 
     this.setBossPanelVisible(true);
+    this.startBossBgm();
 
     this.gameCam.shake(600, 0.015);
     this.time.delayedCall(300, () => this.showBossAlert(bossConfig.id));
@@ -3437,7 +3490,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     // BGM 일시정지
-    this.sound.get('bgm_game')?.pause();
+    this.sound.get(this.stageBgmKey)?.pause();
+    this.sound.get('bgm_boss')?.pause();
   }
 
   resumeGame() {
@@ -3449,7 +3503,38 @@ export class GameScene extends Phaser.Scene {
     // 오버레이 숨김
     this.pauseOverlayItems.forEach(obj => (obj as any).setVisible(false));
     // BGM 재개
-    this.sound.get('bgm_game')?.resume();
+    if (this.bossBgmActive) {
+      this.sound.get('bgm_boss')?.resume();
+    } else {
+      this.sound.get(this.stageBgmKey)?.resume();
+    }
+  }
+
+  /** 스테이지 BGM 시작 */
+  private playBgm(key: string) {
+    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.45;
+    this.sound.stopAll();
+    if (this.cache.audio.exists(key)) {
+      this.sound.play(key, { loop: true, volume: vol });
+    }
+  }
+
+  /** 보스 BGM 시작 (스테이지 BGM 페이드아웃 후 보스 BGM) */
+  private startBossBgm() {
+    this.bossBgmActive = true;
+    const stageSnd = this.sound.get(this.stageBgmKey);
+    if (stageSnd?.isPlaying) stageSnd.stop();
+    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.45;
+    if (this.cache.audio.exists('bgm_boss')) {
+      this.sound.play('bgm_boss', { loop: true, volume: vol });
+    }
+  }
+
+  /** 보스 BGM 종료 후 스테이지 BGM 복귀 */
+  private stopBossBgm() {
+    this.bossBgmActive = false;
+    this.sound.stopByKey('bgm_boss');
+    this.playBgm(this.stageBgmKey);
   }
 
   private startHpLowPulse() {
