@@ -19,6 +19,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   contactDamage?: number;  // 설정 시 접촉 데미지로 사용 (기본값: 게임씬 수식)
   ignoreKnockback: boolean = false; // 넉백 무시 여부
   movementOverride: { vx: number; vy: number } | null = null; // 보스 패턴용 이동 오버라이드
+  private tintTimer: Phaser.Time.TimerEvent | null = null;
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -107,10 +108,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(amount: number): number {
     this.hp = Math.max(0, this.hp - amount);
-    // 피격 시 흰색 플래시
+    // 피격 시 흰색 플래시 (이전 타이머 취소 후 재설정)
     this.setTint(0xffffff);
-    this.scene.time.delayedCall(80, () => {
+    this.tintTimer?.remove(false);
+    this.tintTimer = this.scene.time.delayedCall(80, () => {
       if (this.active) this.clearTint();
+      this.tintTimer = null;
     });
     return amount;
   }

@@ -1,344 +1,330 @@
 import Phaser from 'phaser';
 import {
-  UPGRADES, type UpgradeConfig,
+  UPGRADES,
   getUpgradeLevel, setUpgradeLevel,
   getTotalGold, setTotalGold,
 } from '../data/upgrades';
 import { getCurrentUser } from '../lib/auth';
 import { pushLocalToCloud } from '../lib/userDB';
 
-// ── 카드 그리드 상수 ──
-const COLS      = 4;
-const CARD_W    = 83;
-const CARD_H    = 108;
-const GAP_X     = 6;
-const GAP_Y     = 6;
-const GRID_TOP  = 76;
-
-// 카드 (col, row) → 중심 좌표
-function cardCenter(col: number, row: number, gridLeft: number) {
-  return {
-    x: gridLeft + col * (CARD_W + GAP_X) + CARD_W / 2,
-    y: GRID_TOP  + row * (CARD_H + GAP_Y) + CARD_H / 2,
-  };
-}
-
 export class UpgradeScene extends Phaser.Scene {
-  private selectedIdx: number = 0;
+  private selectedIdx = 0;
+  private selectionGfx: Phaser.GameObjects.Graphics[] = [];
+  private cardMeta: { cx: number; cy: number; w: number; h: number; color: number }[] = [];
 
-  // 선택 하이라이트용 오버레이 (카드 인덱스 → rect)
-  private selectionOverlays: Phaser.GameObjects.Rectangle[] = [];
+  private infoIconBg!: Phaser.GameObjects.Rectangle;
+  private infoIcon!:   Phaser.GameObjects.Text;
+  private infoName!:   Phaser.GameObjects.Text;
+  private infoLevel!:  Phaser.GameObjects.Text;
+  private infoDesc!:   Phaser.GameObjects.Text;
+  private infoBonus!:  Phaser.GameObjects.Text;
+  private infoDots:    Phaser.GameObjects.Arc[] = [];
+  private buyBtn!:     Phaser.GameObjects.Rectangle;
+  private buyTxt!:     Phaser.GameObjects.Text;
+  private buySub!:     Phaser.GameObjects.Text;
+  private goldTxt!:    Phaser.GameObjects.Text;
 
-  // 하단 정보 패널 갱신용 오브젝트
-  private infoIcon!:    Phaser.GameObjects.Text;
-  private infoIconBg!:  Phaser.GameObjects.Rectangle;
-  private infoName!:    Phaser.GameObjects.Text;
-  private infoLevel!:   Phaser.GameObjects.Text;
-  private infoDesc!:    Phaser.GameObjects.Text;
-  private infoBonus!:   Phaser.GameObjects.Text;
-  private infoDots:     Phaser.GameObjects.Arc[]     = [];
-  private buyBtn!:      Phaser.GameObjects.Rectangle;
-  private buyBtnInner!: Phaser.GameObjects.Rectangle;
-  private buyBtnTxt!:   Phaser.GameObjects.Text;
-  private buyBtnSub!:   Phaser.GameObjects.Text;
-  private goldDisplay!: Phaser.GameObjects.Text;
-
-  constructor() {
-    super({ key: 'UpgradeScene' });
-  }
+  constructor() { super({ key: 'UpgradeScene' }); }
 
   create(data?: { selectedIdx?: number }) {
-    this.selectedIdx = 0;
+    this.selectedIdx  = 0;
+    this.selectionGfx = [];
+    this.cardMeta     = [];
+    this.infoDots     = [];
+
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const CX = W / 2;
 
     // ── 배경 ──
-    const W = this.scale.width;
-    const H = this.scale.height;
-    this.add.rectangle(0, 0, W, H, 0x1a3d0a).setOrigin(0, 0);
-    const grid = this.add.graphics();
-    grid.lineStyle(1, 0x2a5518, 0.22);
-    for (let x = 0; x < W; x += 32) grid.lineBetween(x, 0, x, H);
-    for (let y = 0; y < H; y += 32) grid.lineBetween(0, y, W, y);
+    this.add.rectangle(0, 0, W, H, 0x0d1a2e).setOrigin(0, 0);
+    const bg = this.add.graphics();
+    bg.lineStyle(1, 0x1a3050, 0.3);
+    for (let x = 0; x < W; x += 40) bg.lineBetween(x, 0, x, H);
+    for (let y = 0; y < H; y += 40) bg.lineBetween(0, y, W, y);
 
-    this.createHeader();
-    this.createCardGrid();
-    this.createInfoPanel();
-    this.createBackButton();
-
-    // 구매 후 재시작 시 이전 선택 유지, 아니면 0번
-    this.selectCard(data?.selectedIdx ?? 0);
-    this.cameras.main.fadeIn(220, 24, 16, 40);
-  }
-
-  // ── 헤더 ──────────────────────────────────────────────
-  private createHeader() {
-    const CX = this.scale.width / 2;
-    const W  = this.scale.width;
-    this.add.rectangle(CX, 38, W - 16, 62, 0x181810);
-    this.add.rectangle(CX, 38, W - 20, 58, 0xd8d8c0);
-    this.add.rectangle(13, 38, 2, 52, 0xf0f0e0);
-    this.add.rectangle(CX, 10, W - 24, 2, 0xf0f0e0);
-
+    // ── 헤더 ──
     this.add.text(CX, 22, '영구 업그레이드', {
-      fontSize: '17px', color: '#181810', fontStyle: 'bold',
-    }).setOrigin(0.5, 0);
+      fontSize: '20px', color: '#ffdd00', fontStyle: 'bold',
+      stroke: '#302000', strokeThickness: 4, padding: { top: 4 },
+    }).setOrigin(0.5);
 
-    this.goldDisplay = this.add.text(CX, 44, `★  ${getTotalGold()} G 보유`, {
-      fontSize: '13px', color: '#9a7a10', fontStyle: 'bold',
-    }).setOrigin(0.5, 0);
-  }
+    this.goldTxt = this.add.text(CX, 50, `💰 ${getTotalGold().toLocaleString()} G`, {
+      fontSize: '14px', color: '#f0c040', fontStyle: 'bold',
+    }).setOrigin(0.5);
 
-  // ── 카드 그리드 ───────────────────────────────────────
-  private createCardGrid() {
-    const gridLeft = Math.floor((this.scale.width - (COLS * CARD_W + (COLS - 1) * GAP_X)) / 2);
+    this.add.graphics().lineStyle(1, 0x2a4a70, 1).lineBetween(10, 66, W - 10, 66);
+
+    // ── 레이아웃 상수 ──
+    const GRID_TOP  = 72;
+    const PANEL_Y   = Math.round(H * 0.585);
+    const COLS      = 2;
+    const GAP       = 6;
+    const CARD_W    = Math.floor((W - 16 - GAP) / COLS);
+    const CARD_H    = 82;
+    const GRID_L    = 8;
+    const ROWS      = Math.ceil(UPGRADES.length / COLS);
+    const totalH    = ROWS * (CARD_H + GAP) - GAP;
+
+    // ── 스크롤 마스크 ──
+    const viewH    = PANEL_Y - GRID_TOP - 4;
+    const maxScroll = Math.max(0, totalH - viewH);
+    const maskGfx  = this.add.graphics();
+    maskGfx.fillRect(0, GRID_TOP, W, viewH);
+    const mask = new Phaser.Display.Masks.GeometryMask(this, maskGfx);
+
+    const container = this.add.container(0, GRID_TOP);
+    container.setMask(mask);
+
+    // ── 카드 그리드 ──
     UPGRADES.forEach((upg, idx) => {
       const col = idx % COLS;
       const row = Math.floor(idx / COLS);
-      const { x: cx, y: cy } = cardCenter(col, row, gridLeft);
-      const curLevel = getUpgradeLevel(upg.id);
-      const isMaxed  = curLevel >= 5;
+      const cx  = GRID_L + col * (CARD_W + GAP) + CARD_W / 2;
+      const cy  = row * (CARD_H + GAP) + CARD_H / 2;
+      const lv     = getUpgradeLevel(upg.id);
+      const maxLv  = upg.maxLevel ?? 5;
+      const maxed  = lv >= maxLv;
 
-      // ─ 카드 배경 (DP 스타일) ─
-      this.add.rectangle(cx, cy, CARD_W,     CARD_H,     0x181810); // 외곽
-      this.add.rectangle(cx, cy, CARD_W - 2, CARD_H - 2, 0xd8d8c0); // 크림
-      // 하이라이트
-      this.add.rectangle(cx,          cy - CARD_H / 2 + 2, CARD_W - 8,  2, 0xf0f0e0);
-      this.add.rectangle(cx - CARD_W / 2 + 2, cy,          2, CARD_H - 8, 0xf0f0e0);
-      // 좌측 타입 컬러 스트라이프
-      this.add.rectangle(cx - CARD_W / 2 + 5, cy, 6, CARD_H - 4, upg.color);
+      this.cardMeta.push({ cx, cy, w: CARD_W, h: CARD_H, color: upg.color });
 
-      // ─ 아이콘 영역 ─
-      const iconY = cy - 14;
-      this.add.circle(cx + 4, iconY, 20, upg.color, isMaxed ? 0.5 : 0.85);
-      if (isMaxed) {
-        this.add.circle(cx + 4, iconY, 16, 0xd4aa30, 0.6);
-      }
-      this.add.text(cx + 4, iconY, upg.icon, {
-        fontSize: '18px', color: '#ffffff', fontStyle: 'bold',
+      // 그림자
+      const shadow = this.add.rectangle(cx + 2, cy + 3, CARD_W, CARD_H, 0x000000, 0.35);
+      // 카드 배경
+      const cardBg = this.add.rectangle(cx, cy, CARD_W, CARD_H, maxed ? 0x141420 : 0x111827);
+      // 좌측 색상 스트라이프
+      const stripe = this.add.rectangle(cx - CARD_W / 2 + 4, cy, 6, CARD_H, upg.color, maxed ? 0.3 : 0.85);
+
+      // 아이콘 (작은 사각형)
+      const ICX = cx - CARD_W / 2 + 24;
+      const ICY = cy;
+      const iconBg = this.add.rectangle(ICX, ICY, 32, 32, upg.color, maxed ? 0.12 : 0.2);
+      const iconTxt = this.add.text(ICX, ICY, upg.icon, {
+        fontSize: '16px', color: maxed ? '#555544' : '#ffffff',
       }).setOrigin(0.5);
 
-      // ─ 카드 이름 ─
-      this.add.text(cx + 4, cy + 14, upg.name, {
-        fontSize: '10px', color: '#181810', fontStyle: 'bold',
-        wordWrap: { width: CARD_W - 14 },
-        align: 'center',
-      }).setOrigin(0.5, 0);
+      // 이름
+      const TX = cx - CARD_W / 2 + 48;
+      const nameTxt = this.add.text(TX, cy - 22, upg.name, {
+        fontSize: '12px', color: maxed ? '#555544' : '#ddeeff', fontStyle: 'bold',
+      }).setOrigin(0, 0.5);
 
-      // ─ 레벨 닷 (5개) ─
-      const dotY  = cy + CARD_H / 2 - 14;
-      const dotX0 = cx + 4 - 2 * 12;
-      for (let i = 0; i < 5; i++) {
-        this.add.circle(dotX0 + i * 12, dotY, 5, i < curLevel ? upg.color : 0xb0b098);
-        if (i < curLevel) {
-          this.add.circle(dotX0 + i * 12, dotY, 3, 0xffffff, 0.3);
-        }
+      // 레벨
+      const lvTxt = this.add.text(cx + CARD_W / 2 - 6, cy - 22, maxed ? 'MAX' : `${lv}/${maxLv}`, {
+        fontSize: '10px', color: maxed ? '#c4a020' : '#5588aa',
+      }).setOrigin(1, 0.5);
+
+      // 레벨 닷
+      const dots: Phaser.GameObjects.Arc[] = [];
+      for (let i = 0; i < maxLv; i++) {
+        dots.push(this.add.circle(TX + i * 10, cy, 3.5, i < lv ? upg.color : 0x253545));
       }
 
-      // ─ 만렙 골드 배지 ─
-      if (isMaxed) {
-        this.add.text(cx + 4, cy - CARD_H / 2 + 10, '★MAX', {
-          fontSize: '9px', color: '#d4aa30', fontStyle: 'bold',
-        }).setOrigin(0.5, 0);
-      }
+      // 효과 미리보기
+      const preview = maxed ? upg.labels[maxLv - 1] : `→ ${upg.labels[lv] ?? upg.labels[maxLv - 1]}`;
+      const previewTxt = this.add.text(TX, cy + 20, preview, {
+        fontSize: '10px', color: maxed ? '#444433' : '#4488bb',
+      }).setOrigin(0, 0.5);
 
-      // ─ 선택 오버레이 (처음엔 투명) ─
-      const overlay = this.add.rectangle(cx, cy, CARD_W - 2, CARD_H - 2, 0xffffff, 0)
+      // 선택 오버레이 Graphics
+      const gfx = this.add.graphics();
+      this.selectionGfx.push(gfx);
+
+      // 히트 영역
+      const hit = this.add.rectangle(cx, cy, CARD_W, CARD_H, 0xffffff, 0)
         .setInteractive({ useHandCursor: true });
-      this.selectionOverlays.push(overlay);
+      hit.on('pointerdown', () => this.selectCard(idx));
+      hit.on('pointerover', () => {
+        if (this.selectedIdx !== idx) {
+          gfx.clear();
+          gfx.lineStyle(1, upg.color, 0.4);
+          gfx.strokeRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H);
+        }
+      });
+      hit.on('pointerout', () => {
+        if (this.selectedIdx !== idx) gfx.clear();
+      });
 
-      overlay.on('pointerdown', () => this.selectCard(idx));
-      overlay.on('pointerover', () => {
-        if (this.selectedIdx !== idx) overlay.setFillStyle(0xffffff, 0.08);
-      });
-      overlay.on('pointerout', () => {
-        if (this.selectedIdx !== idx) overlay.setFillStyle(0xffffff, 0);
-      });
+      container.add([shadow, cardBg, stripe, iconBg, iconTxt, nameTxt, lvTxt, ...dots, previewTxt, gfx, hit]);
     });
+
+    // ── 스크롤 입력 ──
+    let lastY = 0, isDragging = false, scrollY = 0, hasDragged = false;
+    const DRAG_THRESHOLD = 6;
+
+    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+      const worldY = ptr.y;
+      if (worldY < GRID_TOP || worldY > PANEL_Y) return;
+      lastY = worldY; isDragging = true; hasDragged = false;
+    });
+    this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
+      if (!isDragging) return;
+      const dy = ptr.y - lastY; lastY = ptr.y;
+      if (Math.abs(dy) > DRAG_THRESHOLD || hasDragged) {
+        hasDragged = true;
+        scrollY = Phaser.Math.Clamp(scrollY - dy, 0, maxScroll);
+        container.y = GRID_TOP - scrollY;
+      }
+    });
+    this.input.on('pointerup',  () => { isDragging = false; });
+    this.input.on('pointerout', () => { isDragging = false; });
+    this.events.once('shutdown', () => this.input.removeAllListeners());
+
+    // ── 패널 구분선 ──
+    this.add.graphics().lineStyle(1, 0x2a4a70, 0.8).lineBetween(10, PANEL_Y, W - 10, PANEL_Y);
+
+    // ── 정보 패널 ──
+    this.createInfoPanel(W, H, CX, PANEL_Y);
+
+    // ── 뒤로 버튼 ──
+    this.createBackButton(W, H, CX);
+
+    this.selectCard(data?.selectedIdx ?? 0);
+    this.cameras.main.fadeIn(220, 0, 0, 0);
   }
 
-  // ── 카드 선택 ─────────────────────────────────────────
+  // ────────────────────────────────────────────────────
+  private createInfoPanel(W: number, H: number, CX: number, PANEL_Y: number) {
+    const P     = PANEL_Y + 6;
+    const ICX   = 36;
+    const ICY   = P + 36;
+    const TX    = 70;
+    const BUY_CY = H - 96;
+
+    this.add.rectangle(CX, (PANEL_Y + H - 50) / 2, W - 16, H - 50 - PANEL_Y, 0x0d1525);
+
+    this.infoIconBg = this.add.rectangle(ICX, ICY, 48, 48, 0x888888);
+    this.infoIcon   = this.add.text(ICX, ICY, '', { fontSize: '22px' }).setOrigin(0.5);
+
+    this.infoName  = this.add.text(TX, P + 8, '', {
+      fontSize: '16px', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0, 0);
+    this.infoLevel = this.add.text(TX, P + 28, '', {
+      fontSize: '11px', color: '#6688aa',
+    }).setOrigin(0, 0);
+    this.infoDesc  = this.add.text(TX, P + 46, '', {
+      fontSize: '11px', color: '#7799bb',
+      wordWrap: { width: W - TX - 14 },
+    }).setOrigin(0, 0);
+    this.infoBonus = this.add.text(TX, P + 64, '', {
+      fontSize: '12px', color: '#44aaff', fontStyle: 'bold',
+    }).setOrigin(0, 0);
+
+    for (let i = 0; i < 5; i++) {
+      this.infoDots.push(this.add.circle(TX + i * 14, P + 88, 5, 0x253545));
+    }
+
+    this.buyBtn = this.add.rectangle(CX, BUY_CY, W - 40, 48, 0x1a4422)
+      .setInteractive({ useHandCursor: true })
+      .setStrokeStyle(1, 0x44aa66);
+    this.buyTxt = this.add.text(CX, BUY_CY - 7, '', {
+      fontSize: '15px', color: '#ffffff', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.buySub = this.add.text(CX, BUY_CY + 11, '', {
+      fontSize: '10px', color: '#88ccaa',
+    }).setOrigin(0.5);
+
+    this.buyBtn.on('pointerover', () => {
+      const upg = UPGRADES[this.selectedIdx];
+      const lv  = getUpgradeLevel(upg.id);
+      if (lv < (upg.maxLevel ?? 5) && getTotalGold() >= upg.costs[lv]) this.buyBtn.setFillStyle(0x236630);
+    });
+    this.buyBtn.on('pointerout',  () => this.updateInfoPanel());
+    this.buyBtn.on('pointerdown', () => { this.buyBtn.setFillStyle(0x0f3318); this.purchaseSelected(); });
+  }
+
+  // ────────────────────────────────────────────────────
   private selectCard(idx: number) {
     this.selectedIdx = idx;
-
-    // 모든 오버레이 초기화
-    this.selectionOverlays.forEach((ov, i) => {
-      ov.setFillStyle(0xffffff, i === idx ? 0.18 : 0);
+    this.selectionGfx.forEach((gfx, i) => {
+      gfx.clear();
+      if (i !== idx) return;
+      const { cx, cy, w, h, color } = this.cardMeta[i];
+      gfx.lineStyle(2, color, 1.0);
+      gfx.strokeRect(cx - w / 2, cy - h / 2, w, h);
+      gfx.lineStyle(1, color, 0.22);
+      gfx.strokeRect(cx - w / 2 + 2, cy - h / 2 + 2, w - 4, h - 4);
     });
-
     this.updateInfoPanel();
   }
 
-  // ── 하단 정보 패널 생성 ───────────────────────────────
-  private createInfoPanel() {
-    const H        = this.scale.height;
-    const PANEL_Y  = Math.round(H * 0.55);
-    const PANEL_H  = Math.max(180, Math.round(H - 89 - 20) - PANEL_Y);
-    const CX       = this.scale.width / 2;
-    const W        = this.scale.width;
-    const panelCY  = PANEL_Y + PANEL_H / 2;
-
-    // DP 스타일 패널
-    this.add.rectangle(CX, panelCY, W - 16, PANEL_H, 0x181810);
-    this.add.rectangle(CX, panelCY, W - 20, PANEL_H - 4, 0xd8d8c0);
-    this.add.rectangle(13,  panelCY, 2, PANEL_H - 12, 0xf0f0e0);
-    this.add.rectangle(CX, PANEL_Y + 3, W - 24, 2, 0xf0f0e0);
-
-    // ─ 아이콘 배경 (좌측) ─
-    this.infoIconBg = this.add.rectangle(52, PANEL_Y + 56, 72, 72, 0x888870);
-    this.add.rectangle(52, PANEL_Y + 56, 68, 68, 0x181810); // 내부 어두운 테두리용
-    this.infoIconBg = this.add.rectangle(52, PANEL_Y + 56, 66, 66, 0x888870);
-
-    this.infoIcon = this.add.text(52, PANEL_Y + 56, '', {
-      fontSize: '30px', color: '#ffffff', fontStyle: 'bold',
-    }).setOrigin(0.5);
-
-    // ─ 텍스트 영역 ─
-    const TX = 100;
-    this.infoName  = this.add.text(TX, PANEL_Y + 12, '', {
-      fontSize: '16px', color: '#181810', fontStyle: 'bold',
-    }).setOrigin(0, 0);
-
-    this.infoLevel = this.add.text(TX, PANEL_Y + 34, '', {
-      fontSize: '12px', color: '#484840',
-    }).setOrigin(0, 0);
-
-    this.infoDesc  = this.add.text(TX, PANEL_Y + 54, '', {
-      fontSize: '12px', color: '#484840',
-      wordWrap: { width: this.scale.width - TX - 20 },
-    }).setOrigin(0, 0);
-
-    this.infoBonus = this.add.text(TX, PANEL_Y + 74, '', {
-      fontSize: '13px', color: '#2266aa', fontStyle: 'bold',
-    }).setOrigin(0, 0);
-
-    // ─ 레벨 닷 5개 (패널 하단 좌) ─
-    this.infoDots = [];
-    for (let i = 0; i < 5; i++) {
-      const dot = this.add.circle(TX + i * 16, PANEL_Y + 102, 6, 0xb0b098);
-      this.infoDots.push(dot);
-    }
-
-    // ─ 구매 버튼 (우측 하단) ─
-    const BTN_X = this.scale.width - 70;
-    const BTN_Y = PANEL_Y + 92;
-    this.add.rectangle(BTN_X, BTN_Y, 100, 56, 0x181810);
-    this.buyBtnInner = this.add.rectangle(BTN_X, BTN_Y, 98, 54, 0x3aaa3a)
-      .setInteractive({ useHandCursor: true });
-    this.add.rectangle(BTN_X, BTN_Y - 26, 92, 2, 0xffffff, 0.2);  // 하이라이트
-
-    this.buyBtnTxt = this.add.text(BTN_X, BTN_Y - 10, '0 G', {
-      fontSize: '13px', color: '#ffffff', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 2,
-    }).setOrigin(0.5);
-
-    this.buyBtnSub = this.add.text(BTN_X, BTN_Y + 10, '구매', {
-      fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
-    }).setOrigin(0.5);
-
-    this.buyBtnInner.on('pointerover', () => {
-      const upg = UPGRADES[this.selectedIdx];
-      const lv  = getUpgradeLevel(upg.id);
-      if (lv < 5 && getTotalGold() >= upg.costs[lv]) {
-        this.buyBtnInner.setFillStyle(0x50cc50);
-      }
-    });
-    this.buyBtnInner.on('pointerout', () => this.updateInfoPanel());
-    this.buyBtnInner.on('pointerdown', () => this.purchaseSelected());
-  }
-
-  // ── 패널 내용 갱신 ────────────────────────────────────
+  // ────────────────────────────────────────────────────
   private updateInfoPanel() {
-    const upg       = UPGRADES[this.selectedIdx];
-    const curLevel  = getUpgradeLevel(upg.id);
-    const isMaxed   = curLevel >= 5;
-    const gold      = getTotalGold();
-    const nextCost  = isMaxed ? 0 : upg.costs[curLevel];
-    const canAfford = !isMaxed && gold >= nextCost;
+    const upg      = UPGRADES[this.selectedIdx];
+    const lv       = getUpgradeLevel(upg.id);
+    const maxLv    = upg.maxLevel ?? 5;
+    const maxed    = lv >= maxLv;
+    const gold     = getTotalGold();
+    const nextCost = maxed ? 0 : upg.costs[lv];
+    const can      = !maxed && gold >= nextCost;
 
-    // 골드 표시 갱신
-    this.goldDisplay.setText(`★  ${gold} G 보유`);
-
-    // 아이콘 배경 색
-    this.infoIconBg.setFillStyle(isMaxed ? 0xd4aa30 : upg.color);
+    this.goldTxt.setText(`💰 ${gold.toLocaleString()} G`);
+    this.infoIconBg.setFillStyle(maxed ? 0xb89010 : upg.color);
     this.infoIcon.setText(upg.icon);
-
-    // 텍스트
     this.infoName.setText(upg.name);
-    this.infoLevel.setText(isMaxed ? 'Lv.5 / 5  ★ MAX' : `Lv.${curLevel} / 5`);
+    this.infoLevel.setText(maxed ? `Lv.${maxLv} / ${maxLv}  ✦ MAX` : `Lv.${lv} / ${maxLv}`);
     this.infoDesc.setText(upg.description);
 
-    // 다음 단계 보너스
-    if (isMaxed) {
-      this.infoBonus.setText(`최대치 달성!  (${upg.labels[4]})`);
-    } else if (curLevel > 0) {
-      this.infoBonus.setText(`현재 ${upg.labels[curLevel - 1]}  →  다음 ${upg.labels[curLevel]}`);
+    if (maxed) {
+      this.infoBonus.setText(`✦ 최대치 달성  (${upg.labels[maxLv - 1]})`).setColor('#f0c040');
+    } else if (lv > 0) {
+      this.infoBonus.setText(`현재 ${upg.labels[lv - 1]}  →  다음 ${upg.labels[lv]}`).setColor('#44aaff');
     } else {
-      this.infoBonus.setText(`강화 효과: ${upg.labels[0]}`);
+      this.infoBonus.setText(`강화 효과: ${upg.labels[0]}`).setColor('#44aaff');
     }
 
-    // 레벨 닷 업데이트
-    this.infoDots.forEach((dot, i) => {
-      dot.setFillStyle(i < curLevel ? upg.color : 0xb0b098);
-    });
+    this.infoDots.forEach((dot, i) =>
+      dot.setFillStyle(i < lv ? upg.color : i < maxLv ? 0x253545 : 0x151d28));
 
-    // 구매 버튼 상태
-    if (isMaxed) {
-      this.buyBtnInner.setFillStyle(0xa89848).disableInteractive();
-      this.buyBtnTxt.setText('MAX');
-      this.buyBtnSub.setText('★★★');
-    } else if (canAfford) {
-      this.buyBtnInner.setFillStyle(0x3aaa3a).setInteractive({ useHandCursor: true });
-      this.buyBtnTxt.setText(`${nextCost} G`);
-      this.buyBtnSub.setText('구매');
+    if (maxed) {
+      this.buyBtn.setFillStyle(0x1a1a10).disableInteractive().setStrokeStyle(1, 0x3a3a20);
+      this.buyTxt.setText('✦ MAX').setColor('#c4a020');
+      this.buySub.setText('이미 최고 레벨입니다').setColor('#666644');
+    } else if (can) {
+      this.buyBtn.setFillStyle(0x1a4422).setInteractive({ useHandCursor: true }).setStrokeStyle(1, 0x44aa66);
+      this.buyTxt.setText(`구매  ${nextCost.toLocaleString()} G`).setColor('#ffffff');
+      this.buySub.setText(`보유 ${gold.toLocaleString()} G`).setColor('#88ccaa');
     } else {
-      this.buyBtnInner.setFillStyle(0x787870).disableInteractive();
-      this.buyBtnTxt.setText(`${nextCost} G`);
-      this.buyBtnSub.setText('부족');
+      this.buyBtn.setFillStyle(0x151e2a).disableInteractive().setStrokeStyle(1, 0x2a3a50);
+      this.buyTxt.setText(`${nextCost.toLocaleString()} G 필요`).setColor('#556677');
+      this.buySub.setText(`${(nextCost - gold).toLocaleString()} G 부족`).setColor('#445566');
     }
   }
 
-  // ── 구매 처리 ─────────────────────────────────────────
+  // ────────────────────────────────────────────────────
   private purchaseSelected() {
-    const upg      = UPGRADES[this.selectedIdx];
-    const curLevel = getUpgradeLevel(upg.id);
-    if (curLevel >= 5) return;
-
-    const cost = upg.costs[curLevel];
+    const upg = UPGRADES[this.selectedIdx];
+    const lv  = getUpgradeLevel(upg.id);
+    if (lv >= (upg.maxLevel ?? 5)) return;
+    const cost = upg.costs[lv];
     const gold = getTotalGold();
     if (gold < cost) return;
 
     setTotalGold(gold - cost);
-    setUpgradeLevel(upg.id, curLevel + 1);
+    setUpgradeLevel(upg.id, lv + 1);
 
     const user = getCurrentUser();
     if (user) pushLocalToCloud(user.id).catch(() => {});
 
-    // 구매 플래시 연출 후 씬 재시작
-    this.cameras.main.flash(130, 255, 220, 80);
+    this.cameras.main.flash(120, 80, 200, 255, false);
     this.time.delayedCall(160, () => this.scene.restart({ selectedIdx: this.selectedIdx }));
   }
 
-  // ── 돌아가기 버튼 ─────────────────────────────────────
-  private createBackButton() {
-    const BTN_Y = this.scale.height - 89;
-    const CX    = this.scale.width / 2;
-
-    this.add.rectangle(CX, BTN_Y, 202, 52, 0x181810);
-    const bg = this.add.rectangle(CX, BTN_Y, 200, 50, 0xd8d8c0)
-      .setInteractive({ useHandCursor: true });
-
-    // 좌측 스트라이프 (파랑 = 타이틀 복귀)
-    this.add.rectangle(CX - 100 + 3, BTN_Y, 7, 44, 0x4488cc);
-    this.add.text(CX + 4, BTN_Y, '← 타이틀로', {
-      fontSize: '16px', color: '#181810', fontStyle: 'bold',
+  // ────────────────────────────────────────────────────
+  private createBackButton(W: number, H: number, CX: number) {
+    const BTN_Y = H - 28;
+    const bg  = this.add.rectangle(CX, BTN_Y, W - 16, 40, 0x0d1525)
+      .setInteractive({ useHandCursor: true })
+      .setStrokeStyle(1, 0x2a4060);
+    const txt = this.add.text(CX, BTN_Y, '← 타이틀로', {
+      fontSize: '14px', color: '#7799bb', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    bg.on('pointerover', () => bg.setFillStyle(0xb8c8e0));
-    bg.on('pointerout',  () => bg.setFillStyle(0xd8d8c0));
+    bg.on('pointerover', () => { bg.setFillStyle(0x162035); txt.setColor('#aabbdd'); });
+    bg.on('pointerout',  () => { bg.setFillStyle(0x0d1525); txt.setColor('#7799bb'); });
     bg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(200, 24, 16, 40);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('TitleScene');
-      });
+      this.cameras.main.fadeOut(200, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
     });
   }
 }

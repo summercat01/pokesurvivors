@@ -245,5 +245,6 @@ export class PokedexScene extends Phaser.Scene {
     this.input.on('pointerup',  () => { isDragging = false; });
     this.input.on('pointerout', () => { isDragging = false; });
     this.input.on('wheel', (...args: unknown[]) => applyScroll(this.scrollY + (args[3] as number) * 0.5));
+    this.events.once('shutdown', () => this.input.removeAllListeners());
   }
 }

@@ -10,7 +10,9 @@ export interface UpgradeConfig {
   color:       number;
   statKey:     keyof PlayerStats;
   applyMode:   'add' | 'multiply';
-  /** 레벨 1~5의 누적 총 보너스 (apply 시 직접 사용) */
+  /** 최대 레벨 (기본값 5) */
+  maxLevel?:   number;
+  /** 레벨 1~maxLevel의 누적 총 보너스 (apply 시 직접 사용) */
   totals:      number[];
   /** 카드에 표시할 레벨별 문구 */
   labels:      string[];
@@ -86,6 +88,82 @@ export const UPGRADES: UpgradeConfig[] = [
     labels: ['+3%', '+6%', '+10%', '+14%', '+20%'],
     costs: BASE_COSTS,
   },
+
+  // ── 패시브 아이템 효과 기반 추가 업그레이드 ──
+  {
+    id: 'projectileRange', name: '투사체 범위', icon: '◎',
+    description: '투사체의 크기(범위) 증가',
+    color: 0x4488ee, statKey: 'projectileRange', applyMode: 'multiply',
+    totals: [1.06, 1.12, 1.20, 1.30, 1.42],
+    labels: ['+6%', '+12%', '+20%', '+30%', '+42%'],
+    costs: BASE_COSTS,
+  },
+  {
+    id: 'projectileSpeed', name: '투사체 속도', icon: '»',
+    description: '투사체의 이동 속도 증가',
+    color: 0xeedd20, statKey: 'projectileSpeed', applyMode: 'multiply',
+    totals: [1.08, 1.16, 1.25, 1.36, 1.48],
+    labels: ['+8%', '+16%', '+25%', '+36%', '+48%'],
+    costs: BASE_COSTS,
+  },
+  {
+    id: 'critDamage', name: '치명타 위력', icon: '✦',
+    description: '치명타 피해 배율 증가',
+    color: 0xe05030, statKey: 'critDamage', applyMode: 'add',
+    totals: [0.15, 0.30, 0.50, 0.75, 1.00],
+    labels: ['+15%', '+30%', '+50%', '+75%', '+100%'],
+    costs: BASE_COSTS,
+  },
+  {
+    id: 'projectileDuration', name: '투사체 지속', icon: '⧗',
+    description: '투사체가 사라지기까지의 시간 증가',
+    color: 0xa040c0, statKey: 'projectileDuration', applyMode: 'add',
+    totals: [0.3, 0.6, 1.0, 1.5, 2.0],
+    labels: ['+0.3s', '+0.6s', '+1.0s', '+1.5s', '+2.0s'],
+    costs: BASE_COSTS,
+  },
+  {
+    id: 'knockback', name: '넉백', icon: '↗',
+    description: '적을 밀어내는 거리 증가',
+    color: 0xe080a0, statKey: 'knockback', applyMode: 'multiply',
+    totals: [1.10, 1.22, 1.36, 1.52, 1.70],
+    labels: ['+10%', '+22%', '+36%', '+52%', '+70%'],
+    costs: BASE_COSTS,
+  },
+  {
+    id: 'evasion', name: '회피율', icon: '◌',
+    description: '적 공격 회피 확률 증가',
+    color: 0x60a840, statKey: 'evasion', applyMode: 'add',
+    totals: [0.02, 0.04, 0.07, 0.11, 0.15],
+    labels: ['+2%', '+4%', '+7%', '+11%', '+15%'],
+    costs: BASE_COSTS,
+  },
+  {
+    id: 'revives', name: '부활 횟수', icon: '↺',
+    description: '쓰러졌을 때 부활 가능 횟수',
+    color: 0x706090, statKey: 'revives', applyMode: 'add',
+    maxLevel: 2,
+    totals: [1, 2],
+    labels: ['+1회', '+2회'],
+    costs: [5000, 20000],
+  },
+  {
+    id: 'projectileCount', name: '투사체 수', icon: '⁂',
+    description: '동시에 발사되는 투사체 개수 증가',
+    color: 0x6030e0, statKey: 'projectileCount', applyMode: 'add',
+    maxLevel: 2,
+    totals: [1, 2],
+    labels: ['+1개', '+2개'],
+    costs: [5000, 20000],
+  },
+  {
+    id: 'goldGain', name: '골드 획득', icon: '¥',
+    description: '몬스터 처치 시 골드 획득량 증가',
+    color: 0x806050, statKey: 'goldGain', applyMode: 'multiply',
+    totals: [1.10, 1.22, 1.35, 1.52, 1.75],
+    labels: ['+10%', '+22%', '+35%', '+52%', '+75%'],
+    costs: BASE_COSTS,
+  },
 ];
 
 // ===== localStorage 헬퍼 =====
@@ -117,8 +195,9 @@ export function applyPermanentUpgrades(stats: PlayerStats): void {
     const key   = upg.statKey;
 
     if (upg.applyMode === 'multiply') {
-      // 기본값에 배율 적용 (누적 총 배율)
-      (stats as any)[key] = Math.round((DEFAULT_STATS as any)[key] * bonus);
+      // 기본값에 배율 적용 (정수 스탯은 반올림, 소수형은 그대로)
+      const result = (DEFAULT_STATS as any)[key] * bonus;
+      (stats as any)[key] = (DEFAULT_STATS as any)[key] >= 10 ? Math.round(result) : result;
     } else {
       // 기본값에 절대값 덧셈
       (stats as any)[key] = (DEFAULT_STATS as any)[key] + bonus;

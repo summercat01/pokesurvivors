@@ -403,28 +403,45 @@ export function getUpgradeDescription(base: WeaponConfig, fromLevel: number, toL
   }
 }
 
-// ===== 타입 상성 (공격 타입 → 약점 타입 목록) =====
-export const SUPER_EFFECTIVE: Partial<Record<PokemonType, PokemonType[]>> = {
-  fire:     ['grass', 'bug', 'steel', 'ice'],
-  water:    ['fire', 'rock', 'ground'],
-  grass:    ['water', 'ground', 'rock'],
-  electric: ['water', 'flying'],
-  ice:      ['grass', 'dragon', 'flying', 'ground'],
-  fighting: ['normal', 'rock', 'steel', 'ice', 'dark'],
-  ground:   ['fire', 'electric', 'poison', 'rock', 'steel'],
-  rock:     ['fire', 'ice', 'flying', 'bug'],
-  ghost:    ['ghost', 'psychic'],
-  psychic:  ['fighting', 'poison'],
-  flying:   ['grass', 'fighting', 'bug'],
-  poison:   ['grass'],
-  dark:     ['ghost', 'psychic'],
-  dragon:   ['dragon'],
+// ===== 타입 상성표 (공격타입 → 방어타입 → 배율, 1배는 생략) =====
+type TypeChart = Partial<Record<PokemonType, Partial<Record<PokemonType, 0 | 0.5 | 2>>>>;
+const TYPE_CHART: TypeChart = {
+  normal:   { rock: 0.5, steel: 0.5, ghost: 0 },
+  fire:     { fire: 0.5, water: 0.5, rock: 0.5, dragon: 0.5, grass: 2, ice: 2, bug: 2, steel: 2 },
+  water:    { water: 0.5, grass: 0.5, dragon: 0.5, fire: 2, ground: 2, rock: 2 },
+  grass:    { fire: 0.5, grass: 0.5, poison: 0.5, flying: 0.5, bug: 0.5, dragon: 0.5, steel: 0.5, water: 2, ground: 2, rock: 2 },
+  electric: { grass: 0.5, electric: 0.5, dragon: 0.5, ground: 0, water: 2, flying: 2 },
+  ice:      { water: 0.5, ice: 0.5, steel: 0.5, fire: 0.5, grass: 2, ground: 2, flying: 2, dragon: 2 },
+  fighting: { poison: 0.5, flying: 0.5, psychic: 0.5, bug: 0.5, ghost: 0, normal: 2, rock: 2, steel: 2, ice: 2, dark: 2 },
+  poison:   { poison: 0.5, ground: 0.5, rock: 0.5, ghost: 0.5, steel: 0, grass: 2 },
+  ground:   { grass: 0.5, bug: 0.5, flying: 0, fire: 2, electric: 2, poison: 2, rock: 2, steel: 2 },
+  flying:   { electric: 0.5, rock: 0.5, steel: 0.5, grass: 2, fighting: 2, bug: 2 },
+  psychic:  { psychic: 0.5, steel: 0.5, dark: 0, fighting: 2, poison: 2 },
+  bug:      { fire: 0.5, fighting: 0.5, flying: 0.5, ghost: 0.5, steel: 0.5, grass: 2, psychic: 2, dark: 2 },
+  rock:     { fighting: 0.5, ground: 0.5, steel: 0.5, fire: 2, ice: 2, flying: 2, bug: 2 },
+  ghost:    { normal: 0, dark: 0.5, ghost: 2, psychic: 2 },
+  dragon:   { steel: 0.5, dragon: 2 },
+  dark:     { fighting: 0.5, dark: 0.5, ghost: 2, psychic: 2 },
+  steel:    { fire: 0.5, water: 0.5, electric: 0.5, steel: 0.5, ice: 2, rock: 2 },
 };
 
-/** 1.5배 데미지면 true */
-export function isSuperEffective(attackType: PokemonType, defenderType: PokemonType): boolean {
-  return SUPER_EFFECTIVE[attackType]?.includes(defenderType) ?? false;
+/**
+ * 공격 타입 vs 방어 타입 배열의 최종 배율을 반환.
+ * 포켓몬 정식 규칙: 각 방어 타입 배율을 곱함 (×4, ×2, ×1, ×0.5, ×0.25, ×0)
+ */
+export function getTypeMultiplier(attackType: PokemonType, defenderTypes: PokemonType[]): number {
+  return defenderTypes.reduce((mult, defType) => {
+    return mult * (TYPE_CHART[attackType]?.[defType] ?? 1);
+  }, 1);
 }
+
+/** 하위 호환용 — WeaponSystem / progressionUtils 에서 참조 */
+export function isSuperEffective(attackType: PokemonType, defenderType: PokemonType): boolean {
+  return (TYPE_CHART[attackType]?.[defenderType] ?? 1) >= 2;
+}
+
+/** @deprecated getTypeMultiplier 사용 권장 */
+export const SUPER_EFFECTIVE: Partial<Record<PokemonType, PokemonType[]>> = {} as any;
 
 // ===== 타입별 투사체 색상 =====
 export const TYPE_COLORS: Record<PokemonType, number> = {

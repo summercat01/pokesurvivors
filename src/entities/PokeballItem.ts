@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import type { GameScene } from '../scenes/GameScene';
 
 export type PokeballType = 'pokeball' | 'superball' | 'hyperball';
 
@@ -13,7 +12,7 @@ export class PokeballItem extends Phaser.GameObjects.Container {
   readonly ballType: PokeballType;
   private collected = false;
 
-  constructor(scene: GameScene, x: number, y: number, type: PokeballType) {
+  constructor(scene: Phaser.Scene, x: number, y: number, type: PokeballType) {
     super(scene, x, y);
     this.ballType = type;
 

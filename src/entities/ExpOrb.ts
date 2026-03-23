@@ -39,19 +39,24 @@ export class ExpOrb extends Phaser.GameObjects.Image {
 
   private flyToPlayer(scene: GameScene, expValue: number) {
     const player = scene.player;
-    const targetX = player?.x ?? this.x;
-    const targetY = player?.y ?? this.y;
 
+    // 플레이어 현재 위치를 onUpdate에서 실시간 추적
     scene.tweens.add({
       targets: this,
-      x: targetX,
-      y: targetY,
       scale: 0.5,
       duration: 280,
       ease: 'Cubic.easeIn',
+      onUpdate: () => {
+        if (!player?.active) return;
+        this.x += (player.x - this.x) * 0.18;
+        this.y += (player.y - this.y) * 0.18;
+      },
       onComplete: () => {
+        const px = player?.x ?? this.x;
+        const py = player?.y ?? this.y;
+
         // 흡수 파티클 효과 (작은 흰 원)
-        const burst = scene.add.circle(targetX, targetY, 8, 0xffee44, 0.7).setDepth(13);
+        const burst = scene.add.circle(px, py, 8, 0xffee44, 0.7).setDepth(13);
         scene.cameras.main.ignore(burst);
         scene.tweens.add({
           targets: burst,
@@ -63,7 +68,7 @@ export class ExpOrb extends Phaser.GameObjects.Image {
 
         // EXP 획득 텍스트 (3 이상일 때만 표시)
         if (expValue >= 3) {
-          const expTxt = scene.add.text(targetX, targetY - 12, `+${expValue} EXP`, {
+          const expTxt = scene.add.text(px, py - 12, `+${expValue} EXP`, {
             fontSize: '11px', color: '#ffee44',
             stroke: '#443300', strokeThickness: 2,
           }).setOrigin(0.5).setDepth(14);

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TYPE_COLORS } from '../data/weapons';
 import type { PokemonType } from '../types';
 import { isStageUnlocked, isStageCleared } from '../lib/stageProgress';
+import { getBgmVolume } from '../lib/storage';
 
 interface StageConfig {
   id: number;
@@ -32,9 +33,6 @@ const STAGES: StageConfig[] = [
   { id: 17, name: '신월섬',      subtitle: 'Newmoon Island',     enemyTypes: ['dark'],                 bgColor: 0x0a0a1a, bgPokemon: ['pokemon_442', 'pokemon_262', 'pokemon_197'] },
 ];
 
-const CARD_H   = 150;
-const CARD_GAP = 10;
-const CARD_STRIDE = CARD_H + CARD_GAP;
 
 interface CardControl {
   select: () => void;
@@ -52,7 +50,7 @@ export class StageSelectScene extends Phaser.Scene {
     const CX = W / 2;
 
     // BGM
-    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    const vol = getBgmVolume() * 0.5;
     if (this.cache.audio.exists('bgm_select') && !this.sound.get('bgm_select')?.isPlaying) {
       this.sound.stopAll();
       const play = () => { if (this.cache.audio.exists('bgm_select')) this.sound.play('bgm_select', { loop: true, volume: vol }); };
@@ -114,9 +112,15 @@ export class StageSelectScene extends Phaser.Scene {
       if (selectedStageId === 0) return;
       this.cameras.main.fadeOut(250, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('CharacterSelectScene', { stageId: selectedStageId });
+        this.scene.sleep();
+        this.scene.launch('CharacterSelectScene', { stageId: selectedStageId });
       });
     });
+
+    // ── 카드 크기 (화면 높이 기반 반응형) ──
+    const CARD_H      = Math.round(Math.max(130, H * 0.17));
+    const CARD_GAP    = 10;
+    const CARD_STRIDE = CARD_H + CARD_GAP;
 
     // ── 스크롤 영역 ──
     const SCROLL_TOP = 88;
@@ -181,6 +185,8 @@ export class StageSelectScene extends Phaser.Scene {
 
     this.input.on('pointerup',   () => { isDragging = false; });
     this.input.on('pointerout',  () => { isDragging = false; });
+    this.events.once('shutdown', () => this.input.removeAllListeners());
+    this.events.on('wake', () => { this.cameras.main.fadeIn(300, 0, 0, 0); });
 
     this.cameras.main.fadeIn(300, 0, 0, 0);
   }

@@ -155,5 +155,6 @@ export class RankingScene extends Phaser.Scene {
     });
     this.input.on('pointerup',  () => { isDragging = false; });
     this.input.on('pointerout', () => { isDragging = false; });
+    this.events.once('shutdown', () => this.input.removeAllListeners());
   }
 }

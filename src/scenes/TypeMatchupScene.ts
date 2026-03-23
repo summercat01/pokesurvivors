@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { PokemonType } from '../types';
 import type { GameScene } from './GameScene';
 import { TYPE_COLORS } from '../data/weapons';
+import { TYPE_KR } from '../constants/typeLabels';
 
 // ===== Gen IV 타입 상성 테이블 =====
 const TYPES: PokemonType[] = [
@@ -9,13 +10,6 @@ const TYPES: PokemonType[] = [
   'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug',
   'rock', 'ghost', 'dragon', 'dark', 'steel',
 ];
-
-const TYPE_KR: Record<PokemonType, string> = {
-  normal: '노말', fire: '불꽃', water: '물', grass: '풀',
-  electric: '전기', ice: '얼음', fighting: '격투', poison: '독',
-  ground: '땅', flying: '비행', psychic: '에스퍼', bug: '벌레',
-  rock: '바위', ghost: '고스트', dragon: '드래곤', dark: '악', steel: '강철',
-};
 
 // 컬럼 헤더용 1~2자 약칭
 const TYPE_ABBR: Record<PokemonType, string> = {
@@ -69,7 +63,7 @@ export class TypeMatchupScene extends Phaser.Scene {
     const CX         = W / 2;
     const caller     = data?.caller ?? 'TitleScene';
     const HEADER_H   = 54;
-    const LEGEND_H   = 38;
+    const LEGEND_H   = 44;
     const CONTENT_TOP = HEADER_H + LEGEND_H;
 
     // ── 배경 ──
@@ -83,18 +77,20 @@ export class TypeMatchupScene extends Phaser.Scene {
       stroke: '#302000', strokeThickness: 4, padding: { top: 4 },
     }).setOrigin(0.5).setDepth(11);
     this.add.text(CX, 40, '↓ 공격 타입   →  방어 타입', {
-      fontSize: '10px', color: '#99bbdd',
+      fontSize: '12px', color: '#99bbdd',
     }).setOrigin(0.5).setDepth(11);
 
-    // ── 뒤로 버튼 ──
-    const backBg = this.add.rectangle(38, 22, 64, 28, 0x243a5a)
+    // ── 뒤로 버튼 (최소 44px 높이, 모바일 터치 대응) ──
+    const backBg = this.add.rectangle(48, 28, 88, 44, 0x243a5a)
       .setDepth(12).setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(1, 0x5577aa).strokeRect(6, 8, 64, 28).setDepth(12);
-    const backTxt = this.add.text(38, 22, '← 뒤로', {
-      fontSize: '12px', color: '#aaccee', fontStyle: 'bold', padding: { top: 2 },
+    this.add.graphics().lineStyle(1, 0x5577aa).strokeRect(4, 6, 88, 44).setDepth(12);
+    const backTxt = this.add.text(48, 28, '← 뒤로', {
+      fontSize: '14px', color: '#aaccee', fontStyle: 'bold', padding: { top: 2 },
     }).setOrigin(0.5).setDepth(13);
-    backBg.on('pointerover', () => { backBg.setFillStyle(0x2e4a70); backTxt.setColor('#ffffff'); });
-    backBg.on('pointerout',  () => { backBg.setFillStyle(0x243a5a); backTxt.setColor('#aaccee'); });
+    backBg.on('pointerover',  () => { backBg.setFillStyle(0x2e4a70); backTxt.setColor('#ffffff'); });
+    backBg.on('pointerout',   () => { backBg.setFillStyle(0x243a5a); backTxt.setColor('#aaccee'); });
+    backBg.on('pointerdown',  () => backBg.setFillStyle(0x1a2e50));
+    backBg.on('pointerup',    () => backBg.setFillStyle(0x2e4a70));
     backBg.on('pointerdown', () => {
       if (caller === 'GameScene') {
         this.scene.stop('TypeMatchupScene');
@@ -127,7 +123,7 @@ export class TypeMatchupScene extends Phaser.Scene {
         fontSize: leg.sym === '◎◎' ? '10px' : '12px', color: leg.symColor, fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(12);
       this.add.text(lx, ly + 8, leg.label, {
-        fontSize: '7px', color: '#99aabb',
+        fontSize: '11px', color: '#aabbcc',
       }).setOrigin(0.5).setDepth(12);
     });
 
@@ -165,7 +161,7 @@ export class TypeMatchupScene extends Phaser.Scene {
       const stripe = this.add.rectangle(cx2, cy2, CELL_W - 1, 2, typeColor, 0.9);
       stripe.setY(cy2 + COL_H / 2 - 2);
       const txt = this.add.text(cx2, cy2 + 1, TYPE_ABBR[defType], {
-        fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
+        fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5);
       container.add([bg, stripe, txt]);
@@ -191,7 +187,7 @@ export class TypeMatchupScene extends Phaser.Scene {
       // 왼쪽 4px 타입 컬러 스트라이프
       const labelStripe = this.add.rectangle(2, rowY + CELL_H / 2, 4, CELL_H - 1, typeColor, 0.9);
       const labelTxt = this.add.text(LABEL_W / 2 + 2, rowY + CELL_H / 2 + 1, TYPE_KR[atkType], {
-        fontSize: '8px', color: '#ddeeee', fontStyle: 'bold',
+        fontSize: '11px', color: '#ddeeee', fontStyle: 'bold',
       }).setOrigin(0.5);
       container.add([labelBg, labelStripe, labelTxt]);
 
@@ -224,7 +220,7 @@ export class TypeMatchupScene extends Phaser.Scene {
         } else {
           bgColor  = 0x00000000;  // 투명 (행 배경 사용)
           sym      = '·';
-          symColor = '#2a2a3a';
+          symColor = '#5a5a7a';
           symSize  = '14px';
         }
 

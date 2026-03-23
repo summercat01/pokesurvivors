@@ -1,9 +1,7 @@
 import Phaser from 'phaser';
 import { ALL_WEAPONS, TYPE_COLORS } from '../data/weapons';
+import { getBgmVolume } from '../lib/storage';
 
-const CARD_H      = 160;
-const CARD_GAP    = 12;
-const CARD_STRIDE = CARD_H + CARD_GAP;
 
 interface CardControl {
   select: () => void;
@@ -24,7 +22,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     const CX = W / 2;
 
     // BGM (bgm_select 이미 재생 중이면 유지)
-    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    const vol = getBgmVolume() * 0.5;
     if (this.cache.audio.exists('bgm_select') && !this.sound.get('bgm_select')?.isPlaying) {
       this.sound.stopAll();
       const play = () => { if (this.cache.audio.exists('bgm_select')) this.sound.play('bgm_select', { loop: true, volume: vol }); };
@@ -68,7 +66,14 @@ export class CharacterSelectScene extends Phaser.Scene {
     backBg.on('pointerout',  () => { backBg.setFillStyle(0x222233); backTxt.setColor('#aaaacc'); });
     backBg.on('pointerdown', () => {
       this.cameras.main.fadeOut(200, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('StageSelectScene'));
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        if (this.scene.manager.isSleeping('StageSelectScene')) {
+          this.scene.stop();
+          this.scene.wake('StageSelectScene');
+        } else {
+          this.scene.start('StageSelectScene');
+        }
+      });
     });
 
     // 게임 시작 버튼
@@ -85,9 +90,15 @@ export class CharacterSelectScene extends Phaser.Scene {
     startBg.on('pointerdown', () => {
       this.cameras.main.fadeOut(250, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.stop('StageSelectScene');
         this.scene.start('GameScene', { weaponIndex: selectedWeaponIndex, stageId: this.stageId });
       });
     });
+
+    // ── 카드 크기 (화면 높이 기반 반응형) ──
+    const CARD_H      = Math.round(Math.max(140, H * 0.18));
+    const CARD_GAP    = 12;
+    const CARD_STRIDE = CARD_H + CARD_GAP;
 
     // ── 스크롤 영역 ──
     const SCROLL_TOP = 88;
@@ -151,6 +162,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.input.on('pointerup',  () => { isDragging = false; });
     this.input.on('pointerout', () => { isDragging = false; });
+    this.events.once('shutdown', () => this.input.removeAllListeners());
 
     this.cameras.main.fadeIn(300, 0, 0, 0);
   }

@@ -2,20 +2,12 @@ import Phaser from 'phaser';
 import type { LevelUpOption } from '../types';
 import { TYPE_COLORS, getWeaponByPokemonId } from '../data/weapons';
 import type { GameScene } from './GameScene';
-
-const TYPE_KR: Record<string, string> = {
-  normal: '노말', fire: '불꽃', water: '물', grass: '풀',
-  electric: '전기', ice: '얼음', fighting: '격투', poison: '독',
-  ground: '땅', flying: '비행', psychic: '에스퍼', bug: '벌레',
-  rock: '바위', ghost: '고스트', dragon: '드래곤', dark: '악', steel: '강철',
-};
-
-const CARD_H   = 100;
-const CARD_GAP = 14;
-
+import { TYPE_KR } from '../constants/typeLabels';
 
 export class LevelUpScene extends Phaser.Scene {
   private CARD_W = 360;
+  private CARD_H = 100;
+  private CARD_GAP = 14;
 
   constructor() {
     super({ key: 'LevelUpScene' });
@@ -26,7 +18,9 @@ export class LevelUpScene extends Phaser.Scene {
     const H = this.scale.height;
     const { options } = data;
 
-    this.CARD_W = W - 20;
+    this.CARD_W   = W - 20;
+    this.CARD_H   = Math.round(Math.max(90, H * 0.115));
+    this.CARD_GAP = Math.round(H * 0.016);
 
     // ── 어두운 반투명 오버레이 ──
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.72);
@@ -52,7 +46,7 @@ export class LevelUpScene extends Phaser.Scene {
     // ── 카드 ──
     const CARD_START = Math.round(H * 0.18);
     options.forEach((opt, i) => {
-      const cy = CARD_START + i * (CARD_H + CARD_GAP) + CARD_H / 2;
+      const cy = CARD_START + i * (this.CARD_H + this.CARD_GAP) + this.CARD_H / 2;
       this.createCard(opt, W / 2, cy);
     });
   }
@@ -68,6 +62,7 @@ export class LevelUpScene extends Phaser.Scene {
     const sprKey    = this.resolveSprite(opt);
 
     const CARD_W = this.CARD_W;
+    const CARD_H = this.CARD_H;
     // 그림자
     this.add.rectangle(cx + 2, cy + 3, CARD_W + 4, CARD_H + 4, 0x000000, 0.5);
 
@@ -173,6 +168,7 @@ export class LevelUpScene extends Phaser.Scene {
   // ─────────────────────────────────────────
   private createGoldCard(cx: number, cy: number) {
     const CARD_W = this.CARD_W;
+    const CARD_H = this.CARD_H;
     const GOLD = 0xf0a800;
 
     this.add.rectangle(cx + 2, cy + 3, CARD_W + 4, CARD_H + 4, 0x000000, 0.5);

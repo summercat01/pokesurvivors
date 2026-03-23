@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getBgmVolume } from '../lib/storage';
 
 interface DialogStep {
   text: string;
@@ -52,7 +53,7 @@ export class OakGuideScene extends Phaser.Scene {
     const CX = W / 2;
 
     // BGM (locked이면 unlock 후 재생)
-    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    const vol = getBgmVolume() * 0.5;
     const playOakBgm = () => {
       if (this.cache.audio.exists('bgm_oak')) {
         this.sound.stopAll();

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { getCurrentUser, getNickname, signOut } from '../lib/auth';
 import { loadUserRecord } from '../lib/userDB';
+import { getBgmVolume } from '../lib/storage';
 
 // ── 패치 노트 ──
 interface PatchEntry { version: string; date: string; changes: string[] }
@@ -103,6 +104,9 @@ export class TitleScene extends Phaser.Scene {
     this.createFooter();
     this.createUserBadge();
 
+    // 저장된 음소거 상태 적용
+    this.sound.setMute(localStorage.getItem('bgmMuted') === '1');
+
     // BGM 재생 (locked이면 unlock 이후 재생)
     this.playBGM();
 
@@ -124,20 +128,11 @@ export class TitleScene extends Phaser.Scene {
       this.sound.once('unlocked', () => this.playBGM());
       return;
     }
-    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    const vol = getBgmVolume() * 0.5;
     // 타이틀 BGM이 이미 재생 중이면 스킵
-    if (this.sound.get('bgm_title')?.isPlaying || this.sound.get('bgm_title_intro')?.isPlaying) return;
+    if (this.sound.get('bgm_title')?.isPlaying) return;
     this.sound.stopAll();
-    // 인트로(1번) 재생 후 타이틀 루프
-    if (this.cache.audio.exists('bgm_title_intro')) {
-      const intro = this.sound.add('bgm_title_intro', { loop: false, volume: vol });
-      intro.once('complete', () => {
-        if (this.cache.audio.exists('bgm_title') && this.scene.isActive('TitleScene')) {
-          this.sound.play('bgm_title', { loop: true, volume: vol });
-        }
-      });
-      intro.play();
-    } else if (this.cache.audio.exists('bgm_title')) {
+    if (this.cache.audio.exists('bgm_title')) {
       this.sound.play('bgm_title', { loop: true, volume: vol });
     }
   }
@@ -719,7 +714,14 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(13);
     bookBg.on('pointerover', () => { bookBg.setFillStyle(0x336633); bookTxt.setColor('#aaffcc'); });
     bookBg.on('pointerout',  () => { bookBg.setFillStyle(0x224422); bookTxt.setColor('#88eeaa'); });
-    bookBg.on('pointerdown', () => this.scene.launch('OakGuideScene'));
+    bookBg.on('pointerdown', () => {
+      this.scene.launch('OakGuideScene');
+      this.scene.get('OakGuideScene')?.events.once('shutdown', () => {
+        if (!this.sound.get('bgm_title')?.isPlaying && !this.sound.get('bgm_title_intro')?.isPlaying) {
+          this.playBGM();
+        }
+      });
+    });
 
     // ── 상성표 버튼 (가이드 왼쪽) ──
     const matchupX = W - 142;
@@ -738,6 +740,31 @@ export class TitleScene extends Phaser.Scene {
       this.cameras.main.once('camerafadeoutcomplete', () =>
         this.scene.start('TypeMatchupScene', { caller: 'TitleScene' })
       );
+    });
+
+    // ── 음소거 버튼 (도감 오른쪽) ──
+    const muteX = 142;
+    const isMuted = () => localStorage.getItem('bgmMuted') === '1';
+    const muteBg = this.add.rectangle(muteX, guideY, 84, 30, 0x332244, 0.9)
+      .setDepth(12).setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(1, 0x8844aa, 0.8)
+      .strokeRect(muteX - 42, guideY - 15, 84, 30).setDepth(12);
+    const muteTxt = this.add.text(muteX, guideY, isMuted() ? '🔇 음소거' : '🔊 소리', {
+      fontSize: '12px', color: '#ccaaee', fontStyle: 'bold',
+      padding: { top: 2 },
+    }).setOrigin(0.5).setDepth(13);
+
+    // 초기 상태 적용
+    this.sound.setMute(isMuted());
+
+    muteBg.on('pointerover', () => { muteBg.setFillStyle(0x553366); muteTxt.setColor('#eeccff'); });
+    muteBg.on('pointerout',  () => { muteBg.setFillStyle(0x332244); muteTxt.setColor('#ccaaee'); });
+    muteBg.on('pointerdown', () => {
+      const muted = !isMuted();
+      localStorage.setItem('bgmMuted', muted ? '1' : '0');
+      this.sound.setMute(muted);
+      muteTxt.setText(muted ? '🔇 음소거' : '🔊 소리');
+      if (!muted && !this.sound.get('bgm_title')?.isPlaying) this.playBGM();
     });
 
     // ── 도감 버튼 (화면 왼쪽, 가이드와 대칭) ──

@@ -1,206 +1,261 @@
 import Phaser from 'phaser';
 import { getCurrentUser } from '../lib/auth';
 import { pushLocalToCloud } from '../lib/userDB';
+import { getBgmVolume, getStoredInt } from '../lib/storage';
 
 interface GameOverData {
-  level: number;
-  killCount: number;
-  surviveTime: number;
-  goldEarned: number;
-  totalGold:  number;
-  waveNumber: number;
+  level:           number;
+  killCount:       number;
+  surviveTime:     number;
+  goldEarned:      number;
+  totalGold:       number;
+  waveNumber:      number;
   weaponDamageLog?: Record<string, number>;
-  stageId:      number;
-  stageCleared: boolean;
+  stageId:         number;
+  stageCleared:    boolean;
+  maxCombo?:       number;
+}
+
+// 점수 기반 등급 (0~100)
+function calcGrade(level: number, kills: number, wave: number): { grade: string; score: number; color: string; bg: number } {
+  const score = Math.round((level / 20) * 40 + Math.min(kills / 400, 1) * 30 + (wave / 20) * 30);
+  if (score >= 80) return { grade: 'S', score, color: '#ffd700', bg: 0x3a2800 };
+  if (score >= 60) return { grade: 'A', score, color: '#dd88ff', bg: 0x280a38 };
+  if (score >= 40) return { grade: 'B', score, color: '#44aaff', bg: 0x082038 };
+  if (score >= 20) return { grade: 'C', score, color: '#44dd88', bg: 0x082818 };
+  return               { grade: 'D', score, color: '#aaaaaa', bg: 0x181818 };
 }
 
 export class GameOverScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'GameOverScene' });
-  }
+  constructor() { super({ key: 'GameOverScene' }); }
 
   create(data: GameOverData) {
     const W  = this.scale.width;
     const H  = this.scale.height;
     const CX = W / 2;
-    const { level, killCount, goldEarned, totalGold, waveNumber, weaponDamageLog } = data;
-    const surviveTime  = data.surviveTime ?? 0;
-    const stageId      = data.stageId ?? 1;
-    const stageCleared = data.stageCleared ?? false;
 
-    // BGM
-    const vol = parseFloat(localStorage.getItem('bgmVolume') ?? '1') * 0.5;
+    const { level, killCount, goldEarned, totalGold, waveNumber, weaponDamageLog } = data;
+    const surviveTime  = data.surviveTime  ?? 0;
+    const stageId      = data.stageId      ?? 1;
+    const stageCleared = data.stageCleared ?? false;
+    const maxCombo     = data.maxCombo     ?? 0;
+
+    // ── BGM ──────────────────────────────────────────────
+    const vol    = getBgmVolume() * 0.5;
     const endKey = stageCleared ? 'bgm_clear' : 'bgm_gameover';
     if (this.cache.audio.exists(endKey)) {
       this.sound.stopAll();
       this.sound.play(endKey, { loop: false, volume: vol });
     }
 
-    // 베스트 기록
-    const bestWave  = parseInt(localStorage.getItem('bestWave')  ?? '0', 10);
-    const bestKills = parseInt(localStorage.getItem('bestKills') ?? '0', 10);
-    const bestTime  = parseInt(localStorage.getItem('bestTime')  ?? '0', 10);
-    const bestStage = parseInt(localStorage.getItem('bestStage') ?? '0', 10);
+    // ── 베스트 기록 ──────────────────────────────────────
+    const bestWave  = getStoredInt('bestWave');
+    const bestKills = getStoredInt('bestKills');
+    const bestTime  = getStoredInt('bestTime');
+    const bestStage = getStoredInt('bestStage');
     const newWaveRecord  = waveNumber  >= bestWave  && waveNumber  > 0;
     const newKillRecord  = killCount   >= bestKills && killCount   > 0;
     const newTimeRecord  = Math.floor(surviveTime) >= bestTime    && surviveTime > 0;
     const newStageRecord = stageCleared && stageId >= bestStage   && stageId > 0;
 
-    const totalSec = Math.floor((surviveTime ?? 0) / 1000);
-    const min = Math.floor(totalSec / 60).toString().padStart(2, '0');
-    const sec = (totalSec % 60).toString().padStart(2, '0');
-    const timeStr = `${min}:${sec}`;
+    const totalSec = Math.floor(surviveTime / 1000);
+    const timeStr  = `${Math.floor(totalSec / 60).toString().padStart(2, '0')}:${(totalSec % 60).toString().padStart(2, '0')}`;
 
-    // ── 배경 ──────────────────────────────────────────
-    this.add.rectangle(CX, H / 2, W, H, 0x181028);
-    for (let i = 0; i < 30; i++) {
+    // 총 피해량 계산
+    const totalDmg = weaponDamageLog
+      ? Object.values(weaponDamageLog).reduce((s, v) => s + v, 0)
+      : 0;
+
+    // 등급 계산
+    const { grade, color: gradeColor, bg: gradeBg } = calcGrade(level, killCount, waveNumber);
+
+    // ── 배경 ─────────────────────────────────────────────
+    this.add.rectangle(CX, H / 2, W, H, 0x0c0a18);
+    // 별 효과
+    for (let i = 0; i < 40; i++) {
       this.add.circle(
-        Phaser.Math.Between(0, W),
-        Phaser.Math.Between(0, H),
-        Phaser.Math.Between(1, 3),
-        0xffffff,
-        Phaser.Math.FloatBetween(0.2, 0.8),
+        Phaser.Math.Between(0, W), Phaser.Math.Between(0, H),
+        Phaser.Math.Between(1, 2), 0xffffff,
+        Phaser.Math.FloatBetween(0.15, 0.7),
       );
     }
 
-    // ── 버튼 (항상 최하단 고정) ───────────────────────
-    const BTN_Y = H - 38;
-    const BTN_W = Math.min(162, W / 2 - 14);
-    const BTN_H = 48;
+    // ── 레이아웃 상수 ─────────────────────────────────────
+    const BTN_Y      = H - 36;
+    const BTN_H      = 44;
+    const BTN_W      = Math.min(156, W / 2 - 14);
+    const HEADER_H   = Math.min(72, Math.round(H * 0.085));
+    const HEADER_CY  = 12 + HEADER_H / 2;
+    const CONTENT_T  = HEADER_CY + HEADER_H / 2 + 6;
+    const CONTENT_B  = BTN_Y - BTN_H / 2 - 8;
+    const CONTENT_H  = CONTENT_B - CONTENT_T;
 
-    // ── 타이틀 박스 ──────────────────────────────────
-    const MSG_H  = Math.min(76, Math.round(H * 0.09));
-    const MSG_CY = 16 + MSG_H / 2;
-    const msgBgColor  = stageCleared ? 0xd0f8d0 : 0xf8f8d0;
-    const msgTxtColor = stageCleared ? '#1a6a1a' : '#383030';
-    const msgContent  = stageCleared ? `STAGE ${stageId}\n클리어!` : '트레이너가\n쓰러졌다!';
+    // ── 헤더 (클리어/게임오버 + 등급 배지) ───────────────
+    const headerColor = stageCleared ? 0x1a4020 : 0x28180a;
+    const headerBorderColor = stageCleared ? 0x44dd66 : 0xdd8844;
+    this.add.rectangle(CX, HEADER_CY, W - 16, HEADER_H, headerColor)
+      .setStrokeStyle(2, headerBorderColor);
 
-    this.add.rectangle(CX, MSG_CY, W - 20, MSG_H, msgBgColor)
-      .setStrokeStyle(4, 0x383030);
-    const msgText = this.add.text(CX, MSG_CY, msgContent, {
-      fontSize: '22px', color: msgTxtColor, fontStyle: 'bold',
-      align: 'center', lineSpacing: 2,
+    const headerTxt = stageCleared ? `✦  STAGE ${stageId}  클리어!  ✦` : '트레이너가 쓰러졌다!';
+    const headerColor2 = stageCleared ? '#88ffaa' : '#ffcc88';
+    this.add.text(CX, HEADER_CY, headerTxt, {
+      fontSize: '18px', color: headerColor2, fontStyle: 'bold',
     }).setOrigin(0.5).setAlpha(0);
-    this.tweens.add({ targets: msgText, alpha: 1, duration: 400, delay: 200 });
 
-    // ── 결과 패널 (버튼 위~타이틀 아래) ──────────────
-    const PANEL_TOP = MSG_CY + MSG_H / 2 + 8;
-    const PANEL_BOT = BTN_Y - BTN_H / 2 - 10;
-    const PANEL_H   = PANEL_BOT - PANEL_TOP;
-    const panelCY   = PANEL_TOP + PANEL_H / 2;
+    // 등급 배지 (오른쪽 상단)
+    const BADGE_X = W - 34;
+    this.add.circle(BADGE_X, HEADER_CY, 22, gradeBg).setStrokeStyle(2, parseInt(gradeColor.replace('#', ''), 16));
+    const gradeObj = this.add.text(BADGE_X, HEADER_CY, grade, {
+      fontSize: '22px', color: gradeColor, fontStyle: 'bold',
+    }).setOrigin(0.5).setScale(0).setAlpha(0);
 
-    this.add.rectangle(CX, panelCY, W - 20, PANEL_H, 0xf8f8d0)
-      .setStrokeStyle(4, 0x383030);
+    this.tweens.add({ targets: gradeObj, scaleX: 1, scaleY: 1, alpha: 1, duration: 500, delay: 300, ease: 'Back.easeOut' });
 
-    // 결과 헤더
-    this.add.text(CX, PANEL_TOP + 16, '— 결과 —', {
-      fontSize: '15px', color: '#383030', fontStyle: 'bold',
+    // 헤더 텍스트 페이드인
+    this.children.list.forEach(obj => {
+      if (obj instanceof Phaser.GameObjects.Text && obj.alpha === 0 && obj !== gradeObj) {
+        this.tweens.add({ targets: obj, alpha: 1, duration: 400, delay: 150 });
+      }
+    });
+
+    // ── 콘텐츠 패널 배경 ─────────────────────────────────
+    this.add.rectangle(CX, CONTENT_T + CONTENT_H / 2, W - 16, CONTENT_H, 0x13102a)
+      .setStrokeStyle(2, 0x2a2448);
+
+    // 콘텐츠를 두 섹션으로 나눔: 스탯 + 무기 딜
+    const SECTION_SPLIT = CONTENT_T + CONTENT_H * 0.55;
+
+    // ── 스탯 섹션 ─────────────────────────────────────────
+    this.add.text(CX, CONTENT_T + 10, '─  결과  ─', {
+      fontSize: '12px', color: '#556688',
     }).setOrigin(0.5, 0);
-    this.add.rectangle(CX, PANEL_TOP + 38, W - 60, 2, 0x383030);
 
-    // ── 스탯 6행 ─────────────────────────────────────
-    const STAT_START = PANEL_TOP + 50;
-    const STAT_GAP   = Math.max(34, Math.min(44, Math.floor((PANEL_H - 180) / 6)));
-
-    const stats = [
-      { label: '최고 스테이지', value: bestStage > 0 ? `${bestStage} STAGE` : '-', icon: '🏆', isRecord: newStageRecord },
-      { label: '생존 시간',     value: timeStr,               icon: '⏱', isRecord: newTimeRecord },
-      { label: '도달 웨이브',   value: `${waveNumber} WAVE`,  icon: '🌊', isRecord: newWaveRecord },
-      { label: '도달 레벨',     value: `Lv.${level}`,         icon: '⭐', isRecord: false },
-      { label: '처치 수',       value: `${killCount}마리`,    icon: '✕',  isRecord: newKillRecord },
-      { label: '획득 골드',     value: `${goldEarned} G`,     icon: '★',  isRecord: false },
+    const statData: { icon: string; label: string; value: string; isRecord?: boolean }[] = [
+      { icon: '⏱', label: '생존 시간',  value: timeStr,                    isRecord: newTimeRecord },
+      { icon: '🌊', label: '웨이브',     value: `${waveNumber} Wave`,       isRecord: newWaveRecord },
+      { icon: '⭐', label: '도달 레벨', value: `Lv.${level}` },
+      { icon: '✕',  label: '처치 수',   value: `${killCount.toLocaleString()}마리`, isRecord: newKillRecord },
+      { icon: '💥', label: '총 피해량', value: totalDmg > 0 ? totalDmg.toLocaleString() : '-' },
+      { icon: '🔥', label: '최대 콤보', value: maxCombo > 0 ? `${maxCombo} combo` : '-' },
+      { icon: '★',  label: '획득 골드', value: `${goldEarned.toLocaleString()} G` },
     ];
 
-    stats.forEach((stat, i) => {
+    const STAT_START = CONTENT_T + 30;
+    const STAT_GAP   = Math.max(26, Math.min(34, Math.floor((SECTION_SPLIT - STAT_START - 10) / statData.length)));
+    const LX = 22;
+    const RX = W - 22;
+
+    statData.forEach((s, i) => {
       const y = STAT_START + i * STAT_GAP;
-      this.add.text(28, y, `${stat.icon}  ${stat.label}`, {
-        fontSize: '13px', color: '#606060',
+      this.add.text(LX, y, `${s.icon}  ${s.label}`, {
+        fontSize: '12px', color: '#8899bb',
       }).setOrigin(0, 0.5);
-      this.add.text(W - 28, y, stat.value, {
-        fontSize: '16px', color: '#383030', fontStyle: 'bold',
+      this.add.text(RX, y, s.value, {
+        fontSize: '14px', color: '#ddeeff', fontStyle: 'bold',
       }).setOrigin(1, 0.5);
-      if (stat.isRecord) {
-        this.add.text(CX - 6, y, '신기록!', {
-          fontSize: '11px', color: '#ff4400', fontStyle: 'bold',
-          stroke: '#ffffff', strokeThickness: 2,
+      if (s.isRecord) {
+        this.add.text(CX, y, 'NEW!', {
+          fontSize: '10px', color: '#ff6600', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: 2,
         }).setOrigin(0.5);
       }
     });
 
-    // ── 무기 딜 순위 ──────────────────────────────────
-    const RANK_TOP = STAT_START + 6 * STAT_GAP + 8;
+    // ── 무기 딜 섹션 ─────────────────────────────────────
+    this.add.graphics().lineStyle(1, 0x2a3a5a, 0.8)
+      .lineBetween(LX, SECTION_SPLIT, RX, SECTION_SPLIT);
 
-    this.add.rectangle(CX, RANK_TOP, W - 60, 1, 0x888888, 0.6);
-    this.add.text(28, RANK_TOP + 10, '무기 딜 순위', {
-      fontSize: '12px', color: '#888888',
+    this.add.text(LX, SECTION_SPLIT + 8, '무기 딜 순위', {
+      fontSize: '11px', color: '#556688',
     }).setOrigin(0, 0);
 
-    if (weaponDamageLog) {
-      const sorted = Object.entries(weaponDamageLog).sort((a, b) => b[1] - a[1]).slice(0, 3);
-      const medals = ['🥇', '🥈', '🥉'];
+    if (weaponDamageLog && totalDmg > 0) {
+      const sorted = Object.entries(weaponDamageLog).sort((a, b) => b[1] - a[1]).slice(0, 4);
+      const medals = ['🥇', '🥈', '🥉', ''];
+      const barMaxW = W - 100;
       sorted.forEach(([name, dmg], i) => {
-        const ry = RANK_TOP + 28 + i * 24;
-        this.add.text(34, ry, `${medals[i]}  ${name}`, {
-          fontSize: '13px', color: '#303030', fontStyle: 'bold',
-        }).setOrigin(0, 0.5);
-        this.add.text(W - 28, ry, dmg.toLocaleString(), {
-          fontSize: '13px', color: '#303030', fontStyle: 'bold',
-        }).setOrigin(1, 0.5);
+        const ry   = SECTION_SPLIT + 26 + i * 30;
+        const pct  = dmg / totalDmg;
+        const barW = Math.round(pct * barMaxW);
+        const barColor = [0xffcc00, 0xcccccc, 0xcc8844, 0x6688aa][i];
+
+        // 배경 바
+        this.add.rectangle(LX + barMaxW / 2, ry + 10, barMaxW, 14, 0x1a1830).setOrigin(0.5);
+        // 피해량 바
+        const bar = this.add.rectangle(LX, ry + 10, 0, 14, barColor, 0.7).setOrigin(0, 0.5);
+        this.tweens.add({ targets: bar, width: barW, duration: 500, delay: 200 + i * 80, ease: 'Quad.easeOut' });
+
+        // 이름
+        this.add.text(LX + 4, ry + 2, `${medals[i]}  ${name}`, {
+          fontSize: '11px', color: '#ccddee',
+        }).setOrigin(0, 0);
+        // 피해량 + 퍼센트
+        this.add.text(RX, ry + 2, `${dmg.toLocaleString()}  (${Math.round(pct * 100)}%)`, {
+          fontSize: '10px', color: '#9aaacc',
+        }).setOrigin(1, 0);
       });
+    } else {
+      this.add.text(CX, SECTION_SPLIT + 40, '피해 기록 없음', {
+        fontSize: '12px', color: '#445566',
+      }).setOrigin(0.5);
     }
 
-    // ── 보유 골드 ─────────────────────────────────────
-    const GOLD_TOP = RANK_TOP + 94;
+    // ── 하단: 보유 골드 / 해금 / 버튼 ───────────────────
+    const FOOTER_T = CONTENT_B + 6;
+    const goldY = FOOTER_T + 10;
 
-    this.add.rectangle(CX, GOLD_TOP, W - 60, 2, 0xc8b860);
-    this.add.text(CX, GOLD_TOP + 12, `보유 골드   ★  ${totalGold} G`, {
-      fontSize: '14px', color: '#9a7a10', fontStyle: 'bold',
+    this.add.text(CX, goldY, `보유 골드  ✦  ${totalGold.toLocaleString()} G`, {
+      fontSize: '13px', color: '#c8a020', fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
-    // ── 다음 스테이지 해금 알림 (클리어 시) ────────────
+    // 스테이지 해금 배너
+    let unlockH = 0;
     if (stageCleared && stageId < 17) {
-      const unlockY = GOLD_TOP + 34;
-      const unlockBg = this.add.rectangle(CX, unlockY, W - 40, 26, 0x1a6a1a, 0.9)
-        .setStrokeStyle(1, 0x44cc44);
-      this.add.text(CX, unlockY, `🔓  STAGE ${stageId + 1}  해금!`, {
-        fontSize: '13px', color: '#aaffaa', fontStyle: 'bold',
+      const uy = goldY + 26;
+      unlockH = 26;
+      const unlockBg = this.add.rectangle(CX, uy, W - 40, 24, 0x1a4020, 0.9)
+        .setStrokeStyle(1, 0x44cc66);
+      this.add.text(CX, uy, `🔓  STAGE ${stageId + 1}  해금!`, {
+        fontSize: '12px', color: '#88ffaa', fontStyle: 'bold',
       }).setOrigin(0.5);
-      this.tweens.add({
-        targets: [unlockBg],
-        scaleX: { from: 0, to: 1 },
-        duration: 500,
-        ease: 'Back.easeOut',
-        delay: 600,
-      });
+      this.tweens.add({ targets: unlockBg, scaleX: { from: 0, to: 1 }, duration: 450, ease: 'Back.easeOut', delay: 600 });
     }
 
-    const makeBtn = (x: number, label: string, onTap: () => void) => {
-      const bg = this.add.rectangle(x, BTN_Y, BTN_W, BTN_H, 0xf8f8d0)
-        .setStrokeStyle(3, 0x383030)
+    // 최고 스테이지 신기록 배너
+    if (newStageRecord) {
+      const recY = goldY + 26 + unlockH;
+      this.add.text(CX, recY, `🏆  최고 스테이지 신기록!  STAGE ${stageId}`, {
+        fontSize: '11px', color: '#ffd700', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0.5, 0);
+    }
+
+    // ── 버튼 ─────────────────────────────────────────────
+    const makeBtn = (x: number, label: string, fill: number, border: number, textColor: string, onTap: () => void) => {
+      const bg = this.add.rectangle(x, BTN_Y, BTN_W, BTN_H, fill)
+        .setStrokeStyle(2, border)
         .setInteractive({ useHandCursor: true });
       const txt = this.add.text(x, BTN_Y, label, {
-        fontSize: '16px', color: '#383030', fontStyle: 'bold',
+        fontSize: '14px', color: textColor, fontStyle: 'bold',
       }).setOrigin(0.5);
-      bg.on('pointerover', () => { bg.setFillStyle(0xe8e8a0); txt.setColor('#181028'); });
-      bg.on('pointerout',  () => { bg.setFillStyle(0xf8f8d0); txt.setColor('#383030'); });
+      bg.on('pointerover', () => { bg.setFillStyle(border); txt.setColor('#ffffff'); });
+      bg.on('pointerout',  () => { bg.setFillStyle(fill);   txt.setColor(textColor); });
       bg.on('pointerdown', onTap);
     };
 
-    makeBtn(CX - BTN_W / 2 - 6, '▶ 다시 도전', () => {
-      this.cameras.main.fadeOut(300, 24, 16, 40);
+    makeBtn(CX - BTN_W / 2 - 6, '▶ 다시 도전', 0x1a3820, 0x44aa66, '#88ffaa', () => {
+      this.cameras.main.fadeOut(300, 12, 10, 24);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('GameScene', { stageId }));
     });
-    makeBtn(CX + BTN_W / 2 + 6, '⌂ 타이틀로', () => {
-      this.cameras.main.fadeOut(300, 24, 16, 40);
+    makeBtn(CX + BTN_W / 2 + 6, '⌂ 타이틀로', 0x18181a, 0x445566, '#aabbcc', () => {
+      this.cameras.main.fadeOut(300, 12, 10, 24);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
     });
 
-    this.cameras.main.fadeIn(500, 24, 16, 40);
+    this.cameras.main.fadeIn(500, 12, 10, 24);
 
     // 클라우드 동기화
     const user = getCurrentUser();
-    if (user) {
-      pushLocalToCloud(user.id).catch(e => console.warn('[GameOver] cloud sync failed:', e));
-    }
+    if (user) pushLocalToCloud(user.id).catch(() => {});
   }
 }
