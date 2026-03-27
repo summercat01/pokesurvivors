@@ -4,6 +4,7 @@ import { TYPE_KR } from '../constants/typeLabels';
 import type { WeaponConfig } from '../data/weapons';
 import { TYPE_COLORS } from '../data/weapons';
 import type { PokemonType } from '../types';
+import { PokeUI, POKE_FONT, PokePalette } from './PokeUI';
 
 export interface HudUpdateData {
   hp: number;
@@ -70,50 +71,76 @@ export class GameHud {
     const W = this.scene.scale.width;
     const H = this.scene.scale.height;
 
-    // ── 상단 패널 ──
-    this.scene.add.rectangle(W / 2, 35, W - 4, 70, 0x181810).setScrollFactor(0).setDepth(D);
-    this.scene.add.rectangle(W / 2, 35, W - 8, 66, 0xd8d8c0).setScrollFactor(0).setDepth(D + 1);
-    this.scene.add.rectangle(7, 35, 2, 60, 0xf0f0e0).setScrollFactor(0).setDepth(D + 2);
-    this.scene.add.rectangle(W / 2, 4, W - 12, 2, 0xf0f0e0).setScrollFactor(0).setDepth(D + 2);
+    // ── 상단 패널 (포켓몬 스타일) ──
+    PokeUI.panel(this.scene, W / 2, 35, W - 4, 70, PokePalette.panelBg, D)
+      .setScrollFactor(0);
 
-    this.scene.add.text(10, 9, '광휘', {
-      fontSize: '14px', color: '#181810', fontStyle: 'bold', padding: { top: 4 },
+    // 타이틀 (이름)
+    this.scene.add.text(10, 8, '광휘', {
+      fontFamily: POKE_FONT,
+      fontSize: '11px',
+      color: PokePalette.textDark,
+      fontStyle: 'bold',
     }).setScrollFactor(0).setDepth(D + 3);
 
-    this.timerText = this.scene.add.text(W / 2, 9, '00:00', {
-      fontSize: '13px', color: '#484840',
+    // 타이머 (중앙)
+    this.timerText = this.scene.add.text(W / 2, 8, '00:00', {
+      fontFamily: POKE_FONT,
+      fontSize: '11px',
+      color: PokePalette.textGray,
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(D + 3);
 
-    this.levelText = this.scene.add.text(W - 46, 9, 'Lv  1', {
-      fontSize: '14px', color: '#181810', fontStyle: 'bold',
+    // 레벨 (우측)
+    this.levelText = this.scene.add.text(W - 10, 8, 'Lv 1', {
+      fontFamily: POKE_FONT,
+      fontSize: '11px',
+      color: PokePalette.textDark,
+      fontStyle: 'bold',
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(D + 3);
 
+    // HP 레이블
     this.scene.add.text(10, 36, 'HP', {
-      fontSize: '11px', color: '#181810', fontStyle: 'bold',
+      fontFamily: POKE_FONT,
+      fontSize: '9px',
+      color: PokePalette.textDark,
+      fontStyle: 'bold',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3);
 
-    const BAR_END  = W - 46;
-    const HP_START = 32;
+    // HP 바
+    const BAR_END  = W - 10;
+    const HP_START = 30;
     this.hpBarMaxW = BAR_END - HP_START;
-    this.scene.add.rectangle(HP_START + this.hpBarMaxW / 2, 36, this.hpBarMaxW + 2, 11, 0x282018)
+    // 배경 트랙
+    this.scene.add.rectangle(HP_START + this.hpBarMaxW / 2, 36, this.hpBarMaxW + 2, 11, PokePalette.hpBg)
       .setScrollFactor(0).setDepth(D + 3);
-    this.hpBar = this.scene.add.rectangle(HP_START, 36, this.hpBarMaxW, 8, 0x58c040)
+    // 내부 트랙 (어두운 적색 배경)
+    this.scene.add.rectangle(HP_START + this.hpBarMaxW / 2, 36, this.hpBarMaxW, 8, 0x400000)
+      .setScrollFactor(0).setDepth(D + 3);
+    this.hpBar = this.scene.add.rectangle(HP_START, 36, this.hpBarMaxW, 8, PokePalette.hpGreen)
       .setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 4);
 
-    const EXP_START = 8;
+    // EXP 레이블
+    this.scene.add.text(10, 54, 'EXP', {
+      fontFamily: POKE_FONT,
+      fontSize: '7px',
+      color: '#2244aa',
+      fontStyle: 'bold',
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3);
+
+    // EXP 바
+    const EXP_START = 30;
     this.expBarMaxW = BAR_END - EXP_START;
-    this.scene.add.rectangle(EXP_START + this.expBarMaxW / 2, 55, this.expBarMaxW + 2, 7, 0x282018)
+    this.scene.add.rectangle(EXP_START + this.expBarMaxW / 2, 54, this.expBarMaxW + 2, 7, PokePalette.hpBg)
       .setScrollFactor(0).setDepth(D + 3);
-    this.expBar = this.scene.add.rectangle(EXP_START, 55, 0, 5, 0x3888e8)
+    this.expBar = this.scene.add.rectangle(EXP_START, 54, 0, 5, 0x3888e8)
       .setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 4);
 
-    // ── 하단 패널 ──
+    // ── 하단 패널 (포켓몬 스타일) ──
     const BOT_TOP = H - BOT_H;
     const BOT_CY  = H - BOT_H / 2;
 
-    this.scene.add.rectangle(W / 2, BOT_CY, W - 4, BOT_H, 0x181810).setScrollFactor(0).setDepth(D);
-    this.scene.add.rectangle(W / 2, BOT_CY, W - 8, BOT_H - 4, 0xd8d8c0).setScrollFactor(0).setDepth(D + 1);
-    this.scene.add.rectangle(W / 2, BOT_TOP + BOT_H / 2, W - 16, 2, 0x989880).setScrollFactor(0).setDepth(D + 2);
+    PokeUI.panel(this.scene, W / 2, BOT_CY, W - 4, BOT_H, PokePalette.panelBg, D)
+      .setScrollFactor(0);
 
     const SLOT_W   = 52;
     const SLOT_H   = 44;
@@ -122,38 +149,39 @@ export class GameHud {
 
     const ROW_P_Y = BOT_TOP + 4 + 14 + SLOT_H / 2;
     const ROW_A_Y = ROW_P_Y + SLOT_H / 2 + 8 + 14 + SLOT_H / 2;
-    const labelStyle = { fontSize: '11px', color: '#383028', fontStyle: 'bold' as const };
+    const labelStyle = { fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textDark, fontStyle: 'bold' as const };
 
-    this.scene.add.text(8, ROW_P_Y - SLOT_H / 2 - 14, '포켓몬', labelStyle).setScrollFactor(0).setDepth(D + 2);
+    this.scene.add.text(8, ROW_P_Y - SLOT_H / 2 - 13, '포켓몬', labelStyle).setScrollFactor(0).setDepth(D + 2);
     for (let i = 0; i < 6; i++) {
       const sx = SLOT_X0 + i * (SLOT_W + SLOT_GAP);
-      this.scene.add.rectangle(sx, ROW_P_Y, SLOT_W, SLOT_H, 0x181810).setScrollFactor(0).setDepth(D + 2);
-      const bg = this.scene.add.rectangle(sx, ROW_P_Y, SLOT_W - 2, SLOT_H - 2, 0x8cb890).setScrollFactor(0).setDepth(D + 3);
+      // 슬롯 테두리 (포켓몬 스타일 패널)
+      this.scene.add.rectangle(sx, ROW_P_Y, SLOT_W, SLOT_H, PokePalette.panelBorder).setScrollFactor(0).setDepth(D + 2);
+      const bg = this.scene.add.rectangle(sx, ROW_P_Y, SLOT_W - 2, SLOT_H - 2, 0xe0e0d0).setScrollFactor(0).setDepth(D + 3);
       this.pokemonSlotBgs.push(bg);
       const img = this.scene.add.image(sx, ROW_P_Y - 2, 'pokemon_001').setDisplaySize(38, 38).setScrollFactor(0).setDepth(D + 4).setVisible(false);
       this.pokemonSlotImgs.push(img);
       const typeBar = this.scene.add.rectangle(sx, ROW_P_Y + SLOT_H / 2 - 3, SLOT_W - 2, 5, 0x000000, 0).setScrollFactor(0).setDepth(D + 5);
       this.pokemonSlotTypes.push(typeBar);
       const lv = this.scene.add.text(sx + SLOT_W / 2 - 2, ROW_P_Y + SLOT_H / 2 - 1, '', {
-        fontSize: '9px', color: '#ffffff', stroke: '#000000', strokeThickness: 2,
+        fontFamily: POKE_FONT, fontSize: '8px', color: '#ffffff', stroke: '#000000', strokeThickness: 2,
       }).setOrigin(1, 1).setScrollFactor(0).setDepth(D + 6);
       this.pokemonSlotLvs.push(lv);
     }
 
-    this.scene.add.text(8, ROW_A_Y - SLOT_H / 2 - 14, '장신구', labelStyle).setScrollFactor(0).setDepth(D + 2);
+    this.scene.add.text(8, ROW_A_Y - SLOT_H / 2 - 13, '장신구', labelStyle).setScrollFactor(0).setDepth(D + 2);
     for (let i = 0; i < 6; i++) {
       const sx = SLOT_X0 + i * (SLOT_W + SLOT_GAP);
-      this.scene.add.rectangle(sx, ROW_A_Y, SLOT_W, SLOT_H, 0x181810).setScrollFactor(0).setDepth(D + 2);
-      const bg = this.scene.add.rectangle(sx, ROW_A_Y, SLOT_W - 2, SLOT_H - 2, 0x9890c0).setScrollFactor(0).setDepth(D + 3);
+      this.scene.add.rectangle(sx, ROW_A_Y, SLOT_W, SLOT_H, PokePalette.panelBorder).setScrollFactor(0).setDepth(D + 2);
+      const bg = this.scene.add.rectangle(sx, ROW_A_Y, SLOT_W - 2, SLOT_H - 2, 0xe0d8f0).setScrollFactor(0).setDepth(D + 3);
       this.accessorySlotBgs.push(bg);
       const accTypeBar = this.scene.add.rectangle(sx, ROW_A_Y + SLOT_H / 2 - 3, SLOT_W - 2, 5, 0x000000, 0).setScrollFactor(0).setDepth(D + 4);
       this.accessorySlotTypes.push(accTypeBar);
       const accTypeName = this.scene.add.text(sx, ROW_A_Y, '', {
-        fontSize: '9px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2,
+        fontFamily: POKE_FONT, fontSize: '8px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 4);
       this.accessorySlotNames.push(accTypeName);
       const lv = this.scene.add.text(sx + SLOT_W / 2 - 2, ROW_A_Y + SLOT_H / 2 - 1, '', {
-        fontSize: '9px', color: '#ffffff', stroke: '#000000', strokeThickness: 2,
+        fontFamily: POKE_FONT, fontSize: '8px', color: '#ffffff', stroke: '#000000', strokeThickness: 2,
       }).setOrigin(1, 1).setScrollFactor(0).setDepth(D + 5);
       this.accessorySlotLvs.push(lv);
     }
@@ -181,32 +209,34 @@ export class GameHud {
       fontSize: '12px', color: '#aaaaaa', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2,
     }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(D);
 
-    // 보스 HP 패널
+    // 보스 HP 패널 (포켓몬 스타일)
     const SCREEN_BOSS_TOP = 96;
-    const BOSS_PNL_H      = 44;
+    const BOSS_PNL_H      = 48;
     const BT = SCREEN_BOSS_TOP - TOP_H;
     const BC = BT + BOSS_PNL_H / 2;
     const BOSS_BAR_W = W - 48;
-    const BOSS_BAR_H = 12;
+    const BOSS_BAR_H = 10;
     const BAR_LEFT   = 24;
 
-    const pnlBg     = this.scene.add.rectangle(W / 2, BC, W, BOSS_PNL_H, 0x0a0a0a, 0.88).setScrollFactor(0).setDepth(D - 1).setVisible(false);
-    const pnlBorder = this.scene.add.rectangle(W / 2, BT + BOSS_PNL_H, W, 2, 0xdd2222, 0.6).setScrollFactor(0).setDepth(D).setVisible(false);
-    const bossLabel = this.scene.add.text(24, BT + 9, '☠  BOSS', {
-      fontSize: '10px', color: '#ff4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2,
+    const pnlBg = PokeUI.panel(this.scene, W / 2, BC, W - 4, BOSS_PNL_H, 0xf8e8e8, D - 1)
+      .setScrollFactor(0).setVisible(false);
+    // 빨간 강조 상단 줄
+    const pnlBorder = this.scene.add.rectangle(W / 2, BT, W, 3, 0xcc2222).setScrollFactor(0).setDepth(D).setVisible(false);
+    const bossLabel = this.scene.add.text(12, BT + 9, '☠ BOSS', {
+      fontFamily: POKE_FONT, fontSize: '9px', color: '#cc2222', fontStyle: 'bold',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 1).setVisible(false);
 
-    this.bossHpNameText = this.scene.add.text(24, BT + 9, '', {
-      fontSize: '13px', color: '#ffffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
+    this.bossHpNameText = this.scene.add.text(60, BT + 9, '', {
+      fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textDark, fontStyle: 'bold',
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 1).setVisible(false);
 
-    this.bossHpNumText = this.scene.add.text(W - 24, BT + 9, '', {
-      fontSize: '11px', color: '#ffbbbb', stroke: '#000000', strokeThickness: 2,
+    this.bossHpNumText = this.scene.add.text(W - 10, BT + 9, '', {
+      fontFamily: POKE_FONT, fontSize: '9px', color: '#883322',
     }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(D + 1).setVisible(false);
 
     const barY     = BT + 30;
-    const barTrack = this.scene.add.rectangle(BAR_LEFT + BOSS_BAR_W / 2, barY, BOSS_BAR_W + 2, BOSS_BAR_H + 4, 0x1a1a1a).setScrollFactor(0).setDepth(D).setVisible(false);
-    this.bossHpBarBg = this.scene.add.rectangle(BAR_LEFT + BOSS_BAR_W / 2, barY, BOSS_BAR_W, BOSS_BAR_H, 0x550000).setScrollFactor(0).setDepth(D + 1).setVisible(false);
+    const barTrack = this.scene.add.rectangle(BAR_LEFT + BOSS_BAR_W / 2, barY, BOSS_BAR_W + 2, BOSS_BAR_H + 2, PokePalette.hpBg).setScrollFactor(0).setDepth(D).setVisible(false);
+    this.bossHpBarBg = this.scene.add.rectangle(BAR_LEFT + BOSS_BAR_W / 2, barY, BOSS_BAR_W, BOSS_BAR_H, 0x400000).setScrollFactor(0).setDepth(D + 1).setVisible(false);
     this.bossHpBar   = this.scene.add.rectangle(BAR_LEFT, barY, BOSS_BAR_W, BOSS_BAR_H, 0xee2222).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2).setVisible(false);
 
     this.bossHpPanelItems = [pnlBg, pnlBorder, bossLabel, barTrack, this.bossHpNameText, this.bossHpNumText, this.bossHpBarBg, this.bossHpBar];
@@ -275,13 +305,13 @@ export class GameHud {
   ) {
     this.pokemonSlotBgs.forEach((bg, i) => {
       if (i < weapons.length) {
-        bg.setFillStyle(0x38886a);
+        bg.setFillStyle(0xc8e8d0);
         this.pokemonSlotLvs[i].setText(`Lv${weaponLevels[i] ?? 1}`);
         const sprKey = `pokemon_${String(weapons[i].pokemonId).padStart(3, '0')}`;
         this.pokemonSlotImgs[i].setTexture(sprKey).setVisible(true);
         this.pokemonSlotTypes[i].setFillStyle(TYPE_COLORS[weapons[i].type] ?? 0x888888, 1);
       } else {
-        bg.setFillStyle(0x8cb890);
+        bg.setFillStyle(0xe0e0d0);
         this.pokemonSlotLvs[i].setText('');
         this.pokemonSlotImgs[i].setVisible(false);
         this.pokemonSlotTypes[i].setFillStyle(0x000000, 0);
@@ -291,12 +321,12 @@ export class GameHud {
     const passiveEntries = Array.from(passives.entries());
     this.accessorySlotBgs.forEach((bg, i) => {
       if (i < passiveEntries.length) {
-        bg.setFillStyle(0x6855cc);
+        bg.setFillStyle(0xd0c8f0);
         this.accessorySlotLvs[i].setText(`Lv${passiveEntries[i][1]}`);
         this.accessorySlotTypes[i].setFillStyle(TYPE_COLORS[passiveEntries[i][0]] ?? 0x888888, 1);
         this.accessorySlotNames[i].setText(TYPE_KR[passiveEntries[i][0]] ?? '');
       } else {
-        bg.setFillStyle(0x9890c0);
+        bg.setFillStyle(0xe0d8f0);
         this.accessorySlotLvs[i].setText('');
         this.accessorySlotTypes[i].setFillStyle(0x000000, 0);
         this.accessorySlotNames[i].setText('');

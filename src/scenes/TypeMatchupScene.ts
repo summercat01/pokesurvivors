@@ -3,6 +3,7 @@ import type { PokemonType } from '../types';
 import type { GameScene } from './GameScene';
 import { TYPE_COLORS } from '../data/weapons';
 import { TYPE_KR } from '../constants/typeLabels';
+import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 
 // ===== Gen IV 타입 상성 테이블 =====
 const TYPES: PokemonType[] = [
@@ -67,30 +68,27 @@ export class TypeMatchupScene extends Phaser.Scene {
     const CONTENT_TOP = HEADER_H + LEGEND_H;
 
     // ── 배경 ──
-    this.add.rectangle(0, 0, W, H, 0x0c1420).setOrigin(0, 0);
+    this.add.rectangle(0, 0, W, H, 0xe8e8d8).setOrigin(0, 0);
 
-    // ── 헤더 ──
-    this.add.rectangle(CX, HEADER_H / 2, W, HEADER_H, 0x1e3050).setDepth(10);
-    this.add.graphics().lineStyle(1, 0x4466aa).lineBetween(0, HEADER_H, W, HEADER_H).setDepth(10);
+    // ── 헤더 (포켓몬 스타일) ──
+    PokeUI.panel(this, CX, HEADER_H / 2, W - 4, HEADER_H, PokePalette.headerBg, 10);
     this.add.text(CX, 18, '타입 상성표', {
-      fontSize: '18px', color: '#ffdd00', fontStyle: 'bold',
-      stroke: '#302000', strokeThickness: 4, padding: { top: 4 },
+      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
+      stroke: '#101840', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(11);
     this.add.text(CX, 40, '↓ 공격 타입   →  방어 타입', {
-      fontSize: '12px', color: '#99bbdd',
+      fontFamily: POKE_FONT, fontSize: '9px', color: '#aaccff',
     }).setOrigin(0.5).setDepth(11);
 
-    // ── 뒤로 버튼 (최소 44px 높이, 모바일 터치 대응) ──
-    const backBg = this.add.rectangle(48, 28, 88, 44, 0x243a5a)
+    // ── 뒤로 버튼 ──
+    const backBg = this.add.rectangle(48, HEADER_H / 2, 88, 40, PokePalette.btnNormal)
       .setDepth(12).setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(1, 0x5577aa).strokeRect(4, 6, 88, 44).setDepth(12);
-    const backTxt = this.add.text(48, 28, '← 뒤로', {
-      fontSize: '14px', color: '#aaccee', fontStyle: 'bold', padding: { top: 2 },
+    this.add.graphics().lineStyle(2, PokePalette.panelBorder).strokeRect(4, HEADER_H / 2 - 20, 88, 40).setDepth(12);
+    const backTxt = this.add.text(48, HEADER_H / 2, '← 뒤로', {
+      fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textDark,
     }).setOrigin(0.5).setDepth(13);
-    backBg.on('pointerover',  () => { backBg.setFillStyle(0x2e4a70); backTxt.setColor('#ffffff'); });
-    backBg.on('pointerout',   () => { backBg.setFillStyle(0x243a5a); backTxt.setColor('#aaccee'); });
-    backBg.on('pointerdown',  () => backBg.setFillStyle(0x1a2e50));
-    backBg.on('pointerup',    () => backBg.setFillStyle(0x2e4a70));
+    backBg.on('pointerover',  () => { backBg.setFillStyle(PokePalette.btnHover); backTxt.setColor('#003399'); });
+    backBg.on('pointerout',   () => { backBg.setFillStyle(PokePalette.btnNormal); backTxt.setColor(PokePalette.textDark); });
     backBg.on('pointerdown', () => {
       if (caller === 'GameScene') {
         this.scene.stop('TypeMatchupScene');
@@ -102,28 +100,28 @@ export class TypeMatchupScene extends Phaser.Scene {
       }
     });
 
-    // ── 범례 ──
-    this.add.rectangle(CX, HEADER_H + LEGEND_H / 2, W, LEGEND_H, 0x162030).setDepth(10);
-    this.add.graphics().lineStyle(1, 0x3a5070)
+    // ── 범례 (포켓몬 스타일) ──
+    this.add.rectangle(CX, HEADER_H + LEGEND_H / 2, W, LEGEND_H, PokePalette.panelBg, 1).setDepth(10);
+    this.add.graphics().lineStyle(1, PokePalette.panelBorder, 0.3)
       .lineBetween(0, HEADER_H + LEGEND_H, W, HEADER_H + LEGEND_H).setDepth(10);
 
     const legends: Array<{ sym: string; label: string; symColor: string; bg: number }> = [
-      { sym: '◎',  label: '2배 (효과적)',   symColor: '#66ff66', bg: 0x1a4a1e },
-      { sym: '▽',  label: '½배 (반감)',     symColor: '#ff8866', bg: 0x4a1a10 },
-      { sym: '✕',  label: '0배 (무효)',     symColor: '#8888aa', bg: 0x222230 },
-      { sym: '·',  label: '1배',            symColor: '#667788', bg: 0x1a2030 },
+      { sym: '◎',  label: '2배 (효과적)',   symColor: '#228833', bg: 0xd0f0d0 },
+      { sym: '▽',  label: '½배 (반감)',     symColor: '#cc4422', bg: 0xf8d8d0 },
+      { sym: '✕',  label: '0배 (무효)',     symColor: '#888888', bg: 0xe0ddd0 },
+      { sym: '·',  label: '1배',            symColor: PokePalette.textGray, bg: PokePalette.panelBg },
     ];
     const LEG_W = (W - 16) / 4;
     legends.forEach((leg, i) => {
       const lx = 8 + LEG_W * i + LEG_W / 2;
       const ly = HEADER_H + LEGEND_H / 2;
       this.add.rectangle(lx, ly, LEG_W - 4, LEGEND_H - 10, leg.bg).setDepth(11)
-        .setStrokeStyle(1, 0x2a3a55);
+        .setStrokeStyle(1, PokePalette.panelBorder, 0.4);
       this.add.text(lx, ly - 7, leg.sym, {
-        fontSize: leg.sym === '◎◎' ? '10px' : '12px', color: leg.symColor, fontStyle: 'bold',
+        fontFamily: POKE_FONT, fontSize: '12px', color: leg.symColor, fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(12);
       this.add.text(lx, ly + 8, leg.label, {
-        fontSize: '11px', color: '#aabbcc',
+        fontFamily: POKE_FONT, fontSize: '8px', color: PokePalette.textGray,
       }).setOrigin(0.5).setDepth(12);
     });
 
@@ -154,40 +152,38 @@ export class TypeMatchupScene extends Phaser.Scene {
       const cx2      = LABEL_W + ci * CELL_W + CELL_W / 2;
       const cy2      = COL_H / 2;
       const typeColor = TYPE_COLORS[defType] ?? 0x444444;
-      const bgColor   = dimColor(typeColor, 0.38);
+      const bgColor   = dimColor(typeColor, 0.55);
 
       const bg = this.add.rectangle(cx2, cy2, CELL_W - 1, COL_H - 1, bgColor);
-      // 왼쪽 색상 스트라이프
-      const stripe = this.add.rectangle(cx2, cy2, CELL_W - 1, 2, typeColor, 0.9);
-      stripe.setY(cy2 + COL_H / 2 - 2);
+      const stripe = this.add.rectangle(cx2, cy2 + COL_H / 2 - 2, CELL_W - 1, 2, typeColor, 0.9);
       const txt = this.add.text(cx2, cy2 + 1, TYPE_ABBR[defType], {
-        fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
+        fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5);
       container.add([bg, stripe, txt]);
     });
 
-    // 좌상단 빈 셀 (행 레이블 × 컬럼 헤더 교차)
-    const cornerBg = this.add.rectangle(LABEL_W / 2, COL_H / 2, LABEL_W - 1, COL_H - 1, 0x080c14);
+    // 좌상단 빈 셀
+    const cornerBg = this.add.rectangle(LABEL_W / 2, COL_H / 2, LABEL_W - 1, COL_H - 1, PokePalette.panelBorder);
     container.add(cornerBg);
 
     // ── 행 (공격 타입) ──
     TYPES.forEach((atkType, ri) => {
       const rowY      = COL_H + ri * CELL_H;
       const typeColor  = TYPE_COLORS[atkType] ?? 0x444444;
-      const rowBg      = ri % 2 === 0 ? 0x0c1018 : 0x0a0e16;
+      const rowBg      = ri % 2 === 0 ? PokePalette.panelBg : 0xe8e4d8;
 
       // 행 배경
       const rbg = this.add.rectangle(W / 2, rowY + CELL_H / 2, W, CELL_H - 1, rowBg);
       container.add(rbg);
 
-      // 행 레이블 배경 (타입 색상)
-      const lblBgColor = dimColor(typeColor, 0.32);
+      // 행 레이블 배경 (타입 색상, 밝게)
+      const lblBgColor = dimColor(typeColor, 0.60);
       const labelBg = this.add.rectangle(LABEL_W / 2, rowY + CELL_H / 2, LABEL_W - 1, CELL_H - 1, lblBgColor);
-      // 왼쪽 4px 타입 컬러 스트라이프
       const labelStripe = this.add.rectangle(2, rowY + CELL_H / 2, 4, CELL_H - 1, typeColor, 0.9);
       const labelTxt = this.add.text(LABEL_W / 2 + 2, rowY + CELL_H / 2 + 1, TYPE_KR[atkType], {
-        fontSize: '11px', color: '#ddeeee', fontStyle: 'bold',
+        fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5);
       container.add([labelBg, labelStripe, labelTxt]);
 
@@ -203,24 +199,24 @@ export class TypeMatchupScene extends Phaser.Scene {
         let symSize: string;
 
         if (eff === 2) {
-          bgColor  = 0x0c2a0f;
+          bgColor  = 0xc0ecc0;
           sym      = '◎';
-          symColor = '#55ee55';
+          symColor = '#228833';
           symSize  = '12px';
         } else if (eff === 0.5) {
-          bgColor  = 0x2a0c08;
+          bgColor  = 0xf0d0c8;
           sym      = '▽';
-          symColor = '#ee6644';
+          symColor = '#cc4422';
           symSize  = '10px';
         } else if (eff === 0) {
-          bgColor  = 0x111118;
+          bgColor  = 0xd8d5c8;
           sym      = '✕';
-          symColor = '#44445a';
+          symColor = '#888880';
           symSize  = '10px';
         } else {
-          bgColor  = 0x00000000;  // 투명 (행 배경 사용)
+          bgColor  = 0x00000000;
           sym      = '·';
-          symColor = '#5a5a7a';
+          symColor = PokePalette.textGray;
           symSize  = '14px';
         }
 
@@ -229,7 +225,7 @@ export class TypeMatchupScene extends Phaser.Scene {
           container.add(cell);
         }
         const cellTxt = this.add.text(cx2, cy2 + 1, sym, {
-          fontSize: symSize, color: symColor, fontStyle: 'bold',
+          fontFamily: POKE_FONT, fontSize: symSize, color: symColor, fontStyle: 'bold',
         }).setOrigin(0.5);
         container.add(cellTxt);
       });

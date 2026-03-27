@@ -3,6 +3,7 @@ import type { LevelUpOption } from '../types';
 import { TYPE_COLORS, getWeaponByPokemonId } from '../data/weapons';
 import type { GameScene } from './GameScene';
 import { TYPE_KR } from '../constants/typeLabels';
+import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 
 export class LevelUpScene extends Phaser.Scene {
   private CARD_W = 360;
@@ -25,26 +26,29 @@ export class LevelUpScene extends Phaser.Scene {
     // ── 어두운 반투명 오버레이 ──
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.72);
 
-    // ── 헤더 ──
-    this.add.text(W / 2, Math.round(H * 0.08), '레벨이 올랐다!', {
-      fontSize: '30px',
-      color: '#ffdd00',
-      fontStyle: 'bold',
-      stroke: '#302010',
-      strokeThickness: 5,
-      padding: { top: 8 },
+    // ── 포켓몬 스타일 헤더 패널 ──
+    const headerPanelH = 52;
+    const headerY = Math.round(H * 0.065);
+    PokeUI.panel(this, W / 2, headerY, W - 20, headerPanelH, PokePalette.headerBg);
+    this.add.text(W / 2, headerY - 4, '레벨이 올랐다!', {
+      fontFamily: POKE_FONT,
+      fontSize: '20px',
+      color: PokePalette.textWhite,
+      stroke: '#101840',
+      strokeThickness: 3,
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, Math.round(H * 0.14), '강화할 능력을 고르세요', {
-      fontSize: '15px',
-      color: '#ccccbb',
-      stroke: '#000000',
-      strokeThickness: 2,
-      padding: { top: 4 },
+    // ── 서브 패널 ──
+    const subY = Math.round(H * 0.13);
+    PokeUI.panel(this, W / 2, subY, W - 20, 30);
+    this.add.text(W / 2, subY, '강화할 능력을 고르세요', {
+      fontFamily: POKE_FONT,
+      fontSize: '11px',
+      color: PokePalette.textDark,
     }).setOrigin(0.5);
 
     // ── 카드 ──
-    const CARD_START = Math.round(H * 0.18);
+    const CARD_START = Math.round(H * 0.175);
     options.forEach((opt, i) => {
       const cy = CARD_START + i * (this.CARD_H + this.CARD_GAP) + this.CARD_H / 2;
       this.createCard(opt, W / 2, cy);
@@ -63,22 +67,24 @@ export class LevelUpScene extends Phaser.Scene {
 
     const CARD_W = this.CARD_W;
     const CARD_H = this.CARD_H;
-    // 그림자
-    this.add.rectangle(cx + 2, cy + 3, CARD_W + 4, CARD_H + 4, 0x000000, 0.5);
 
-    // 카드 배경
-    const cardBg = this.add.rectangle(cx, cy, CARD_W, CARD_H, 0x1a1a2e)
+    // ── 포켓몬 스타일 카드 패널 ──
+    PokeUI.panel(this, cx, cy, CARD_W, CARD_H);
+
+    // 인터랙션용 투명 레이어
+    const cardBg = this.add.rectangle(cx, cy, CARD_W, CARD_H, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
-    // 외곽선
-    const outline = this.add.graphics();
-    outline.lineStyle(2, 0x555566, 1);
-    outline.strokeRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H);
-
-    // ── 좌측 타입 컬러 영역 (스프라이트 배경) ──
+    // ── 좌측 타입 컬러 영역 ──
     const STRIPE_W = 80;
     const stripeX  = cx - CARD_W / 2 + STRIPE_W / 2;
-    this.add.rectangle(stripeX, cy, STRIPE_W, CARD_H, typeColor, 0.85);
+    // 타입 스트라이프 (검정 테두리 안쪽에 맞게)
+    const sg = this.add.graphics();
+    sg.fillStyle(typeColor, 1);
+    sg.fillRect(cx - CARD_W / 2 + 3, cy - CARD_H / 2 + 3, STRIPE_W - 3, CARD_H - 6);
+    // 스트라이프 우측 구분선
+    sg.fillStyle(0x282018, 0.4);
+    sg.fillRect(cx - CARD_W / 2 + STRIPE_W, cy - CARD_H / 2 + 3, 2, CARD_H - 6);
 
     // 포켓몬 스프라이트 or 타입 심볼
     if (sprKey && this.textures.exists(sprKey)) {
@@ -102,60 +108,67 @@ export class LevelUpScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
-    // ── 배지 (NEW / Lv.X→Y) ──
-    const badgeLabel = isNew
-      ? 'NEW'
-      : `Lv.${opt.levelFrom ?? 1}→${opt.levelTo ?? 2}`;
-    const badgeColor = isNew ? 0xee5522 : 0x3377cc;
-    const badgeW     = isNew ? 44 : 76;
-    const badgeX     = cx + CARD_W / 2 - badgeW / 2 - 6;
+    // ── 배지 (NEW / Lv.X→Y) — 포켓몬 스타일 태그 ──
+    const badgeLabel = isNew ? 'NEW' : `Lv.${opt.levelFrom ?? 1}→${opt.levelTo ?? 2}`;
+    const badgeColor = isNew ? 0xcc3311 : 0x2255aa;
+    const badgeW     = isNew ? 42 : 74;
+    const badgeX     = cx + CARD_W / 2 - badgeW / 2 - 8;
     const badgeY     = cy - CARD_H / 2 + 14;
-    this.add.rectangle(badgeX, badgeY, badgeW, 22, badgeColor);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x181810); bg.fillRect(badgeX - badgeW/2 + 1, badgeY - 9 + 1, badgeW, 18);
+    bg.fillStyle(badgeColor); bg.fillRect(badgeX - badgeW/2, badgeY - 9, badgeW, 18);
+    bg.fillStyle(0xffffff, 0.3); bg.fillRect(badgeX - badgeW/2, badgeY - 9, badgeW, 3);
     this.add.text(badgeX, badgeY, badgeLabel, {
-      fontSize: '11px',
-      color: '#ffffff',
-      fontStyle: 'bold',
+      fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5);
 
     // ── 추천/비추천 배지 ──
     if (opt.recommendation === 'good') {
-      const recBadgeX = cx - CARD_W / 2 + STRIPE_W + 8;
-      const recBadgeY = cy + CARD_H / 2 - 12;
-      this.add.rectangle(recBadgeX + 20, recBadgeY, 44, 18, 0x227744);
-      this.add.text(recBadgeX + 20, recBadgeY, '★ 추천', {
-        fontSize: '10px', color: '#aaffcc', fontStyle: 'bold',
-      }).setOrigin(0.5);
+      const rx = cx - CARD_W / 2 + STRIPE_W + 8;
+      const ry = cy + CARD_H / 2 - 13;
+      const rbg = this.add.graphics();
+      rbg.fillStyle(0x181810); rbg.fillRect(rx + 1, ry - 8, 48, 16);
+      rbg.fillStyle(0x116633); rbg.fillRect(rx, ry - 9, 48, 16);
+      this.add.text(rx + 24, ry - 1, '★ 추천', { fontSize: '9px', color: '#aaffcc', fontStyle: 'bold' }).setOrigin(0.5);
     } else if (opt.recommendation === 'bad') {
-      const recBadgeX = cx - CARD_W / 2 + STRIPE_W + 8;
-      const recBadgeY = cy + CARD_H / 2 - 12;
-      this.add.rectangle(recBadgeX + 24, recBadgeY, 52, 18, 0x553333);
-      this.add.text(recBadgeX + 24, recBadgeY, '▼ 비추천', {
-        fontSize: '10px', color: '#ffaaaa', fontStyle: 'bold',
-      }).setOrigin(0.5);
+      const rx = cx - CARD_W / 2 + STRIPE_W + 8;
+      const ry = cy + CARD_H / 2 - 13;
+      const rbg = this.add.graphics();
+      rbg.fillStyle(0x181810); rbg.fillRect(rx + 1, ry - 8, 54, 16);
+      rbg.fillStyle(0x662222); rbg.fillRect(rx, ry - 9, 54, 16);
+      this.add.text(rx + 27, ry - 1, '▼ 비추천', { fontSize: '9px', color: '#ffaaaa', fontStyle: 'bold' }).setOrigin(0.5);
     }
 
-    // ── 이름 텍스트 ──
+    // ── 이름 텍스트 (어두운 색으로) ──
     const textX = cx - CARD_W / 2 + STRIPE_W + 12;
-    this.add.text(textX, cy - 22, opt.label, {
-      fontSize: '20px',
-      color: '#ffffff',
+    this.add.text(textX, cy - 20, opt.label, {
+      fontSize: '19px',
+      color: '#181810',
       fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3,
-      padding: { top: 6 },
+      padding: { top: 4 },
     }).setOrigin(0, 0.5);
 
+    // 구분선
+    const dl = this.add.graphics();
+    dl.lineStyle(1, 0x989880, 0.6);
+    dl.lineBetween(textX, cy, cx + CARD_W / 2 - 10, cy);
+
     // ── 설명 텍스트 ──
-    this.add.text(textX, cy + 14, opt.description, {
+    this.add.text(textX, cy + 18, opt.description, {
       fontSize: '11px',
-      color: '#aaaaaa',
+      color: '#484838',
       wordWrap: { width: CARD_W - STRIPE_W - 60 },
       lineSpacing: 3,
     }).setOrigin(0, 0.5);
 
-    // ── 호버 / 탭 인터랙션 ──
-    cardBg.on('pointerover', () => cardBg.setFillStyle(0x2e2e50));
-    cardBg.on('pointerout',  () => cardBg.setFillStyle(0x1a1a2e));
+    // ── 호버 (포켓몬 스타일 하이라이트) ──
+    const hoverG = this.add.graphics();
+    cardBg.on('pointerover', () => {
+      hoverG.clear();
+      hoverG.fillStyle(0x3050a0, 0.12);
+      hoverG.fillRect(cx - CARD_W / 2 + 3, cy - CARD_H / 2 + 3, CARD_W - 6, CARD_H - 6);
+    });
+    cardBg.on('pointerout', () => hoverG.clear());
 
     cardBg.on('pointerdown', () => {
       const gameScene = this.scene.get('GameScene') as unknown as GameScene;
@@ -171,31 +184,37 @@ export class LevelUpScene extends Phaser.Scene {
     const CARD_H = this.CARD_H;
     const GOLD = 0xf0a800;
 
-    this.add.rectangle(cx + 2, cy + 3, CARD_W + 4, CARD_H + 4, 0x000000, 0.5);
+    // 골드 카드 - 포켓몬 스타일 패널
+    PokeUI.panel(this, cx, cy, CARD_W, CARD_H, 0xf8f0d0);
 
-    const cardBg = this.add.rectangle(cx, cy, CARD_W, CARD_H, 0x1a1a2e)
+    const cardBg = this.add.rectangle(cx, cy, CARD_W, CARD_H, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
-    const outline = this.add.graphics();
-    outline.lineStyle(2, GOLD, 0.8);
-    outline.strokeRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H);
-
     const STRIPE_W = 80;
-    const stripeX  = cx - CARD_W / 2 + STRIPE_W / 2;
-    this.add.rectangle(stripeX, cy, STRIPE_W, CARD_H, GOLD, 0.85);
+    const sg = this.add.graphics();
+    sg.fillStyle(GOLD, 1);
+    sg.fillRect(cx - CARD_W / 2 + 3, cy - CARD_H / 2 + 3, STRIPE_W - 3, CARD_H - 6);
+    sg.fillStyle(0x282018, 0.4);
+    sg.fillRect(cx - CARD_W / 2 + STRIPE_W, cy - CARD_H / 2 + 3, 2, CARD_H - 6);
+
+    const stripeX = cx - CARD_W / 2 + STRIPE_W / 2;
     this.add.text(stripeX, cy, '💰', { fontSize: '36px' }).setOrigin(0.5);
 
     const textX = cx - CARD_W / 2 + STRIPE_W + 12;
-    this.add.text(textX, cy - 14, '+50 골드', {
-      fontSize: '22px', color: '#ffdd00', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 3,
+    this.add.text(textX, cy - 16, '+50 골드', {
+      fontSize: '21px', color: '#8a6000', fontStyle: 'bold',
     }).setOrigin(0, 0.5);
-    this.add.text(textX, cy + 18, '골드 50개를 획득합니다.', {
-      fontSize: '12px', color: '#aaaaaa',
+    this.add.text(textX, cy + 14, '골드 50개를 획득합니다.', {
+      fontSize: '11px', color: '#606040',
     }).setOrigin(0, 0.5);
 
-    cardBg.on('pointerover', () => { cardBg.setFillStyle(0x2e2e10); outline.clear(); outline.lineStyle(2, GOLD, 1); outline.strokeRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H); });
-    cardBg.on('pointerout',  () => { cardBg.setFillStyle(0x1a1a2e); outline.clear(); outline.lineStyle(2, GOLD, 0.8); outline.strokeRect(cx - CARD_W / 2, cy - CARD_H / 2, CARD_W, CARD_H); });
+    const hoverG = this.add.graphics();
+    cardBg.on('pointerover', () => {
+      hoverG.clear();
+      hoverG.fillStyle(GOLD, 0.1);
+      hoverG.fillRect(cx - CARD_W / 2 + 3, cy - CARD_H / 2 + 3, CARD_W - 6, CARD_H - 6);
+    });
+    cardBg.on('pointerout', () => hoverG.clear());
     cardBg.on('pointerdown', () => {
       const gameScene = this.scene.get('GameScene') as unknown as GameScene;
       gameScene.applyLevelUpChoice({ type: 'goldBonus', label: '', description: '' });

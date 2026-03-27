@@ -109,6 +109,8 @@ export class GameScene extends Phaser.Scene {
   private readonly JOY_KNOB_R = 22;
   private readonly JOY_UI_TOP = 70;
   private JOY_UI_BOT = 0;
+  private joyBase!:  Phaser.GameObjects.Graphics;
+  private joyStick!: Phaser.GameObjects.Graphics;
 
   // 웨이브
   private waveTimer: number = 0;
@@ -317,6 +319,14 @@ export class GameScene extends Phaser.Scene {
     // gameCam.ignore 이후 생성 → gameCam이 렌더링 → 게임 영역(y=70~712)에서도 보임
     this.hud.createHudOverlay();   // 골드/웨이브/킬/콤보/보스HP
     this.pauseOverlay.create(() => { if (!this.isLevelingUp) this.pauseGame(); }); // 일시정지 오버레이
+
+    // 가상 조이스틱 그래픽 (cameras.main에서만 렌더링)
+    this.joyBase  = this.add.graphics();
+    this.joyStick = this.add.graphics();
+    this.gameCam.ignore([this.joyBase, this.joyStick]);
+    this.drawJoystickGraphics();
+    this.joyBase.setVisible(false);
+    this.joyStick.setVisible(false);
 
     // 개발자 모드
     if (IS_DEV_MODE) {
@@ -987,6 +997,44 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ===== 가상 조이스틱 =====
+  private drawJoystickGraphics() {
+    const R = this.JOY_RADIUS;
+    const K = this.JOY_KNOB_R;
+
+    // 베이스 링
+    this.joyBase.clear();
+    this.joyBase.fillStyle(0xffffff, 0.10);
+    this.joyBase.fillCircle(0, 0, R);
+    this.joyBase.lineStyle(2, 0xffffff, 0.35);
+    this.joyBase.strokeCircle(0, 0, R);
+
+    // 스틱 노브
+    this.joyStick.clear();
+    this.joyStick.fillStyle(0xffffff, 0.55);
+    this.joyStick.fillCircle(0, 0, K);
+    this.joyStick.fillStyle(0xffffff, 0.85);
+    this.joyStick.fillCircle(0, 0, K * 0.45);
+  }
+
+  private showJoystick(x: number, y: number) {
+    this.joyBase.setPosition(x, y).setVisible(true).setAlpha(1);
+    this.joyStick.setPosition(x, y).setVisible(true).setAlpha(1);
+  }
+
+  private moveJoystickKnob(ox: number, oy: number, tx: number, ty: number) {
+    const dx    = tx - ox;
+    const dy    = ty - oy;
+    const dist  = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+    const clamp = Math.min(dist, this.JOY_RADIUS);
+    this.joyStick.setPosition(ox + Math.cos(angle) * clamp, oy + Math.sin(angle) * clamp);
+  }
+
+  private hideJoystick() {
+    this.joyBase.setVisible(false);
+    this.joyStick.setVisible(false);
+  }
+
   private setupJoystick() {
     // 탭 비활성화 시 자동 일시정지 (game 전역 이벤트 → shutdown 시 명시적 제거)
     const onHidden = () => {
@@ -1016,17 +1064,16 @@ export class GameScene extends Phaser.Scene {
       this.joystickPointerId  = p.id;
       this.joystickOriginX    = p.x;
       this.joystickOriginY    = p.y;
-
+      this.showJoystick(p.x, p.y);
     });
 
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
       if (!this.joystickActive || p.id !== this.joystickPointerId) return;
 
-      const dx     = p.x - this.joystickOriginX;
-      const dy     = p.y - this.joystickOriginY;
-      const dist   = Math.sqrt(dx * dx + dy * dy);
-      const clamped = Math.min(dist, this.JOY_RADIUS);
-      const angle   = Math.atan2(dy, dx);
+      const dx    = p.x - this.joystickOriginX;
+      const dy    = p.y - this.joystickOriginY;
+      const dist  = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
 
       if (dist < 5) {
         this.joystickDx = 0;
@@ -1036,6 +1083,7 @@ export class GameScene extends Phaser.Scene {
         this.joystickDx = Math.cos(angle) * ratio;
         this.joystickDy = Math.sin(angle) * ratio;
       }
+      this.moveJoystickKnob(this.joystickOriginX, this.joystickOriginY, p.x, p.y);
     });
 
     const resetJoystick = (p: Phaser.Input.Pointer) => {
@@ -1044,6 +1092,7 @@ export class GameScene extends Phaser.Scene {
       this.joystickPointerId  = -1;
       this.joystickDx         = 0;
       this.joystickDy         = 0;
+      this.hideJoystick();
     };
 
     this.input.on('pointerup',     resetJoystick);
@@ -1080,6 +1129,7 @@ export class GameScene extends Phaser.Scene {
     this.joystickActive = false;
     this.joystickDx     = 0;
     this.joystickDy     = 0;
+    this.hideJoystick();
     this.gameCam.setVisible(false);
     this.pauseOverlay.show(this.weapons, this.weaponLevels, this.equippedPassives, this.player.stats);
     this.sound.get(this.stageBgmKey)?.pause();

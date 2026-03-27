@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { signIn, signUp } from '../lib/auth';
 import { syncLocalWithCloud, overwriteLocalWithCloud } from '../lib/userDB';
+import { POKE_FONT, PokePalette } from '../ui/PokeUI';
 
 /**
  * LoginScene
@@ -26,23 +27,20 @@ export class LoginScene extends Phaser.Scene {
     const W = this.scale.width;
     const H = this.scale.height;
 
-    this.add.rectangle(W / 2, H / 2, W, H, 0x1a1a2e);
-
-    for (let i = 0; i < 40; i++) {
-      const x    = Phaser.Math.Between(0, W);
-      const y    = Phaser.Math.Between(0, H);
-      const size = Phaser.Math.Between(1, 3);
-      this.add.circle(x, y, size, 0xffffff, Phaser.Math.FloatBetween(0.2, 0.7));
-    }
+    this.add.rectangle(W / 2, H / 2, W, H, 0xe8e8d8);
+    const g = this.add.graphics();
+    g.lineStyle(1, 0xd0d0c0, 0.5);
+    for (let x = 0; x < W; x += 40) g.lineBetween(x, 0, x, H);
+    for (let y2 = 0; y2 < H; y2 += 40) g.lineBetween(0, y2, W, y2);
 
     this.add.text(W / 2, 110, '포켓몬', {
-      fontSize: '20px', color: '#ffe040', fontStyle: 'bold',
-      stroke: '#302000', strokeThickness: 4,
+      fontFamily: POKE_FONT, fontSize: '18px', color: PokePalette.textGold, fontStyle: 'bold',
+      stroke: '#302000', strokeThickness: 3,
     }).setOrigin(0.5);
 
     this.add.text(W / 2, 155, '서바이버즈', {
-      fontSize: '46px', color: '#ffffff', fontStyle: 'bold',
-      stroke: '#1a1a00', strokeThickness: 7,
+      fontFamily: POKE_FONT, fontSize: '40px', color: PokePalette.textDark, fontStyle: 'bold',
+      stroke: '#ffffff', strokeThickness: 5,
     }).setOrigin(0.5);
   }
 
@@ -85,11 +83,11 @@ export class LoginScene extends Phaser.Scene {
   private buildFormHTML(): string {
     return `
     <div id="login-box" style="${boxStyle()}">
-      <div id="form-title" style="text-align:center; font-size:18px; font-weight:bold; color:#ffe040; margin-bottom:20px;">
+      <div id="form-title" style="text-align:center; font-size:16px; font-weight:bold; color:#181810; margin-bottom:20px;">
         로그인
       </div>
 
-      <div id="msg-area" style="min-height:22px; text-align:center; font-size:12px; color:#ff8888; margin-bottom:8px;"></div>
+      <div id="msg-area" style="min-height:22px; text-align:center; font-size:12px; color:#cc3311; margin-bottom:8px;"></div>
 
       <div style="margin-bottom:12px;">
         <label style="${labelStyle()}">아이디</label>
@@ -111,21 +109,21 @@ export class LoginScene extends Phaser.Scene {
       <!-- 회원가입 전용 영역 (기본 숨김) -->
       <div id="signup-extra" style="display:none;">
         <div style="margin-bottom:16px;">
-          <label style="${labelStyle()}">닉네임 <span style="color:#667788; font-size:11px;">(게임 내 표시 이름)</span></label>
+          <label style="${labelStyle()}">닉네임 <span style="color:#484838; font-size:11px;">(게임 내 표시 이름)</span></label>
           <input id="inp-nickname" type="text" autocomplete="off"
             placeholder="ex) 포켓몬마스터"
             style="${inputStyle()}">
         </div>
-        <button id="btn-signup" style="${btnStyle('#225533')}">✦ 회원가입</button>
+        <button id="btn-signup" style="${btnStyle('#228833')}">✦ 회원가입</button>
       </div>
 
       <div style="text-align:center; margin-top:10px;">
-        <a id="link-toggle" href="#" style="font-size:12px; color:#7799bb; cursor:pointer; text-decoration:none;">
+        <a id="link-toggle" href="#" style="font-size:12px; color:#2255aa; cursor:pointer; text-decoration:none;">
           계정이 없으신가요? 회원가입
         </a>
       </div>
 
-      <div style="margin-top:16px; border-top:1px solid #334455; padding-top:14px;">
+      <div style="margin-top:16px; border-top:1px solid #989880; padding-top:14px;">
         <button id="btn-guest" style="${btnStyle('#443322', true)}">👤 게스트로 플레이</button>
       </div>
     </div>`;
@@ -154,7 +152,7 @@ export class LoginScene extends Phaser.Scene {
     try {
       const user = await signIn(id, pw);
       if (user) {
-        this.setMsg('✔ 로그인 성공!', '#88ffaa');
+        this.setMsg('✔ 로그인 성공!', '#228833');
         await syncLocalWithCloud(user.id);
         this.time.delayedCall(400, () => this.proceed());
       }
@@ -184,7 +182,7 @@ export class LoginScene extends Phaser.Scene {
     try {
       const user = await signUp(id, pw, nickname);
       if (user) {
-        this.setMsg('✔ 가입 완료! 바로 로그인합니다.', '#88ffaa');
+        this.setMsg('✔ 가입 완료! 바로 로그인합니다.', '#228833');
         await overwriteLocalWithCloud(user.id);
         this.time.delayedCall(400, () => this.proceed());
       }
@@ -233,7 +231,7 @@ export class LoginScene extends Phaser.Scene {
   }
 
   // ── 헬퍼 ──────────────────────────────────────────
-  private setMsg(msg: string, color = '#ff8888') {
+  private setMsg(msg: string, color = '#cc3311') {
     const el = this.overlay.querySelector('#msg-area') as HTMLElement;
     el.textContent = msg;
     el.style.color = color;
@@ -258,32 +256,34 @@ export class LoginScene extends Phaser.Scene {
 // ── 스타일 헬퍼 ───────────────────────────────────────
 function boxStyle() {
   return `
-    background: rgba(10,10,20,0.92);
-    border: 2px solid #334466;
-    border-radius: 12px;
+    background: #f0f0e0;
+    border: 3px solid #282018;
+    border-radius: 8px;
     padding: 28px 32px 24px;
     width: min(320px, 84vw);
     pointer-events: auto;
     box-sizing: border-box;
-    font-family: sans-serif;
+    font-family: 'DungGeunMo', 'Press Start 2P', monospace;
+    box-shadow: 3px 4px 0 #282018;
   `.replace(/\n\s+/g, ' ').trim();
 }
 
 function labelStyle() {
-  return 'display:block; font-size:12px; color:#aabbcc; margin-bottom:4px;';
+  return 'display:block; font-size:11px; color:#484838; margin-bottom:4px; font-family: inherit;';
 }
 
 function inputStyle() {
   return `
     width: 100%;
     padding: 9px 10px;
-    background: #0d1117;
-    border: 1px solid #334466;
-    border-radius: 6px;
-    color: #ddeeff;
-    font-size: 14px;
+    background: #ffffff;
+    border: 2px solid #282018;
+    border-radius: 4px;
+    color: #181810;
+    font-size: 13px;
     box-sizing: border-box;
     outline: none;
+    font-family: inherit;
   `.replace(/\n\s+/g, ' ').trim();
 }
 
@@ -291,15 +291,16 @@ function btnStyle(bg: string, outline = false) {
   return `
     width: 100%;
     padding: 11px;
-    background: ${outline ? 'transparent' : bg};
-    border: ${outline ? `1px solid #665544` : 'none'};
-    border-radius: 6px;
-    color: ${outline ? '#aa9988' : '#ffffff'};
-    font-size: 14px;
+    background: ${outline ? '#e8e0d0' : bg};
+    border: 2px solid #282018;
+    border-radius: 4px;
+    color: ${outline ? '#484838' : '#ffffff'};
+    font-size: 13px;
     font-weight: bold;
     cursor: pointer;
     margin-bottom: 8px;
     box-sizing: border-box;
+    font-family: inherit;
   `.replace(/\n\s+/g, ' ').trim();
 }
 

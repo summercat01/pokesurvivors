@@ -3,6 +3,7 @@ import { TYPE_COLORS } from '../data/weapons';
 import type { PokemonType } from '../types';
 import { isStageUnlocked, isStageCleared } from '../lib/stageProgress';
 import { getBgmVolume } from '../lib/storage';
+import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 
 interface StageConfig {
   id: number;
@@ -58,21 +59,20 @@ export class StageSelectScene extends Phaser.Scene {
     }
 
     // ── 배경 ──
-    this.add.rectangle(0, 0, W, H, 0x0d1a2e).setOrigin(0, 0);
+    this.add.rectangle(0, 0, W, H, 0xe8e8d8).setOrigin(0, 0);
     const g = this.add.graphics();
-    g.lineStyle(1, 0x1a3050, 0.4);
+    g.lineStyle(1, 0xd0d0c0, 0.5);
     for (let x = 0; x < W; x += 40) g.lineBetween(x, 0, x, H);
     for (let y = 0; y < H; y += 40) g.lineBetween(0, y, W, y);
 
-    // ── 헤더 (고정) ──
-    this.add.text(CX, 36, '스테이지 선택', {
-      fontSize: '22px', color: '#ffdd00', fontStyle: 'bold',
-      stroke: '#302000', strokeThickness: 5,
-      padding: { top: 6 },
+    // ── 헤더 (포켓몬 스타일) ──
+    PokeUI.panel(this, CX, 36, W - 4, 66, PokePalette.headerBg, 9);
+    this.add.text(CX, 24, '스테이지 선택', {
+      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
+      stroke: '#101840', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(10);
-
-    this.add.text(CX, 70, '탐험할 지역을 선택하세요', {
-      fontSize: '12px', color: '#aaaaaa',
+    this.add.text(CX, 50, '탐험할 지역을 선택하세요', {
+      fontFamily: POKE_FONT, fontSize: '10px', color: '#aaccff',
     }).setOrigin(0.5).setDepth(10);
 
     // ── 하단 버튼 2개: [뒤로] [다음] ──
@@ -81,33 +81,33 @@ export class StageSelectScene extends Phaser.Scene {
     const backX  = CX - BTN_W / 2 - 4;
     const nextX  = CX + BTN_W / 2 + 4;
 
-    // 뒤로 버튼
-    const backBg = this.add.rectangle(backX, BTN_Y, BTN_W, 40, 0x222233).setDepth(10)
+    // 뒤로 버튼 (포켓몬 스타일)
+    const backBg = this.add.rectangle(backX, BTN_Y, BTN_W, 40, PokePalette.btnNormal).setDepth(10)
       .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(1, 0x445566)
+    this.add.graphics().lineStyle(2, PokePalette.panelBorder)
       .strokeRect(backX - BTN_W / 2, BTN_Y - 20, BTN_W, 40).setDepth(10);
     const backTxt = this.add.text(backX, BTN_Y, '← 뒤로', {
-      fontSize: '15px', color: '#aaaacc', fontStyle: 'bold',
+      fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textDark,
     }).setOrigin(0.5).setDepth(11);
 
-    backBg.on('pointerover', () => { backBg.setFillStyle(0x333355); backTxt.setColor('#ffffff'); });
-    backBg.on('pointerout',  () => { backBg.setFillStyle(0x222233); backTxt.setColor('#aaaacc'); });
+    backBg.on('pointerover', () => { backBg.setFillStyle(PokePalette.btnHover); backTxt.setColor('#003399'); });
+    backBg.on('pointerout',  () => { backBg.setFillStyle(PokePalette.btnNormal); backTxt.setColor(PokePalette.textDark); });
     backBg.on('pointerdown', () => {
       this.cameras.main.fadeOut(200, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
     });
 
-    // 다음 버튼
-    const nextBg = this.add.rectangle(nextX, BTN_Y, BTN_W, 40, 0x223355).setDepth(10)
+    // 다음 버튼 (포켓몬 스타일)
+    const nextBg = this.add.rectangle(nextX, BTN_Y, BTN_W, 40, PokePalette.btnPrimary).setDepth(10)
       .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(1, 0x4488aa)
+    this.add.graphics().lineStyle(2, PokePalette.panelBorder)
       .strokeRect(nextX - BTN_W / 2, BTN_Y - 20, BTN_W, 40).setDepth(10);
     const nextTxt = this.add.text(nextX, BTN_Y, '다음 →', {
-      fontSize: '15px', color: '#88ccff', fontStyle: 'bold',
+      fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textWhite,
     }).setOrigin(0.5).setDepth(11);
 
-    nextBg.on('pointerover', () => { nextBg.setFillStyle(0x334466); nextTxt.setColor('#ffffff'); });
-    nextBg.on('pointerout',  () => { nextBg.setFillStyle(0x223355); nextTxt.setColor('#88ccff'); });
+    nextBg.on('pointerover', () => { nextBg.setFillStyle(0x3366cc); });
+    nextBg.on('pointerout',  () => { nextBg.setFillStyle(PokePalette.btnPrimary); });
     nextBg.on('pointerdown', () => {
       if (selectedStageId === 0) return;
       this.cameras.main.fadeOut(250, 0, 0, 0);
@@ -204,78 +204,79 @@ export class StageSelectScene extends Phaser.Scene {
     const cardLeft = cx - cardW / 2;
     const cardTop  = cy - cardH / 2;
 
-    const shadow = this.add.rectangle(cx + 3, cy + 4, cardW + 4, cardH + 4, 0x000000, 0.5);
-    const fillColor = unlocked ? 0x111827 : 0x0d0d1a;
-    const cardBg    = this.add.rectangle(cx, cy, cardW, cardH, fillColor);
+    const shadow  = this.add.rectangle(cx + 3, cy + 4, cardW + 4, cardH + 4, 0x000000, 0.2);
+    const fillColor = unlocked ? PokePalette.panelBg : 0xe0ddd0;
+    const cardBorder = this.add.rectangle(cx, cy, cardW, cardH, PokePalette.panelBorder);
+    const cardBg    = this.add.rectangle(cx, cy, cardW - 6, cardH - 6, fillColor);
     if (unlocked) cardBg.setInteractive({ useHandCursor: true });
 
     const typeColor = TYPE_COLORS[stage.enemyTypes[0]] ?? 0x888888;
-    const sidebar   = this.add.rectangle(cardLeft + 4, cy, 6, cardH - 4, unlocked ? typeColor : 0x333333);
+    // 좌측 타입 스트라이프
+    const stripeG = this.add.graphics();
+    stripeG.fillStyle(unlocked ? typeColor : 0xb8b5a8, 1);
+    stripeG.fillRect(cardLeft + 3, cardTop + 3, 10, cardH - 6);
 
     const outline = this.add.graphics();
-    outline.lineStyle(2, unlocked ? typeColor : 0x333344, unlocked ? 0.6 : 0.3);
-    outline.strokeRect(cardLeft, cardTop, cardW, cardH);
 
-    container.add([shadow, cardBg, sidebar, outline]);
+    container.add([shadow, cardBorder, cardBg, stripeG, outline]);
 
     if (!unlocked) {
       const lockIcon = this.add.text(cx, cy - 14, '🔒', { fontSize: '28px' }).setOrigin(0.5);
       const lockText = this.add.text(cx, cy + 18, `${stage.name}  —  STAGE ${stage.id - 1} 클리어 필요`, {
-        fontSize: '13px', color: '#555566',
+        fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textGray,
       }).setOrigin(0.5);
       container.add([lockIcon, lockText]);
       return null;
     }
 
-    const L = cardLeft + 16;
+    const L = cardLeft + 20;
     const R = cardLeft + cardW - 16;
 
     const row1Y = cardTop + 26;
-    const badge    = this.add.rectangle(L + 32, row1Y, 64, 22, typeColor, 0.9);
+    const badge    = this.add.rectangle(L + 32, row1Y, 64, 20, typeColor, 0.9);
     const badgeTxt = this.add.text(L + 32, row1Y, `STAGE ${stage.id}`, {
-      fontSize: '11px', color: '#ffffff', fontStyle: 'bold', padding: { top: 2 },
+      fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5);
     const nameTxt = this.add.text(L + 72, row1Y, stage.name, {
-      fontSize: '26px', color: '#ffffff', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 4, padding: { top: 4 },
+      fontFamily: POKE_FONT, fontSize: '20px', color: PokePalette.textDark, fontStyle: 'bold',
     }).setOrigin(0, 0.5);
 
-    const subtitleTxt = this.add.text(L + 72, cardTop + 56, stage.subtitle, {
-      fontSize: '15px', color: '#aabbdd', fontStyle: 'bold',
+    const subtitleTxt = this.add.text(L + 72, cardTop + 52, stage.subtitle, {
+      fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textGray,
     }).setOrigin(0, 0.5);
 
-    const line = this.add.graphics().lineStyle(1, 0x2a3a50)
-      .lineBetween(L, cardTop + 76, R, cardTop + 76);
+    const line = this.add.graphics().lineStyle(1, 0x989880, 0.5)
+      .lineBetween(L, cardTop + 70, R, cardTop + 70);
 
-    const typeLabel = this.add.text(L, cardTop + 97, '출현 타입', {
-      fontSize: '13px', color: '#7788aa',
+    const typeLabel = this.add.text(L, cardTop + 86, '출현 타입', {
+      fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray,
     }).setOrigin(0, 0.5);
 
     const typeBadges: Phaser.GameObjects.Text[] = [];
     let bx = 0;
     stage.enemyTypes.forEach(t => {
       const hex    = `#${(TYPE_COLORS[t] ?? 0x888888).toString(16).padStart(6, '0')}`;
-      const tbadge = this.add.text(L + bx, cardTop + 124, `  ${t.toUpperCase()}  `, {
-        fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
-        backgroundColor: hex, padding: { x: 6, y: 4 },
+      const tbadge = this.add.text(L + bx, cardTop + 110, `  ${t.toUpperCase()}  `, {
+        fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
+        backgroundColor: hex, padding: { x: 4, y: 3 },
       }).setOrigin(0, 0.5);
       typeBadges.push(tbadge);
-      bx += tbadge.width + 8;
+      bx += tbadge.width + 6;
     });
 
     const pkmImages: Phaser.GameObjects.Image[] = [];
     const shown = stage.bgPokemon.filter(k => this.textures.exists(k)).slice(0, 2);
     shown.forEach((key, idx) => {
       const img = this.add.image(R - idx * 56, cy - 4, key)
-        .setDisplaySize(60, 60).setOrigin(1, 0.5).setAlpha(0.55 - idx * 0.15);
+        .setDisplaySize(60, 60).setOrigin(1, 0.5).setAlpha(0.45 - idx * 0.12);
       pkmImages.push(img);
     });
 
     const clearItems: Phaser.GameObjects.GameObject[] = [];
     if (cleared) {
-      const clearBg  = this.add.rectangle(R - 28, cardTop + 16, 60, 20, 0x1a8a1a, 0.9);
+      const clearBg  = this.add.rectangle(R - 28, cardTop + 16, 60, 20, 0x228833, 0.9);
       const clearTxt = this.add.text(R - 28, cardTop + 16, '✓ CLEAR', {
-        fontSize: '11px', color: '#aaffaa', fontStyle: 'bold',
+        fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
       }).setOrigin(0.5);
       clearItems.push(clearBg, clearTxt);
     }
@@ -283,33 +284,29 @@ export class StageSelectScene extends Phaser.Scene {
     container.add([badge, badgeTxt, nameTxt, subtitleTxt, line, typeLabel, ...typeBadges, ...pkmImages, ...clearItems]);
 
     // 선택 하이라이트 오버레이
-    const selOverlay = this.add.rectangle(cx, cy, cardW, cardH, typeColor, 0).setDepth(1);
+    const selOverlay = this.add.graphics();
     container.add(selOverlay);
 
     const select = () => {
-      cardBg.setFillStyle(0x1a2840);
-      outline.clear();
-      outline.lineStyle(3, typeColor, 1.0);
-      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
-      selOverlay.setFillStyle(typeColor, 0.08);
+      cardBg.setFillStyle(PokePalette.btnHover);
+      selOverlay.clear();
+      selOverlay.fillStyle(0x3050a0, 0.12);
+      selOverlay.fillRect(cardLeft + 3, cardTop + 3, cardW - 6, cardH - 6);
+      selOverlay.lineStyle(3, PokePalette.headerBg, 1.0);
+      selOverlay.strokeRect(cardLeft, cardTop, cardW, cardH);
     };
     const deselect = () => {
-      cardBg.setFillStyle(0x111827);
-      outline.clear();
-      outline.lineStyle(2, typeColor, 0.6);
-      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
-      selOverlay.setFillStyle(typeColor, 0);
+      cardBg.setFillStyle(PokePalette.panelBg);
+      selOverlay.clear();
     };
 
     cardBg.on('pointerover', () => {
-      outline.clear();
-      outline.lineStyle(2, typeColor, 1.0);
-      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
+      selOverlay.clear();
+      selOverlay.fillStyle(0x3050a0, 0.07);
+      selOverlay.fillRect(cardLeft + 3, cardTop + 3, cardW - 6, cardH - 6);
     });
     cardBg.on('pointerout', () => {
-      outline.clear();
-      outline.lineStyle(2, typeColor, 0.6);
-      outline.strokeRect(cardLeft, cardTop, cardW, cardH);
+      selOverlay.clear();
     });
     cardBg.on('pointerup', () => {
       if (getHasDragged()) return;

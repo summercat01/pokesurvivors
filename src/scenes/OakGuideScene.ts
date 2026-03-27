@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getBgmVolume } from '../lib/storage';
+import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 
 interface DialogStep {
   text: string;
@@ -70,17 +71,14 @@ export class OakGuideScene extends Phaser.Scene {
     // ── 반투명 배경 (interactive로 뒤 씬 입력 차단) ──
     this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.88).setInteractive();
 
-    // ── 헤더 ──
-    this.add.rectangle(CX, 36, W, 70, 0x0d3320);
-    this.add.graphics().lineStyle(2, 0x44cc66, 0.6).lineBetween(0, 70, W, 70);
-    this.add.text(CX, 30, '포켓몬 서바이버즈', {
-      fontSize: '14px', color: '#88eeaa', fontStyle: 'bold',
-      padding: { top: 4 },
+    // ── 헤더 (포켓몬 스타일) ──
+    PokeUI.panel(this, CX, 36, W - 4, 66, PokePalette.headerBg);
+    this.add.text(CX, 24, '포켓몬 서바이버즈', {
+      fontFamily: POKE_FONT, fontSize: '10px', color: '#aaccff',
     }).setOrigin(0.5);
-    this.add.text(CX, 52, '트레이너 가이드', {
-      fontSize: '20px', color: '#ffffff', fontStyle: 'bold',
-      stroke: '#003300', strokeThickness: 4,
-      padding: { top: 6 },
+    this.add.text(CX, 46, '트레이너 가이드', {
+      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
+      stroke: '#101840', strokeThickness: 3,
     }).setOrigin(0.5);
 
     // ── 오박사 초상화 ──
@@ -89,21 +87,8 @@ export class OakGuideScene extends Phaser.Scene {
     const PORTRAIT_W  = 150;
     const PORTRAIT_H  = 170;
 
-    // 초상화 배경
-    this.add.rectangle(PORTRAIT_CX, PORTRAIT_CY, PORTRAIT_W + 8, PORTRAIT_H + 8, 0x44cc66, 0.2);
-    this.add.rectangle(PORTRAIT_CX, PORTRAIT_CY, PORTRAIT_W,     PORTRAIT_H,     0x0d2a18);
-    this.add.graphics()
-      .lineStyle(3, 0x44cc66, 0.9)
-      .strokeRect(PORTRAIT_CX - PORTRAIT_W / 2, PORTRAIT_CY - PORTRAIT_H / 2, PORTRAIT_W, PORTRAIT_H);
-    // 모서리 장식
-    const corners = [
-      [PORTRAIT_CX - PORTRAIT_W / 2, PORTRAIT_CY - PORTRAIT_H / 2],
-      [PORTRAIT_CX + PORTRAIT_W / 2, PORTRAIT_CY - PORTRAIT_H / 2],
-      [PORTRAIT_CX - PORTRAIT_W / 2, PORTRAIT_CY + PORTRAIT_H / 2],
-      [PORTRAIT_CX + PORTRAIT_W / 2, PORTRAIT_CY + PORTRAIT_H / 2],
-    ] as [number, number][];
-    const cornerGfx = this.add.graphics().fillStyle(0x44cc66);
-    corners.forEach(([cx2, cy2]) => cornerGfx.fillRect(cx2 - 5, cy2 - 5, 10, 10));
+    // 초상화 배경 (포켓몬 스타일 패널)
+    PokeUI.panel(this, PORTRAIT_CX, PORTRAIT_CY, PORTRAIT_W + 8, PORTRAIT_H + 8, 0xf0f8e8);
 
     if (this.textures.exists('prof_oak')) {
       this.add.image(PORTRAIT_CX, PORTRAIT_CY, 'prof_oak')
@@ -121,84 +106,81 @@ export class OakGuideScene extends Phaser.Scene {
     }
 
     // ── 스텝 도트 ──
-    const DOT_Y     = PORTRAIT_CY + PORTRAIT_H / 2 + 22;
+    const DOT_Y     = PORTRAIT_CY + PORTRAIT_H / 2 + 20;
     const dotGap    = 14;
     const dotStartX = CX - (DIALOGS.length - 1) * dotGap / 2;
     for (let i = 0; i < DIALOGS.length; i++) {
-      const dot = this.add.arc(dotStartX + i * dotGap, DOT_Y, 4, 0, 360, false, 0x556655);
+      const dot = this.add.arc(dotStartX + i * dotGap, DOT_Y, 4, 0, 360, false, PokePalette.panelShadow);
       this.stepDots.push(dot);
     }
 
-    // ── 대화창 ──
-    const BOX_TOP = DOT_Y + 20;
+    // ── 대화창 (포켓몬 정통 대화창) ──
+    const BOX_TOP = DOT_Y + 16;
     const BOX_H   = H - BOX_TOP - 50;
     const BOX_L   = 12;
     const BOX_R   = W - 12;
     const BOX_W   = BOX_R - BOX_L;
     const BOX_CY  = BOX_TOP + BOX_H / 2;
 
-    // 배경
-    this.add.rectangle(CX, BOX_CY, BOX_W, BOX_H, 0xf0eedc);
-    this.add.graphics().lineStyle(3, 0x44aa44).strokeRect(BOX_L, BOX_TOP, BOX_W, BOX_H);
-    // 내부 미세 선
-    this.add.graphics().lineStyle(1, 0x88cc88, 0.3)
-      .strokeRect(BOX_L + 4, BOX_TOP + 4, BOX_W - 8, BOX_H - 8);
+    PokeUI.dialog(this, CX, BOX_CY, BOX_W, BOX_H);
 
-    // 화자 배지
-    this.add.rectangle(BOX_L + 54, BOX_TOP - 14, 108, 26, 0x44aa44);
-    this.add.graphics().lineStyle(2, 0x228822).strokeRect(BOX_L, BOX_TOP - 27, 108, 26);
-    this.add.text(BOX_L + 54, BOX_TOP - 14, '오박사', {
-      fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
-      padding: { top: 4 },
+    // 화자 배지 (포켓몬 스타일 헤더 태그)
+    const badgeG = this.add.graphics();
+    badgeG.fillStyle(PokePalette.panelBorder); badgeG.fillRect(BOX_L + 1, BOX_TOP - 26 + 1, 90, 24);
+    badgeG.fillStyle(PokePalette.headerBg);    badgeG.fillRect(BOX_L, BOX_TOP - 27, 90, 24);
+    badgeG.fillStyle(0xffffff, 0.3);           badgeG.fillRect(BOX_L, BOX_TOP - 27, 90, 3);
+    this.add.text(BOX_L + 45, BOX_TOP - 15, '오박사', {
+      fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textWhite, fontStyle: 'bold',
     }).setOrigin(0.5);
 
     // 대화 텍스트
-    this.dialogText = this.add.text(BOX_L + 16, BOX_TOP + 34, '', {
-      fontSize: '15px',
-      color: '#181810',
+    this.dialogText = this.add.text(BOX_L + 16, BOX_TOP + 22, '', {
+      fontFamily: POKE_FONT,
+      fontSize: '13px',
+      color: PokePalette.textDark,
       lineSpacing: 8,
-      wordWrap: { width: BOX_W - 32 },
-      padding: { top: 8 },
+      wordWrap: { width: BOX_W - 40 },
     });
 
     // ── 버튼 행 ──
     const BTN_Y = BOX_TOP + BOX_H - 28;
     const CB_Y  = BTN_Y - 38;
 
-    // 이전 버튼
-    this.prevBtn = this.add.rectangle(CX - 66, BTN_Y, 110, 30, 0x445544)
+    // 이전 버튼 (포켓몬 스타일)
+    this.prevBtn = this.add.rectangle(CX - 66, BTN_Y, 110, 30, PokePalette.btnNormal)
       .setInteractive({ useHandCursor: true });
+    // 버튼 테두리
+    this.add.graphics().lineStyle(2, PokePalette.panelBorder).strokeRect(CX - 66 - 55, BTN_Y - 15, 110, 30);
     this.prevTxt = this.add.text(CX - 66, BTN_Y, '◀ 이전', {
-      fontSize: '14px', color: '#aabbaa', fontStyle: 'bold',
+      fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textGray,
       padding: { top: 4 },
     }).setOrigin(0.5);
-    this.prevBtn.on('pointerover', () => { if (this.step > 0) this.prevBtn.setFillStyle(0x556655); });
-    this.prevBtn.on('pointerout',  () => { if (this.step > 0) this.prevBtn.setFillStyle(0x445544); });
+    this.prevBtn.on('pointerover', () => { if (this.step > 0) this.prevBtn.setFillStyle(PokePalette.btnHover); });
+    this.prevBtn.on('pointerout',  () => { if (this.step > 0) this.prevBtn.setFillStyle(PokePalette.btnNormal); });
     this.prevBtn.on('pointerdown', () => this.goBack());
 
     // 다음 버튼
-    this.nextBtn = this.add.rectangle(CX + 66, BTN_Y, 110, 30, 0x44aa44)
+    this.nextBtn = this.add.rectangle(CX + 66, BTN_Y, 110, 30, PokePalette.btnPrimary)
       .setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(2, PokePalette.panelBorder).strokeRect(CX + 66 - 55, BTN_Y - 15, 110, 30);
     this.nextTxt = this.add.text(CX + 66, BTN_Y, '다음 ▶', {
-      fontSize: '14px', color: '#ffffff', fontStyle: 'bold',
+      fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textWhite,
       padding: { top: 4 },
     }).setOrigin(0.5);
-    this.nextBtn.on('pointerover', () => this.nextBtn.setFillStyle(0x55cc55));
-    this.nextBtn.on('pointerout',  () => this.nextBtn.setFillStyle(this.step === DIALOGS.length - 1 ? 0xcc4422 : 0x44aa44));
+    this.nextBtn.on('pointerover', () => this.nextBtn.setFillStyle(0x3366cc));
+    this.nextBtn.on('pointerout',  () => this.nextBtn.setFillStyle(this.step === DIALOGS.length - 1 ? PokePalette.btnDanger : PokePalette.btnPrimary));
     this.nextBtn.on('pointerdown', () => this.advance());
 
     // ── 다시 보지 않기 체크박스 ──
     const cbX = BOX_L + 16;
-    this.checkBox = this.add.rectangle(cbX + 9, CB_Y, 18, 18, 0xffffff)
+    this.checkBox = this.add.rectangle(cbX + 9, CB_Y, 18, 18, PokePalette.panelBg)
       .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(2, 0x44aa44).strokeRect(cbX, CB_Y - 9, 18, 18);
+    this.add.graphics().lineStyle(2, PokePalette.panelBorder).strokeRect(cbX, CB_Y - 9, 18, 18);
     this.checkMark = this.add.text(cbX + 9, CB_Y, '', {
-      fontSize: '13px', color: '#44aa44', fontStyle: 'bold',
-      padding: { top: 1 },
+      fontFamily: POKE_FONT, fontSize: '11px', color: '#228822', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.add.text(cbX + 26, CB_Y, '다시 보지 않기', {
-      fontSize: '13px', color: '#555544',
-      padding: { top: 4 },
+      fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textGray,
     }).setOrigin(0, 0.5);
 
     this.checkBox.on('pointerdown', () => {
@@ -209,7 +191,7 @@ export class OakGuideScene extends Phaser.Scene {
 
     // ── 법적 고지 (마지막 스텝에만 표시) ──
     this.disclaimerText = this.add.text(CX, CB_Y - 28, '본 게임은 포켓몬 팬 게임으로, 어떠한 수익도 창출하지 않으며\n닌텐도 / 포켓몬컴퍼니 / GAME FREAK과 무관합니다.', {
-      fontSize: '11px', color: '#888877', align: 'center',
+      fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray, align: 'center',
       lineSpacing: 4,
       wordWrap: { width: BOX_W - 32 },
     }).setOrigin(0.5, 1).setVisible(false);
@@ -223,7 +205,7 @@ export class OakGuideScene extends Phaser.Scene {
 
     // 도트 갱신
     this.stepDots.forEach((d, i) =>
-      d.setFillStyle(i === index ? 0x44cc66 : i < index ? 0x228833 : 0x445544),
+      d.setFillStyle(i === index ? PokePalette.headerBg : i < index ? 0x3366aa : PokePalette.panelShadow),
     );
 
     // 타이핑 초기화
@@ -244,13 +226,13 @@ export class OakGuideScene extends Phaser.Scene {
     // 다음 버튼
     const isLast = index === DIALOGS.length - 1;
     this.nextTxt.setText(isLast ? '시작! ▶' : '다음 ▶');
-    this.nextBtn.setFillStyle(isLast ? 0xcc4422 : 0x44aa44);
+    this.nextBtn.setFillStyle(isLast ? PokePalette.btnDanger : PokePalette.btnPrimary);
     this.disclaimerText.setVisible(isLast);
 
     // 이전 버튼 (첫 스텝이면 흐리게)
     const isFirst = index === 0;
-    this.prevBtn.setFillStyle(isFirst ? 0x2a332a : 0x445544);
-    this.prevTxt.setColor(isFirst ? '#445544' : '#aabbaa');
+    this.prevBtn.setFillStyle(isFirst ? PokePalette.panelShadow : PokePalette.btnNormal);
+    this.prevTxt.setColor(isFirst ? '#b0b0a0' : PokePalette.textDark);
     this.prevBtn.setInteractive(isFirst ? false : { useHandCursor: true });
 
     // 연속 입력 방지 (200ms 차단)

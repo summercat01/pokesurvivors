@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getCurrentUser, getNickname, signOut } from '../lib/auth';
 import { loadUserRecord } from '../lib/userDB';
 import { getBgmVolume } from '../lib/storage';
+import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 
 // ── 패치 노트 ──
 interface PatchEntry { version: string; date: string; changes: string[] }
@@ -199,23 +200,23 @@ export class TitleScene extends Phaser.Scene {
     const W = this.scale.width;
     // ── "포켓몬" 소제목 ──
     this.add.text(W / 2, Math.round(H * 0.142), '포켓몬', {
-      fontSize: '22px',
+      fontFamily: POKE_FONT,
+      fontSize: '18px',
       color: '#ffe040',
       fontStyle: 'bold',
       stroke: '#302000',
       strokeThickness: 4,
-      padding: { top: 6 },
     }).setOrigin(0.5).setDepth(10);
 
     // ── 메인 타이틀 ──
     const titleY = Math.round(H * 0.211);
     const title = this.add.text(W / 2, titleY, '서바이버즈', {
-      fontSize: '52px',
+      fontFamily: POKE_FONT,
+      fontSize: '44px',
       color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#1a1a00',
-      strokeThickness: 7,
-      padding: { top: 10 },
+      strokeThickness: 6,
     }).setOrigin(0.5).setDepth(10);
 
     // 타이틀 등장 애니메이션 (아래서 올라오며 페이드인)
@@ -360,26 +361,27 @@ export class TitleScene extends Phaser.Scene {
 
     // 버튼 텍스트
     const txt = this.add.text(cx, cy, label, {
-      fontSize: '18px',
-      color: '#181810',
+      fontFamily: POKE_FONT,
+      fontSize: '14px',
+      color: PokePalette.textDark,
       fontStyle: 'bold',
-      padding: { top: 6 },
+      padding: { top: 4 },
     }).setOrigin(0.5).setDepth(D + 4);
 
     // ── 인터랙션 ──
     bg.on('pointerover', () => {
-      bg.setFillStyle(0xd8d8c8);
-      txt.setStyle({ color: '#003399', fontSize: '18px', fontStyle: 'bold', padding: { top: 6 } });
+      bg.setFillStyle(PokePalette.btnHover);
+      txt.setColor('#003399');
     });
     bg.on('pointerout', () => {
-      bg.setFillStyle(0xeeeee0);
-      txt.setStyle({ color: '#181810', fontSize: '18px', fontStyle: 'bold', padding: { top: 6 } });
+      bg.setFillStyle(PokePalette.btnNormal);
+      txt.setColor(PokePalette.textDark);
     });
     bg.on('pointerdown', () => {
-      bg.setFillStyle(0xc8c8b8);
+      bg.setFillStyle(PokePalette.btnPressed);
       this.time.delayedCall(80, onClick);
     });
-    bg.on('pointerup', () => bg.setFillStyle(0xd8d8c8));
+    bg.on('pointerup', () => bg.setFillStyle(PokePalette.btnHover));
   }
 
   // ─────────────────────────────────────────────
@@ -415,37 +417,32 @@ export class TitleScene extends Phaser.Scene {
       .setDepth(D).setInteractive();
     allItems.push(dimBg);
 
-    // 패널
+    // 패널 (포켓몬 스타일)
     const PANEL_W  = W - 28;
     const PANEL_H  = H - 100;
     const PANEL_Y  = H / 2 + 10;
-    const HEADER_H = 46;
-    const panel = this.add.rectangle(CX, PANEL_Y, PANEL_W, PANEL_H, 0x0d1a2e, 0.97)
-      .setDepth(D + 1).setStrokeStyle(2, 0x3377cc);
-    allItems.push(panel);
+    const HEADER_H = 48;
+    const panelG = PokeUI.panel(this, CX, PANEL_Y, PANEL_W, PANEL_H, PokePalette.panelBg, D + 1);
+    panelG.setDepth(D + 1);
+    allItems.push(panelG);
 
-    // 타이틀
-    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + 22, '패치 노트', {
-      fontSize: '16px', color: '#88bbff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(D + 2);
+    // 헤더
+    const headerG = PokeUI.panel(this, CX, PANEL_Y - PANEL_H / 2 + HEADER_H / 2, PANEL_W - 6, HEADER_H, PokePalette.headerBg, D + 2);
+    headerG.setDepth(D + 2);
+    allItems.push(headerG);
+    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + HEADER_H / 2 - 2, '패치 노트', {
+      fontFamily: POKE_FONT, fontSize: '14px', color: PokePalette.textWhite, fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(D + 3);
     allItems.push(titleTxt);
 
-    // 구분선
-    const divLine = this.add.graphics()
-      .lineStyle(1, 0x3377cc, 0.5)
-      .lineBetween(CX - PANEL_W / 2 + 12, PANEL_Y - PANEL_H / 2 + 40,
-                   CX + PANEL_W / 2 - 12, PANEL_Y - PANEL_H / 2 + 40)
-      .setDepth(D + 2);
-    allItems.push(divLine);
-
     // 닫기 버튼
-    const closeBg = this.add.rectangle(CX + PANEL_W / 2 - 18, PANEL_Y - PANEL_H / 2 + 18, 28, 28, 0x223355)
-      .setDepth(D + 2).setInteractive({ useHandCursor: true });
-    const closeTxt = this.add.text(CX + PANEL_W / 2 - 18, PANEL_Y - PANEL_H / 2 + 18, '✕', {
-      fontSize: '14px', color: '#aabbcc',
-    }).setOrigin(0.5).setDepth(D + 3);
-    closeBg.on('pointerover', () => { closeBg.setFillStyle(0x334466); closeTxt.setColor('#ffffff'); });
-    closeBg.on('pointerout',  () => { closeBg.setFillStyle(0x223355); closeTxt.setColor('#aabbcc'); });
+    const closeBg = this.add.rectangle(CX + PANEL_W / 2 - 20, PANEL_Y - PANEL_H / 2 + HEADER_H / 2, 30, 26, PokePalette.btnDanger)
+      .setDepth(D + 3).setInteractive({ useHandCursor: true });
+    const closeTxt = this.add.text(CX + PANEL_W / 2 - 20, PANEL_Y - PANEL_H / 2 + HEADER_H / 2, '✕', {
+      fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textWhite,
+    }).setOrigin(0.5).setDepth(D + 4);
+    closeBg.on('pointerover', () => closeBg.setFillStyle(0xdd4422));
+    closeBg.on('pointerout',  () => closeBg.setFillStyle(PokePalette.btnDanger));
     closeBg.on('pointerdown', close);
     allItems.push(closeBg, closeTxt);
 
@@ -471,17 +468,17 @@ export class TitleScene extends Phaser.Scene {
     let localY = 0;
     PATCH_NOTES.forEach(entry => {
       const verTxt = this.add.text(LEFT, CONTENT_TOP + localY, entry.version, {
-        fontSize: '14px', color: '#55aaff', fontStyle: 'bold',
+        fontFamily: POKE_FONT, fontSize: '11px', color: '#2255aa', fontStyle: 'bold',
       });
       const dateTxt = this.add.text(CX + PANEL_W / 2 - 18, CONTENT_TOP + localY, entry.date, {
-        fontSize: '11px', color: '#556677',
+        fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray,
       }).setOrigin(1, 0);
       container.add([verTxt, dateTxt]);
       localY += 20;
 
       entry.changes.forEach(change => {
         const line = this.add.text(LEFT + 8, CONTENT_TOP + localY, `• ${change}`, {
-          fontSize: '12px', color: '#99bbcc',
+          fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textDark,
           wordWrap: { width: PANEL_W - 36 },
         });
         container.add(line);
@@ -524,36 +521,32 @@ export class TitleScene extends Phaser.Scene {
       .setDepth(D).setInteractive();
     allItems.push(dimBg);
 
-    // 패널
+    // 패널 (포켓몬 스타일)
     const PANEL_W = W - 28;
     const PANEL_H = 260;
     const PANEL_Y = H / 2;
-    const panel = this.add.rectangle(CX, PANEL_Y, PANEL_W, PANEL_H, 0x0d1a2e, 0.97)
-      .setDepth(D + 1).setStrokeStyle(2, 0x3377cc);
-    allItems.push(panel);
+    const SETT_HEADER_H = 48;
+    const settPanelG = PokeUI.panel(this, CX, PANEL_Y, PANEL_W, PANEL_H, PokePalette.panelBg, D + 1);
+    settPanelG.setDepth(D + 1);
+    allItems.push(settPanelG);
+    const settHeaderG = PokeUI.panel(this, CX, PANEL_Y - PANEL_H / 2 + SETT_HEADER_H / 2, PANEL_W - 6, SETT_HEADER_H, PokePalette.headerBg, D + 2);
+    settHeaderG.setDepth(D + 2);
+    allItems.push(settHeaderG);
 
     // 타이틀
-    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + 22, '⚙ 설정', {
-      fontSize: '16px', color: '#88bbff', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(D + 2);
+    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + SETT_HEADER_H / 2 - 2, '⚙ 설정', {
+      fontFamily: POKE_FONT, fontSize: '14px', color: PokePalette.textWhite, fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(D + 3);
     allItems.push(titleTxt);
 
-    // 구분선
-    const divLine = this.add.graphics()
-      .lineStyle(1, 0x3377cc, 0.5)
-      .lineBetween(CX - PANEL_W / 2 + 12, PANEL_Y - PANEL_H / 2 + 40,
-                   CX + PANEL_W / 2 - 12, PANEL_Y - PANEL_H / 2 + 40)
-      .setDepth(D + 2);
-    allItems.push(divLine);
-
     // 닫기 버튼
-    const closeBg = this.add.rectangle(CX + PANEL_W / 2 - 18, PANEL_Y - PANEL_H / 2 + 18, 28, 28, 0x223355)
-      .setDepth(D + 2).setInteractive({ useHandCursor: true });
-    const closeTxt = this.add.text(CX + PANEL_W / 2 - 18, PANEL_Y - PANEL_H / 2 + 18, '✕', {
-      fontSize: '14px', color: '#aabbcc',
-    }).setOrigin(0.5).setDepth(D + 3);
-    closeBg.on('pointerover', () => { closeBg.setFillStyle(0x334466); closeTxt.setColor('#ffffff'); });
-    closeBg.on('pointerout',  () => { closeBg.setFillStyle(0x223355); closeTxt.setColor('#aabbcc'); });
+    const closeBg = this.add.rectangle(CX + PANEL_W / 2 - 20, PANEL_Y - PANEL_H / 2 + SETT_HEADER_H / 2, 30, 26, PokePalette.btnDanger)
+      .setDepth(D + 3).setInteractive({ useHandCursor: true });
+    const closeTxt = this.add.text(CX + PANEL_W / 2 - 20, PANEL_Y - PANEL_H / 2 + SETT_HEADER_H / 2, '✕', {
+      fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textWhite,
+    }).setOrigin(0.5).setDepth(D + 4);
+    closeBg.on('pointerover', () => closeBg.setFillStyle(0xdd4422));
+    closeBg.on('pointerout',  () => closeBg.setFillStyle(PokePalette.btnDanger));
     closeBg.on('pointerdown', close);
     allItems.push(closeBg, closeTxt);
 

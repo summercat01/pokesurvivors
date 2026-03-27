@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getCurrentUser } from '../lib/auth';
 import { pushLocalToCloud } from '../lib/userDB';
 import { getBgmVolume, getStoredInt } from '../lib/storage';
+import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 
 interface GameOverData {
   level:           number;
@@ -19,11 +20,11 @@ interface GameOverData {
 // 점수 기반 등급 (0~100)
 function calcGrade(level: number, kills: number, wave: number): { grade: string; score: number; color: string; bg: number } {
   const score = Math.round((level / 20) * 40 + Math.min(kills / 400, 1) * 30 + (wave / 20) * 30);
-  if (score >= 80) return { grade: 'S', score, color: '#ffd700', bg: 0x3a2800 };
-  if (score >= 60) return { grade: 'A', score, color: '#dd88ff', bg: 0x280a38 };
-  if (score >= 40) return { grade: 'B', score, color: '#44aaff', bg: 0x082038 };
-  if (score >= 20) return { grade: 'C', score, color: '#44dd88', bg: 0x082818 };
-  return               { grade: 'D', score, color: '#aaaaaa', bg: 0x181818 };
+  if (score >= 80) return { grade: 'S', score, color: '#c8a020', bg: 0xfff8d0 };
+  if (score >= 60) return { grade: 'A', score, color: '#8833aa', bg: 0xf0e0f8 };
+  if (score >= 40) return { grade: 'B', score, color: '#2255aa', bg: 0xe0e8f8 };
+  if (score >= 20) return { grade: 'C', score, color: '#228833', bg: 0xe0f0e8 };
+  return               { grade: 'D', score, color: '#886644', bg: 0xf0ece0 };
 }
 
 export class GameOverScene extends Phaser.Scene {
@@ -70,13 +71,13 @@ export class GameOverScene extends Phaser.Scene {
     const { grade, color: gradeColor, bg: gradeBg } = calcGrade(level, killCount, waveNumber);
 
     // ── 배경 ─────────────────────────────────────────────
-    this.add.rectangle(CX, H / 2, W, H, 0x0c0a18);
+    this.add.rectangle(CX, H / 2, W, H, 0x181820);
     // 별 효과
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 30; i++) {
       this.add.circle(
         Phaser.Math.Between(0, W), Phaser.Math.Between(0, H),
         Phaser.Math.Between(1, 2), 0xffffff,
-        Phaser.Math.FloatBetween(0.15, 0.7),
+        Phaser.Math.FloatBetween(0.1, 0.5),
       );
     }
 
@@ -90,23 +91,24 @@ export class GameOverScene extends Phaser.Scene {
     const CONTENT_B  = BTN_Y - BTN_H / 2 - 8;
     const CONTENT_H  = CONTENT_B - CONTENT_T;
 
-    // ── 헤더 (클리어/게임오버 + 등급 배지) ───────────────
-    const headerColor = stageCleared ? 0x1a4020 : 0x28180a;
-    const headerBorderColor = stageCleared ? 0x44dd66 : 0xdd8844;
-    this.add.rectangle(CX, HEADER_CY, W - 16, HEADER_H, headerColor)
-      .setStrokeStyle(2, headerBorderColor);
+    // ── 헤더 (포켓몬 스타일) ───────────────
+    const headerBg = stageCleared ? 0x3050a0 : 0x802010;
+    PokeUI.panel(this, CX, HEADER_CY, W - 16, HEADER_H, headerBg);
 
     const headerTxt = stageCleared ? `✦  STAGE ${stageId}  클리어!  ✦` : '트레이너가 쓰러졌다!';
-    const headerColor2 = stageCleared ? '#88ffaa' : '#ffcc88';
     this.add.text(CX, HEADER_CY, headerTxt, {
-      fontSize: '18px', color: headerColor2, fontStyle: 'bold',
+      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
+      stroke: '#101020', strokeThickness: 3,
     }).setOrigin(0.5).setAlpha(0);
 
-    // 등급 배지 (오른쪽 상단)
-    const BADGE_X = W - 34;
-    this.add.circle(BADGE_X, HEADER_CY, 22, gradeBg).setStrokeStyle(2, parseInt(gradeColor.replace('#', ''), 16));
+    // 등급 배지 (포켓몬 스타일 태그)
+    const BADGE_X = W - 38;
+    const badgeG = this.add.graphics();
+    badgeG.fillStyle(PokePalette.panelBorder); badgeG.fillRect(BADGE_X - 21, HEADER_CY - 21, 42, 42);
+    badgeG.fillStyle(parseInt(gradeBg.toString(16).padStart(6, '0'), 16) || gradeBg);
+    badgeG.fillRect(BADGE_X - 20, HEADER_CY - 20, 40, 40);
     const gradeObj = this.add.text(BADGE_X, HEADER_CY, grade, {
-      fontSize: '22px', color: gradeColor, fontStyle: 'bold',
+      fontFamily: POKE_FONT, fontSize: '20px', color: gradeColor, fontStyle: 'bold',
     }).setOrigin(0.5).setScale(0).setAlpha(0);
 
     this.tweens.add({ targets: gradeObj, scaleX: 1, scaleY: 1, alpha: 1, duration: 500, delay: 300, ease: 'Back.easeOut' });
@@ -118,16 +120,15 @@ export class GameOverScene extends Phaser.Scene {
       }
     });
 
-    // ── 콘텐츠 패널 배경 ─────────────────────────────────
-    this.add.rectangle(CX, CONTENT_T + CONTENT_H / 2, W - 16, CONTENT_H, 0x13102a)
-      .setStrokeStyle(2, 0x2a2448);
+    // ── 콘텐츠 패널 배경 (포켓몬 스타일) ─────────────────────────────────
+    PokeUI.panel(this, CX, CONTENT_T + CONTENT_H / 2, W - 16, CONTENT_H, PokePalette.panelBg);
 
     // 콘텐츠를 두 섹션으로 나눔: 스탯 + 무기 딜
     const SECTION_SPLIT = CONTENT_T + CONTENT_H * 0.55;
 
     // ── 스탯 섹션 ─────────────────────────────────────────
     this.add.text(CX, CONTENT_T + 10, '─  결과  ─', {
-      fontSize: '12px', color: '#556688',
+      fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textGray,
     }).setOrigin(0.5, 0);
 
     const statData: { icon: string; label: string; value: string; isRecord?: boolean }[] = [
@@ -148,25 +149,23 @@ export class GameOverScene extends Phaser.Scene {
     statData.forEach((s, i) => {
       const y = STAT_START + i * STAT_GAP;
       this.add.text(LX, y, `${s.icon}  ${s.label}`, {
-        fontSize: '12px', color: '#8899bb',
+        fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textGray,
       }).setOrigin(0, 0.5);
       this.add.text(RX, y, s.value, {
-        fontSize: '14px', color: '#ddeeff', fontStyle: 'bold',
+        fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textDark, fontStyle: 'bold',
       }).setOrigin(1, 0.5);
       if (s.isRecord) {
         this.add.text(CX, y, 'NEW!', {
-          fontSize: '10px', color: '#ff6600', fontStyle: 'bold',
-          stroke: '#000000', strokeThickness: 2,
+          fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.btnDanger === 0xcc3311 ? '#cc3311' : '#cc3311', fontStyle: 'bold',
         }).setOrigin(0.5);
       }
     });
 
     // ── 무기 딜 섹션 ─────────────────────────────────────
-    this.add.graphics().lineStyle(1, 0x2a3a5a, 0.8)
-      .lineBetween(LX, SECTION_SPLIT, RX, SECTION_SPLIT);
+    PokeUI.divider(this, LX, SECTION_SPLIT, RX);
 
     this.add.text(LX, SECTION_SPLIT + 8, '무기 딜 순위', {
-      fontSize: '11px', color: '#556688',
+      fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray,
     }).setOrigin(0, 0);
 
     if (weaponDamageLog && totalDmg > 0) {
@@ -180,18 +179,18 @@ export class GameOverScene extends Phaser.Scene {
         const barColor = [0xffcc00, 0xcccccc, 0xcc8844, 0x6688aa][i];
 
         // 배경 바
-        this.add.rectangle(LX + barMaxW / 2, ry + 10, barMaxW, 14, 0x1a1830).setOrigin(0.5);
+        this.add.rectangle(LX + barMaxW / 2, ry + 10, barMaxW, 12, PokePalette.hpBg).setOrigin(0.5);
         // 피해량 바
-        const bar = this.add.rectangle(LX, ry + 10, 0, 14, barColor, 0.7).setOrigin(0, 0.5);
+        const bar = this.add.rectangle(LX, ry + 10, 0, 12, barColor, 0.85).setOrigin(0, 0.5);
         this.tweens.add({ targets: bar, width: barW, duration: 500, delay: 200 + i * 80, ease: 'Quad.easeOut' });
 
         // 이름
         this.add.text(LX + 4, ry + 2, `${medals[i]}  ${name}`, {
-          fontSize: '11px', color: '#ccddee',
+          fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textDark,
         }).setOrigin(0, 0);
         // 피해량 + 퍼센트
         this.add.text(RX, ry + 2, `${dmg.toLocaleString()}  (${Math.round(pct * 100)}%)`, {
-          fontSize: '10px', color: '#9aaacc',
+          fontFamily: POKE_FONT, fontSize: '8px', color: PokePalette.textGray,
         }).setOrigin(1, 0);
       });
     } else {
@@ -205,7 +204,7 @@ export class GameOverScene extends Phaser.Scene {
     const goldY = FOOTER_T + 10;
 
     this.add.text(CX, goldY, `보유 골드  ✦  ${totalGold.toLocaleString()} G`, {
-      fontSize: '13px', color: '#c8a020', fontStyle: 'bold',
+      fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textGold, fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
     // 스테이지 해금 배너
@@ -213,10 +212,10 @@ export class GameOverScene extends Phaser.Scene {
     if (stageCleared && stageId < 17) {
       const uy = goldY + 26;
       unlockH = 26;
-      const unlockBg = this.add.rectangle(CX, uy, W - 40, 24, 0x1a4020, 0.9)
-        .setStrokeStyle(1, 0x44cc66);
+      const unlockBg = this.add.rectangle(CX, uy, W - 40, 24, 0xe8f0e8)
+        .setStrokeStyle(1, 0x228833);
       this.add.text(CX, uy, `🔓  STAGE ${stageId + 1}  해금!`, {
-        fontSize: '12px', color: '#88ffaa', fontStyle: 'bold',
+        fontFamily: POKE_FONT, fontSize: '10px', color: '#228833', fontStyle: 'bold',
       }).setOrigin(0.5);
       this.tweens.add({ targets: unlockBg, scaleX: { from: 0, to: 1 }, duration: 450, ease: 'Back.easeOut', delay: 600 });
     }
@@ -225,29 +224,26 @@ export class GameOverScene extends Phaser.Scene {
     if (newStageRecord) {
       const recY = goldY + 26 + unlockH;
       this.add.text(CX, recY, `🏆  최고 스테이지 신기록!  STAGE ${stageId}`, {
-        fontSize: '11px', color: '#ffd700', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: 2,
+        fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGold, fontStyle: 'bold',
       }).setOrigin(0.5, 0);
     }
 
     // ── 버튼 ─────────────────────────────────────────────
-    const makeBtn = (x: number, label: string, fill: number, border: number, textColor: string, onTap: () => void) => {
-      const bg = this.add.rectangle(x, BTN_Y, BTN_W, BTN_H, fill)
-        .setStrokeStyle(2, border)
-        .setInteractive({ useHandCursor: true });
+    const makeBtn = (x: number, label: string, fill: number, hoverFill: number, textColor: string, onTap: () => void) => {
+      const { bg, hit } = PokeUI.button(this, x, BTN_Y, BTN_W, BTN_H, fill);
       const txt = this.add.text(x, BTN_Y, label, {
-        fontSize: '14px', color: textColor, fontStyle: 'bold',
+        fontFamily: POKE_FONT, fontSize: '12px', color: textColor, padding: { top: 4 },
       }).setOrigin(0.5);
-      bg.on('pointerover', () => { bg.setFillStyle(border); txt.setColor('#ffffff'); });
-      bg.on('pointerout',  () => { bg.setFillStyle(fill);   txt.setColor(textColor); });
-      bg.on('pointerdown', onTap);
+      hit.on('pointerover', () => bg.clear().fillStyle(hoverFill).fillRect(x - BTN_W/2, BTN_Y - BTN_H/2, BTN_W, BTN_H));
+      hit.on('pointerout',  () => bg.clear().fillStyle(fill).fillRect(x - BTN_W/2, BTN_Y - BTN_H/2, BTN_W, BTN_H));
+      hit.on('pointerdown', onTap);
     };
 
-    makeBtn(CX - BTN_W / 2 - 6, '▶ 다시 도전', 0x1a3820, 0x44aa66, '#88ffaa', () => {
+    makeBtn(CX - BTN_W / 2 - 6, '▶ 다시 도전', PokePalette.btnPrimary, 0x3366cc, PokePalette.textWhite, () => {
       this.cameras.main.fadeOut(300, 12, 10, 24);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('GameScene', { stageId }));
     });
-    makeBtn(CX + BTN_W / 2 + 6, '⌂ 타이틀로', 0x18181a, 0x445566, '#aabbcc', () => {
+    makeBtn(CX + BTN_W / 2 + 6, '⌂ 타이틀로', PokePalette.btnNormal, PokePalette.btnHover, PokePalette.textDark, () => {
       this.cameras.main.fadeOut(300, 12, 10, 24);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
     });

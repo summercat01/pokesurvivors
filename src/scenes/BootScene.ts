@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { POKE_FONT, PokePalette } from '../ui/PokeUI';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -6,15 +7,18 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // 로딩 바 배경
+    // 로딩 바 배경 (포켓몬 스타일)
     const { width, height } = this.scale;
-    const barBg = this.add.rectangle(width / 2, height / 2, 300, 20, 0x333333);
-    const bar = this.add.rectangle(width / 2 - 150, height / 2, 0, 20, 0xffcc00);
+    this.add.rectangle(width / 2, height / 2, width, height, 0xe8e8d8);
+    const barBg = this.add.rectangle(width / 2, height / 2, 304, 24, PokePalette.panelBorder);
+    const barFill = this.add.rectangle(width / 2 - 150, height / 2, 300, 20, PokePalette.panelBg);
+    barFill.setOrigin(0, 0.5);
+    const bar = this.add.rectangle(width / 2 - 150, height / 2, 0, 20, PokePalette.btnPrimary);
     bar.setOrigin(0, 0.5);
 
-    const loadText = this.add.text(width / 2, height / 2 - 30, '로딩 중...', {
-      fontSize: '18px',
-      color: '#ffffff',
+    const loadText = this.add.text(width / 2, height / 2 - 34, '로딩 중...', {
+      fontFamily: POKE_FONT, fontSize: '14px',
+      color: PokePalette.textDark,
     }).setOrigin(0.5);
 
     this.load.on('progress', (value: number) => {

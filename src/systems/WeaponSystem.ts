@@ -35,6 +35,10 @@ export class WeaponSystem {
   private rotatingBeamAngles: Map<number, number> = new Map();
   private rotatingBeamGfx: Map<number, Phaser.GameObjects.Graphics> = new Map();
   private rotatingBeamHitCooldowns: Map<number, number> = new Map();
+  private rotatingBeamParticleTick: Map<number, number> = new Map();
+
+  // zone 파티클 이미터
+  private zoneParticleEmitters: Map<number, Phaser.GameObjects.Particles.ParticleEmitter> = new Map();
 
   // 파티클 이팩트 추적
   private trailEmitters: Set<Phaser.GameObjects.Particles.ParticleEmitter> = new Set();
@@ -144,12 +148,14 @@ export class WeaponSystem {
       const ex = proj.x, ey = proj.y, er = proj.explosionRadius;
       const color = TYPE_COLORS[projType] ?? 0xffffff;
       const flash = this.ctx.scene.add.graphics();
+      flash.setBlendMode(Phaser.BlendModes.ADD);
       this.ctx.scene.cameras.main.ignore(flash);
       flash.fillStyle(color, 0.7);
       flash.fillCircle(ex, ey, er);
       flash.lineStyle(2, color, 1.0);
       flash.strokeCircle(ex, ey, er);
       this.ctx.scene.time.delayedCall(180, () => flash.destroy());
+      this.spawnHitBurst(ex, ey, color, Math.round(er / 6 + 10));
       (this.ctx.enemies.getChildren() as Enemy[]).forEach(e => {
         if (!e.active || e.isDead() || e === enemy) return;
         if (Phaser.Math.Distance.Between(ex, ey, e.x, e.y) <= er) {
@@ -218,6 +224,10 @@ export class WeaponSystem {
     this.rotatingBeamGfx.clear();
     this.rotatingBeamAngles.clear();
     this.rotatingBeamHitCooldowns.clear();
+    this.rotatingBeamParticleTick.clear();
+
+    this.zoneParticleEmitters.forEach(e => { if (e.scene) e.destroy(); });
+    this.zoneParticleEmitters.clear();
 
     this.trailEmitters.forEach(e => { if (e.scene) e.destroy(); });
     this.trailEmitters.clear();
@@ -345,6 +355,7 @@ export class WeaponSystem {
 
     const color = TYPE_COLORS[weapon.type] ?? 0xffffff;
     const gfx   = this.ctx.scene.add.graphics();
+    gfx.setBlendMode(Phaser.BlendModes.ADD);
     this.ctx.scene.cameras.main.ignore(gfx);
 
     gfx.fillStyle(color, 0.40);
@@ -377,6 +388,7 @@ export class WeaponSystem {
       const diff  = Phaser.Math.Angle.Wrap(angle - baseAngle);
       if (Math.abs(diff) > halfAngle) return;
       this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py });
+      this.spawnHitBurst(enemy.x, enemy.y, color, 5);
     });
   }
 
@@ -397,6 +409,7 @@ export class WeaponSystem {
 
     const color = TYPE_COLORS[weapon.type] ?? 0xffffff;
     const gfx   = this.ctx.scene.add.graphics();
+    gfx.setBlendMode(Phaser.BlendModes.ADD);
     this.ctx.scene.cameras.main.ignore(gfx);
 
     // 빔 사각형 (회전된 좌표로 그리기)
@@ -444,6 +457,7 @@ export class WeaponSystem {
       if (along < 0 || along > length) return;
       if (perp > halfW + 14) return;
       this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, weapon.knockbackMult ?? 0.5);
+      this.spawnHitBurst(enemy.x, enemy.y, color, 5);
     });
   }
 
@@ -478,6 +492,7 @@ export class WeaponSystem {
     const splashR = weapon.explosionRadius ?? 0;
 
     const gfx = this.ctx.scene.add.graphics();
+    gfx.setBlendMode(Phaser.BlendModes.ADD);
     this.ctx.scene.cameras.main.ignore(gfx);
 
     let lx = this.ctx.player.x;
@@ -607,6 +622,7 @@ export class WeaponSystem {
     let gfx = this.rotatingBeamGfx.get(slotIdx);
     if (!gfx) {
       gfx = this.ctx.scene.add.graphics();
+      gfx.setBlendMode(Phaser.BlendModes.ADD);
       this.ctx.scene.cameras.main.ignore(gfx);
       this.rotatingBeamGfx.set(slotIdx, gfx);
     }
@@ -645,6 +661,16 @@ export class WeaponSystem {
       this.rotatingBeamHitCooldowns.set(cdKey, 600);
       this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, 0.3);
     });
+
+    // 빔 끝 파티클 (180ms마다 발사)
+    const ptick = (this.rotatingBeamParticleTick.get(slotIdx) ?? 0) - delta;
+    this.rotatingBeamParticleTick.set(slotIdx, ptick);
+    if (ptick <= 0) {
+      this.rotatingBeamParticleTick.set(slotIdx, 180);
+      const tipX = px + cos * length;
+      const tipY = py + sin * length;
+      this.spawnHitBurst(tipX, tipY, color, 4);
+    }
   }
 
   // ── 낙하 공격 ──
@@ -668,6 +694,7 @@ export class WeaponSystem {
       );
 
       const warn = this.ctx.scene.add.graphics();
+      warn.setBlendMode(Phaser.BlendModes.ADD);
       this.ctx.scene.cameras.main.ignore(warn);
       warn.lineStyle(2, color, 0.8);
       warn.strokeCircle(tx, ty, radius);
@@ -704,8 +731,9 @@ export class WeaponSystem {
     const sourceName = weapon.name;
     const hitSet     = new Set<Enemy>();
     const gfx        = this.ctx.scene.add.graphics();
+    gfx.setBlendMode(Phaser.BlendModes.ADD);
     this.ctx.scene.cameras.main.ignore(gfx);
-    const dummy = { r: 0 };
+    const dummy = { r: 0, lastParticleR: -30 };
     this.ctx.scene.tweens.add({
       targets: dummy,
       r: maxR,
@@ -719,6 +747,17 @@ export class WeaponSystem {
         gfx.strokeCircle(px, py, r);
         gfx.fillStyle(color, alpha * 0.13);
         gfx.fillCircle(px, py, r);
+        // 링 위에 파티클 (30px 간격)
+        if (r - dummy.lastParticleR > 30) {
+          dummy.lastParticleR = r;
+          const pCount = Math.round(r * 0.2 + 4);
+          for (let i = 0; i < pCount; i++) {
+            const a  = Math.random() * Math.PI * 2;
+            const px2 = px + Math.cos(a) * r;
+            const py2 = py + Math.sin(a) * r;
+            this.spawnHitBurst(px2, py2, color, 2);
+          }
+        }
         (this.ctx.enemies.getChildren() as Enemy[]).forEach(e => {
           if (!e.active || e.isDead() || hitSet.has(e)) return;
           const d = Phaser.Math.Distance.Between(px, py, e.x, e.y);
@@ -747,30 +786,65 @@ export class WeaponSystem {
     const endY   = this.ctx.player.y + Math.sin(angle) * range;
     const gfx    = this.ctx.scene.add.graphics();
     this.ctx.scene.cameras.main.ignore(gfx);
-    gfx.fillStyle(color, 0.92);
+    // 글로우 레이어
+    gfx.fillStyle(color, 0.25);
+    gfx.fillCircle(0, 0, 16);
+    gfx.fillStyle(color, 0.7);
     gfx.fillCircle(0, 0, 10);
+    gfx.fillStyle(0xffffff, 0.85);
+    gfx.fillCircle(0, 0, 5);
     const pos     = { x: this.ctx.player.x, y: this.ctx.player.y };
     const hitOut  = new Set<Enemy>();
     const hitBack = new Set<Enemy>();
+
+    // 부메랑 꼬리 파티클 이미터
+    const trailEmit = this.ctx.scene.textures.exists('particle_dot')
+      ? this.ctx.scene.add.particles(pos.x, pos.y, 'particle_dot', {
+          speed: { min: 5, max: 25 },
+          lifespan: 200,
+          alpha: { start: 0.5, end: 0 },
+          scale: { start: 0.6, end: 0.05 },
+          frequency: 25,
+          tint: color,
+          blendMode: Phaser.BlendModes.ADD,
+        })
+      : null;
+    if (trailEmit) this.ctx.scene.cameras.main.ignore(trailEmit);
+
     const checkHit = (hitSet: Set<Enemy>) => {
       (this.ctx.enemies.getChildren() as Enemy[]).forEach(e => {
         if (!e.active || e.isDead() || hitSet.has(e)) return;
         if (Phaser.Math.Distance.Between(pos.x, pos.y, e.x, e.y) <= 22) {
           hitSet.add(e);
           this.applyDamageToEnemy(e, damage, weapon.type, { x: pos.x, y: pos.y });
+          this.spawnHitBurst(e.x, e.y, color, 5);
         }
       });
     };
     this.ctx.scene.tweens.add({
       targets: pos, x: endX, y: endY,
       duration: 480, ease: 'Quad.easeOut',
-      onUpdate: () => { gfx.setPosition(pos.x, pos.y); checkHit(hitOut); },
+      onUpdate: () => {
+        gfx.setPosition(pos.x, pos.y);
+        trailEmit?.setPosition(pos.x, pos.y);
+        checkHit(hitOut);
+      },
       onComplete: () => {
         this.ctx.scene.tweens.add({
           targets: pos, x: this.ctx.player.x, y: this.ctx.player.y,
           duration: 360, ease: 'Quad.easeIn',
-          onUpdate: () => { gfx.setPosition(pos.x, pos.y); checkHit(hitBack); },
-          onComplete: () => gfx.destroy(),
+          onUpdate: () => {
+            gfx.setPosition(pos.x, pos.y);
+            trailEmit?.setPosition(pos.x, pos.y);
+            checkHit(hitBack);
+          },
+          onComplete: () => {
+            gfx.destroy();
+            if (trailEmit) {
+              trailEmit.stop();
+              this.ctx.scene.time.delayedCall(300, () => { if (trailEmit.scene) trailEmit.destroy(); });
+            }
+          },
         });
       },
     });
@@ -792,6 +866,7 @@ export class WeaponSystem {
       ) as Projectile | null;
       if (!proj) continue;
       proj.fire(damage, speed, angle, duration, pierce);
+      proj.sourceName = weapon.name;
       this.ctx.scene.cameras.main.ignore(proj);
       this.attachTrail(proj, TYPE_COLORS[weapon.type] ?? 0xffffff);
     }
@@ -811,6 +886,7 @@ export class WeaponSystem {
       const tx = this.ctx.player.x + Math.cos(a) * d;
       const ty = this.ctx.player.y + Math.sin(a) * d;
       const gfx = this.ctx.scene.add.graphics();
+      gfx.setBlendMode(Phaser.BlendModes.ADD);
       this.ctx.scene.cameras.main.ignore(gfx);
       let elapsed  = 0;
       let triggered = false;
@@ -840,6 +916,7 @@ export class WeaponSystem {
               flash.fillStyle(color, 0.88);
               flash.fillCircle(tx, ty, radius * 1.6);
               this.ctx.scene.time.delayedCall(150, () => flash.destroy());
+              this.spawnHitBurst(tx, ty, color, Math.round(radius / 5 + 8));
               this.currentDamageSource = sourceName;
               (this.ctx.enemies.getChildren() as Enemy[]).forEach(e2 => {
                 if (!e2.active || e2.isDead()) return;
@@ -897,6 +974,29 @@ export class WeaponSystem {
     zoneData.graphic.fillCircle(px, py, radius);
     zoneData.graphic.lineStyle(2, color, 0.55);
     zoneData.graphic.strokeCircle(px, py, radius);
+
+    // 장판 내 부유 파티클 이미터 (처음 생성 시 한 번만)
+    if (!this.zoneParticleEmitters.has(slotIdx) && this.ctx.scene.textures.exists('particle_dot')) {
+      const zoneEmit = this.ctx.scene.add.particles(px, py, 'particle_dot', {
+        speed: { min: 5, max: 18 },
+        lifespan: { min: 600, max: 1200 },
+        alpha: { start: 0.5, end: 0 },
+        scale: { start: 0.45, end: 0.05 },
+        frequency: 120,
+        tint: color,
+        blendMode: Phaser.BlendModes.ADD,
+        // 반경 내 랜덤 방출
+        emitZone: {
+          type: 'random',
+          source: new Phaser.Geom.Circle(0, 0, radius * 0.85),
+        } as any,
+        gravityY: -20,
+      });
+      this.ctx.scene.cameras.main.ignore(zoneEmit);
+      this.zoneParticleEmitters.set(slotIdx, zoneEmit);
+    }
+    // 이미터 위치를 플레이어 중심으로 갱신
+    this.zoneParticleEmitters.get(slotIdx)?.setPosition(px, py);
 
     const interval = weapon.zoneDamageInterval ?? 1000;
     zoneData.damageTimer += delta;
