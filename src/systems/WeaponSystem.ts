@@ -315,7 +315,7 @@ export class WeaponSystem {
 
     if (knockbackSrc && enemy.active && !enemy.isDead() && !enemy.ignoreKnockback) {
       const kbAngle = Phaser.Math.Angle.Between(knockbackSrc.x, knockbackSrc.y, enemy.x, enemy.y);
-      const kb = this.ctx.player.stats.knockback * kbMult;
+      const kb = this.ctx.player.stats.knockback * kbMult * (1 - enemy.knockbackResist);
       const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.x += Math.cos(kbAngle) * kb;
       body.velocity.y += Math.sin(kbAngle) * kb;

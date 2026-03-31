@@ -18,6 +18,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   goldValue: number;
   contactDamage?: number;  // 설정 시 접촉 데미지로 사용 (기본값: 게임씬 수식)
   ignoreKnockback: boolean = false; // 넉백 무시 여부
+  knockbackResist: number = 0;      // 넉백 감소율 (0~1, 1이면 완전 무시)
   movementOverride: { vx: number; vy: number } | null = null; // 보스 패턴용 이동 오버라이드
   private tintTimer: Phaser.Time.TimerEvent | null = null;
   constructor(
@@ -36,6 +37,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       goldValue?: number;
       contactDamage?: number;
       ignoreKnockback?: boolean;
+      knockbackResist?: number;
     }
   ) {
     super(scene, x, y, texture);
@@ -54,6 +56,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.goldValue    = config.goldValue ?? (this.isBoss ? 5 : 1);
     this.contactDamage = config.contactDamage;
     this.ignoreKnockback = config.ignoreKnockback ?? false;
+    this.knockbackResist = config.knockbackResist ?? 0;
 
     this.setScale(this.isBoss ? 1.6 : this.isElite ? 1.0 : 0.75);
     this.setCollideWorldBounds(true);

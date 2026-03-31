@@ -104,13 +104,33 @@ export class BossPatternSystem {
       }
     } else if (this.state === 'charging') {
       boss.movementOverride = { vx: 0, vy: 0 };
-      if (this.indicatorGfx) {
+      if (this.indicatorGfx && this.rollTarget) {
         const r = 20 + (this.timer / 1200) * 60;
         this.indicatorGfx.clear();
+        // 충전 원
         this.indicatorGfx.lineStyle(3, 0xff6600, 0.7);
         this.indicatorGfx.strokeCircle(boss.x, boss.y, r);
         this.indicatorGfx.fillStyle(0xff6600, 0.1);
         this.indicatorGfx.fillCircle(boss.x, boss.y, r);
+        // 돌진 방향 화살표
+        const a = Phaser.Math.Angle.Between(boss.x, boss.y, this.rollTarget.x, this.rollTarget.y);
+        const lineLen = 120;
+        const ex = boss.x + Math.cos(a) * lineLen;
+        const ey = boss.y + Math.sin(a) * lineLen;
+        const progress = this.timer / 1200;
+        this.indicatorGfx.lineStyle(4, 0xff2200, 0.4 + progress * 0.5);
+        this.indicatorGfx.lineBetween(boss.x, boss.y, ex, ey);
+        // 화살촉
+        const headLen = 18;
+        this.indicatorGfx.fillStyle(0xff2200, 0.6 + progress * 0.3);
+        this.indicatorGfx.fillTriangle(
+          ex, ey,
+          ex - Math.cos(a - 0.4) * headLen, ey - Math.sin(a - 0.4) * headLen,
+          ex - Math.cos(a + 0.4) * headLen, ey - Math.sin(a + 0.4) * headLen,
+        );
+        // 목표 지점 표시
+        this.indicatorGfx.lineStyle(2, 0xff2200, 0.5);
+        this.indicatorGfx.strokeCircle(this.rollTarget.x, this.rollTarget.y, 14);
       }
       if (this.timer >= 1200) {
         this.state = 'rolling'; this.timer = 0;

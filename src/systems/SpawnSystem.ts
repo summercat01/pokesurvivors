@@ -93,12 +93,13 @@ export class SpawnSystem {
     const bossConfig = wave === 10 ? stage.boss10 : stage.boss20;
 
     const boss = new Enemy(this.ctx.scene, x, y, `pokemon_${bossConfig.id}`, {
-      hp:           Math.round(bossConfig.hp * stage.difficulty),
-      moveSpeed:    bossConfig.moveSpeed,
-      exp:          bossConfig.exp,
-      isBoss:       true,
-      pokemonTypes: bossConfig.types,
-      goldValue:    bossConfig.goldValue,
+      hp:              Math.round(bossConfig.hp * stage.difficulty),
+      moveSpeed:       bossConfig.moveSpeed,
+      exp:             bossConfig.exp,
+      isBoss:          true,
+      pokemonTypes:    bossConfig.types,
+      goldValue:       bossConfig.goldValue,
+      knockbackResist: bossConfig.id === '143' ? 0.7 : 0,  // 잠만보: 넉백 70% 감소
     });
     this.ctx.enemies.add(boss);
     this.ctx.scene.cameras.main.ignore(boss);
