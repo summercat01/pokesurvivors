@@ -80,6 +80,11 @@ export class WeaponSystem {
     this.tickOrbitCooldowns(delta);
     this.tickRotatingBeamCooldowns(delta);
     this.steerHomingProjectiles();
+
+    // 소멸된 trail 이미터 Set에서 주기적 정리 (메모리 누수 방지)
+    if (this.trailEmitters.size > 30) {
+      this.trailEmitters.forEach(e => { if (!e.scene) this.trailEmitters.delete(e); });
+    }
   }
 
   // ===== 궤도 구체 생성 (무기 추가 시 호출) =====
@@ -245,21 +250,19 @@ export class WeaponSystem {
       target.x, target.y
     );
 
-    const count  = weapon.projectileCount + this.ctx.player.stats.projectileCount - 1;
-    const spread = weapon.spreadAngle;
+    const count    = weapon.projectileCount + this.ctx.player.stats.projectileCount - 1;
+    const spread   = weapon.spreadAngle;
+    const speedMult = this.ctx.player.stats.projectileSpeed / 300;
+    const speed    = Math.round(weapon.projectileSpeed * speedMult);
+    const baseDur  = weapon.duration + (this.ctx.player.stats.projectileDuration - 2) * 1000;
+    const duration = Math.round(baseDur * this.ctx.player.stats.projectileRange);
+    const damage   = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const pierce   = weapon.pierce ?? 0;
+    const behavior = weapon.behavior ?? 'projectile';
 
     for (let i = 0; i < count; i++) {
       const angleOffset = count > 1 ? (i / (count - 1) - 0.5) * spread : 0;
       const angle       = baseAngle + angleOffset;
-
-      const speedMult = this.ctx.player.stats.projectileSpeed / 300;
-      const speed    = Math.round(weapon.projectileSpeed * speedMult);
-      const baseDur  = weapon.duration + (this.ctx.player.stats.projectileDuration - 2) * 1000;
-      const duration = Math.round(baseDur * this.ctx.player.stats.projectileRange);
-      const damage   = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
-
-      const pierce   = weapon.pierce ?? 0;
-      const behavior = weapon.behavior ?? 'projectile';
 
       const proj = this.ctx.projectiles.get(
         this.ctx.player.x, this.ctx.player.y, weapon.textureKey
