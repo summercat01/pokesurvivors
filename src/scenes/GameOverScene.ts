@@ -105,7 +105,7 @@ export class GameOverScene extends Phaser.Scene {
     const BADGE_X = W - 38;
     const badgeG = this.add.graphics();
     badgeG.fillStyle(PokePalette.panelBorder); badgeG.fillRect(BADGE_X - 21, HEADER_CY - 21, 42, 42);
-    badgeG.fillStyle(parseInt(gradeBg.toString(16).padStart(6, '0'), 16) || gradeBg);
+    badgeG.fillStyle(gradeBg);
     badgeG.fillRect(BADGE_X - 20, HEADER_CY - 20, 40, 40);
     const gradeObj = this.add.text(BADGE_X, HEADER_CY, grade, {
       fontFamily: POKE_FONT, fontSize: '20px', color: gradeColor, fontStyle: 'bold',
