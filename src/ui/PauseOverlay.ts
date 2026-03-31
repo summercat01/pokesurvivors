@@ -207,18 +207,18 @@ export class PauseOverlay {
     resumeBg.on('pointerdown',  () => { resumeBg.setFillStyle(PokePalette.btnPressed); this.callbacks.onResume(); });
     resumeBg.on('pointerup',    () => resumeBg.setFillStyle(0x3366cc));
 
-    const titleBg = this.scene.add.rectangle(titleX, BTN_Y, BTN_W2, BTN_H2, PokePalette.btnNormal)
+    const titleBg = this.scene.add.rectangle(titleX, BTN_Y, BTN_W2, BTN_H2, 0x445566)
       .setScrollFactor(0).setDepth(D + 2).setVisible(false).setInteractive({ useHandCursor: true });
     this.overlayItems.push(titleBg);
     const titleTxt = this.scene.add.text(titleX, BTN_Y, '⌂  메인으로', {
-      fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textDark, padding: { top: 4 },
+      fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textWhite, padding: { top: 4 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
     this.overlayItems.push(titleTxt);
 
-    titleBg.on('pointerover',  () => { titleBg.setFillStyle(PokePalette.btnHover); titleTxt.setColor('#003399'); });
-    titleBg.on('pointerout',   () => { titleBg.setFillStyle(PokePalette.btnNormal); titleTxt.setColor(PokePalette.textDark); });
-    titleBg.on('pointerdown',  () => { titleBg.setFillStyle(PokePalette.btnPressed); this.callbacks.onQuit(); });
-    titleBg.on('pointerup',    () => titleBg.setFillStyle(PokePalette.btnHover));
+    titleBg.on('pointerover',  () => { titleBg.setFillStyle(0x556677); titleTxt.setColor(PokePalette.textWhite); });
+    titleBg.on('pointerout',   () => { titleBg.setFillStyle(0x445566); titleTxt.setColor(PokePalette.textWhite); });
+    titleBg.on('pointerdown',  () => { titleBg.setFillStyle(0x334455); this.callbacks.onQuit(); });
+    titleBg.on('pointerup',    () => titleBg.setFillStyle(0x556677));
 
     // 상성표 버튼
     const matchupBtnY = BTN_Y + BTN_H2 / 2 + BTN_GAP + 18;
