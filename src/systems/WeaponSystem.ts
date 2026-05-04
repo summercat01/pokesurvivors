@@ -2,9 +2,10 @@ import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
-import { TYPE_COLORS, isSuperEffective, getTypeMultiplier } from '../data/weapons';
+import { TYPE_COLORS } from '../data/weapons';
 import type { WeaponConfig } from '../data/weapons';
 import type { PokemonType } from '../types';
+import { DamageCalculator } from './DamageCalculator';
 
 export interface WeaponContext {
   scene: Phaser.Scene;
@@ -16,13 +17,13 @@ export interface WeaponContext {
 
 export class WeaponSystem {
   private ctx: WeaponContext;
+  private dmg: DamageCalculator;
 
   // 쿨다운 (인덱스 = 슬롯 번호)
   weaponCooldowns: number[] = [];
 
-  // 딜 추적
-  private currentDamageSource = '';
-  readonly weaponDamageLog: Map<string, number> = new Map();
+  /** 외부 접근용 딜 로그 (GameScene에서 GameOverScene으로 전달) */
+  get weaponDamageLog() { return this.dmg.damageLog; }
 
   // orbit 상태
   private orbitOrbs: Map<number, { graphics: Phaser.GameObjects.Graphics[]; angle: number }> = new Map();
@@ -45,13 +46,18 @@ export class WeaponSystem {
 
   constructor(ctx: WeaponContext) {
     this.ctx = ctx;
+    this.dmg = new DamageCalculator({
+      scene: ctx.scene,
+      player: ctx.player,
+      onEnemyKilled: ctx.onEnemyKilled,
+    });
   }
 
   // ===== 매 프레임 업데이트 =====
   update(delta: number, weapons: WeaponConfig[]) {
     weapons.forEach((weapon, idx) => {
       const behavior = weapon.behavior ?? 'projectile';
-      this.currentDamageSource = weapon.name;
+      this.dmg.currentSource = weapon.name;
 
       // 매 프레임 업데이트 (쿨다운 게이트 없음)
       if (behavior === 'orbit')         { this.updateOrbit(weapon, idx, delta);        return; }
@@ -75,7 +81,7 @@ export class WeaponSystem {
         }
       }
     });
-    this.currentDamageSource = '';
+    this.dmg.currentSource = '';
 
     this.tickOrbitCooldowns(delta);
     this.tickRotatingBeamCooldowns(delta);
@@ -142,8 +148,8 @@ export class WeaponSystem {
     proj.hitEnemies.add(uid);
 
     const projType = proj.texture.key.replace('proj_', '') as PokemonType;
-    this.currentDamageSource = proj.sourceName;
-    this.applyDamageToEnemy(enemy, proj.damage, projType, { x: this.ctx.player.x, y: this.ctx.player.y });
+    this.dmg.currentSource = proj.sourceName;
+    this.dmg.apply(enemy, proj.damage, projType, { x: this.ctx.player.x, y: this.ctx.player.y });
     // 피격 파티클 버스트
     const hitColor = TYPE_COLORS[projType] ?? 0xffffff;
     this.spawnHitBurst(enemy.x, enemy.y, hitColor, 6);
@@ -164,7 +170,7 @@ export class WeaponSystem {
       (this.ctx.enemies.getChildren() as Enemy[]).forEach(e => {
         if (!e.active || e.isDead() || e === enemy) return;
         if (Phaser.Math.Distance.Between(ex, ey, e.x, e.y) <= er) {
-          this.applyDamageToEnemy(e, proj.damage, projType, { x: ex, y: ey });
+          this.dmg.apply(e, proj.damage, projType, { x: ex, y: ey });
         }
       });
       proj.kill();
@@ -215,8 +221,7 @@ export class WeaponSystem {
   // ===== 상태 초기화 (재시작 시) =====
   reset() {
     this.weaponCooldowns = [];
-    this.currentDamageSource = '';
-    this.weaponDamageLog.clear();
+    this.dmg.reset();
 
     this.orbitOrbs.forEach(d => d.graphics.forEach(g => g.destroy()));
     this.orbitOrbs.clear();
@@ -256,7 +261,7 @@ export class WeaponSystem {
     const speed    = Math.round(weapon.projectileSpeed * speedMult);
     const baseDur  = weapon.duration + (this.ctx.player.stats.projectileDuration - 2) * 1000;
     const duration = Math.round(baseDur * this.ctx.player.stats.projectileRange);
-    const damage   = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage   = this.dmg.calcWeaponDamage(weapon.damage);
     const pierce   = weapon.pierce ?? 0;
     const behavior = weapon.behavior ?? 'projectile';
 
@@ -277,72 +282,6 @@ export class WeaponSystem {
     }
   }
 
-  // ── 공통 데미지 적용 ──
-  private applyDamageToEnemy(
-    enemy: Enemy,
-    baseDmg: number,
-    attackType: PokemonType,
-    knockbackSrc?: { x: number; y: number },
-    kbMult: number = 1,
-  ) {
-    if (!enemy.active || enemy.isDead()) return;
-
-    const isCrit  = Math.random() < this.ctx.player.stats.critChance;
-    const typeMult = getTypeMultiplier(attackType, enemy.pokemonTypes);
-    let dmg = isCrit
-      ? Math.floor(baseDmg * this.ctx.player.stats.critDamage)
-      : baseDmg;
-    if (typeMult !== 1) dmg = Math.floor(dmg * typeMult);
-    if (typeMult === 0) {
-      // 무효: 데미지 없음, 짧은 '무효' 텍스트만 표시
-      const txt = this.ctx.scene.add.text(enemy.x, enemy.y - 20, '무효', {
-        fontSize: '12px', color: '#888888', stroke: '#000000', strokeThickness: 3,
-      }).setDepth(20);
-      this.ctx.scene.cameras.main.ignore(txt);
-      this.ctx.scene.tweens.add({ targets: txt, y: txt.y - 20, alpha: 0, duration: 600, onComplete: () => txt.destroy() });
-      return;
-    }
-
-    // 무기별 딜 누적
-    if (this.currentDamageSource) {
-      this.weaponDamageLog.set(
-        this.currentDamageSource,
-        (this.weaponDamageLog.get(this.currentDamageSource) ?? 0) + dmg
-      );
-    }
-
-    enemy.takeDamage(dmg);
-
-    if (knockbackSrc && enemy.active && !enemy.isDead() && !enemy.ignoreKnockback) {
-      const kbAngle = Phaser.Math.Angle.Between(knockbackSrc.x, knockbackSrc.y, enemy.x, enemy.y);
-      const kb = this.ctx.player.stats.knockback * kbMult * (1 - enemy.knockbackResist);
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
-      body.velocity.x += Math.cos(kbAngle) * kb;
-      body.velocity.y += Math.sin(kbAngle) * kb;
-    }
-
-    const superEff = typeMult >= 2;
-    const notEff   = typeMult <= 0.5;
-    const color = isCrit ? '#ffdd00' : superEff ? '#ff6600' : notEff ? '#aaaaaa' : '#ffffff';
-    const suffix = typeMult === 4 ? '▲▲' : superEff ? '▲' : notEff ? '▼' : '';
-    const label = isCrit ? `${dmg}!` : `${dmg}${suffix}`;
-    const dmgText = this.ctx.scene.add.text(enemy.x, enemy.y - 20, label, {
-      fontSize: isCrit ? '16px' : superEff ? '15px' : '13px',
-      color,
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setDepth(20);
-    this.ctx.scene.cameras.main.ignore(dmgText);
-    this.ctx.scene.tweens.add({
-      targets: dmgText,
-      y: dmgText.y - 25,
-      alpha: 0,
-      duration: 700,
-      onComplete: () => dmgText.destroy(),
-    });
-
-    if (enemy.isDead()) this.ctx.onEnemyKilled(enemy);
-  }
 
   // ── 근접 공격 ──
   private fireMelee(weapon: WeaponConfig) {
@@ -381,7 +320,7 @@ export class WeaponSystem {
       onComplete: () => gfx.destroy(),
     });
 
-    const damage = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage = this.dmg.calcWeaponDamage(weapon.damage);
     this.ctx.enemies.getChildren().forEach(obj => {
       const enemy = obj as Enemy;
       if (!enemy.active) return;
@@ -390,7 +329,7 @@ export class WeaponSystem {
       const angle = Phaser.Math.Angle.Between(px, py, enemy.x, enemy.y);
       const diff  = Phaser.Math.Angle.Wrap(angle - baseAngle);
       if (Math.abs(diff) > halfAngle) return;
-      this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py });
+      this.dmg.apply(enemy, damage, weapon.type, { x: px, y: py });
       this.spawnHitBurst(enemy.x, enemy.y, color, 5);
     });
   }
@@ -449,7 +388,7 @@ export class WeaponSystem {
       onComplete: () => gfx.destroy(),
     });
 
-    const damage = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage = this.dmg.calcWeaponDamage(weapon.damage);
     this.ctx.enemies.getChildren().forEach(obj => {
       const enemy = obj as Enemy;
       if (!enemy.active) return;
@@ -459,7 +398,7 @@ export class WeaponSystem {
       const perp  = Math.abs(-dx * sin + dy * cos);
       if (along < 0 || along > length) return;
       if (perp > halfW + 14) return;
-      this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, weapon.knockbackMult ?? 0.5);
+      this.dmg.apply(enemy, damage, weapon.type, { x: px, y: py }, weapon.knockbackMult ?? 0.5);
       this.spawnHitBurst(enemy.x, enemy.y, color, 5);
     });
   }
@@ -468,7 +407,7 @@ export class WeaponSystem {
   private fireLightning(weapon: WeaponConfig) {
     const chainCount = weapon.lightningChainCount ?? 3;
     const chainRange = (weapon.lightningRange ?? 200) * (this.ctx.player.stats.projectileRange ?? 1);
-    const damage     = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage     = this.dmg.calcWeaponDamage(weapon.damage);
 
     const hit: Enemy[] = [];
     let fromX = this.ctx.player.x;
@@ -526,7 +465,7 @@ export class WeaponSystem {
     hit.forEach((e, i) => {
       const dmgMult  = Math.pow(0.8, i);
       const chainDmg = Math.floor(damage * dmgMult);
-      this.applyDamageToEnemy(e, chainDmg, weapon.type, { x: this.ctx.player.x, y: this.ctx.player.y });
+      this.dmg.apply(e, chainDmg, weapon.type, { x: this.ctx.player.x, y: this.ctx.player.y });
       this.spawnHitBurst(e.x, e.y, color, 8);
 
       // 체인 스플래시: 각 체인 지점 주변 범위 피해
@@ -537,7 +476,7 @@ export class WeaponSystem {
           if (!splash.active || hit.includes(splash)) return;
           const d = Phaser.Math.Distance.Between(e.x, e.y, splash.x, splash.y);
           if (d <= splashR) {
-            this.applyDamageToEnemy(splash, splashDmg, weapon.type);
+            this.dmg.apply(splash, splashDmg, weapon.type);
           }
         });
 
@@ -575,7 +514,7 @@ export class WeaponSystem {
 
     const radius = (weapon.orbitRadius ?? 110) * (this.ctx.player.stats.projectileRange ?? 1);
     const count  = orbData.graphics.length;
-    const damage = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage = this.dmg.calcWeaponDamage(weapon.damage);
 
     orbData.graphics.forEach((g, i) => {
       const a  = orbData!.angle + (i / count) * Math.PI * 2;
@@ -592,7 +531,7 @@ export class WeaponSystem {
         const cdKey = slotIdx * 1000000 + enemy.uid;
         if ((this.orbitHitCooldowns.get(cdKey) ?? 0) > 0) return;
 
-        this.applyDamageToEnemy(enemy, damage, weapon.type, { x: ox, y: oy });
+        this.dmg.apply(enemy, damage, weapon.type, { x: ox, y: oy });
         this.orbitHitCooldowns.set(cdKey, 600);
       });
     });
@@ -652,7 +591,7 @@ export class WeaponSystem {
       gfx.fillCircle(cx, cy, r);
     }
 
-    const damage = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage = this.dmg.calcWeaponDamage(weapon.damage);
     (this.ctx.enemies.getChildren() as Enemy[]).forEach(enemy => {
       if (!enemy.active || enemy.isDead()) return;
       const dx    = enemy.x - px, dy = enemy.y - py;
@@ -662,7 +601,7 @@ export class WeaponSystem {
       const cdKey = slotIdx * 1000000 + enemy.uid;
       if ((this.rotatingBeamHitCooldowns.get(cdKey) ?? 0) > 0) return;
       this.rotatingBeamHitCooldowns.set(cdKey, 600);
-      this.applyDamageToEnemy(enemy, damage, weapon.type, { x: px, y: py }, 0.3);
+      this.dmg.apply(enemy, damage, weapon.type, { x: px, y: py }, 0.3);
     });
 
     // 빔 끝 파티클 (180ms마다 발사)
@@ -680,7 +619,7 @@ export class WeaponSystem {
   private fireFalling(weapon: WeaponConfig) {
     const count      = (weapon.fallingCount  ?? 3) + (this.ctx.player.stats.projectileCount - 1);
     const radius     = (weapon.fallingRadius ?? 50) * (this.ctx.player.stats.projectileRange ?? 1);
-    const damage     = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage     = this.dmg.calcWeaponDamage(weapon.damage);
     const color      = TYPE_COLORS[weapon.type] ?? 0xffffff;
     const range      = 260;
     const bounds     = this.ctx.scene.physics.world.bounds;
@@ -713,14 +652,14 @@ export class WeaponSystem {
         this.ctx.scene.time.delayedCall(140, () => flash.destroy());
         // 낙하 충격 파티클
         this.spawnHitBurst(tx, ty, color, Math.round(radius / 6 + 6));
-        this.currentDamageSource = sourceName;
+        this.dmg.currentSource = sourceName;
         (this.ctx.enemies.getChildren() as Enemy[]).forEach(e => {
           if (!e.active || e.isDead()) return;
           if (Phaser.Math.Distance.Between(tx, ty, e.x, e.y) <= radius + 16) {
-            this.applyDamageToEnemy(e, damage, weapon.type, { x: tx, y: ty });
+            this.dmg.apply(e, damage, weapon.type, { x: tx, y: ty });
           }
         });
-        this.currentDamageSource = '';
+        this.dmg.currentSource = '';
       });
     }
   }
@@ -729,7 +668,7 @@ export class WeaponSystem {
   private fireNova(weapon: WeaponConfig) {
     const px         = this.ctx.player.x, py = this.ctx.player.y;
     const maxR       = (weapon.meleeRange ?? 170) * (this.ctx.player.stats.projectileRange ?? 1);
-    const damage     = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage     = this.dmg.calcWeaponDamage(weapon.damage);
     const color      = TYPE_COLORS[weapon.type] ?? 0xffffff;
     const sourceName = weapon.name;
     const hitSet     = new Set<Enemy>();
@@ -766,9 +705,9 @@ export class WeaponSystem {
           const d = Phaser.Math.Distance.Between(px, py, e.x, e.y);
           if (d <= r + 16 && d >= r - 32) {
             hitSet.add(e);
-            this.currentDamageSource = sourceName;
-            this.applyDamageToEnemy(e, damage, weapon.type, { x: px, y: py });
-            this.currentDamageSource = '';
+            this.dmg.currentSource = sourceName;
+            this.dmg.apply(e, damage, weapon.type, { x: px, y: py });
+            this.dmg.currentSource = '';
           }
         });
       },
@@ -783,7 +722,7 @@ export class WeaponSystem {
       ? Phaser.Math.Angle.Between(this.ctx.player.x, this.ctx.player.y, target.x, target.y)
       : 0;
     const range  = (weapon.meleeRange ?? 200) * (this.ctx.player.stats.projectileRange ?? 1);
-    const damage = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage = this.dmg.calcWeaponDamage(weapon.damage);
     const color  = TYPE_COLORS[weapon.type] ?? 0xffffff;
     const endX   = this.ctx.player.x + Math.cos(angle) * range;
     const endY   = this.ctx.player.y + Math.sin(angle) * range;
@@ -819,7 +758,7 @@ export class WeaponSystem {
         if (!e.active || e.isDead() || hitSet.has(e)) return;
         if (Phaser.Math.Distance.Between(pos.x, pos.y, e.x, e.y) <= 22) {
           hitSet.add(e);
-          this.applyDamageToEnemy(e, damage, weapon.type, { x: pos.x, y: pos.y });
+          this.dmg.apply(e, damage, weapon.type, { x: pos.x, y: pos.y });
           this.spawnHitBurst(e.x, e.y, color, 5);
         }
       });
@@ -856,7 +795,7 @@ export class WeaponSystem {
   // ── 전방위 산탄 ──
   private fireScatter(weapon: WeaponConfig) {
     const count     = (weapon.projectileCount ?? 8) + (this.ctx.player.stats.projectileCount - 1);
-    const damage    = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage    = this.dmg.calcWeaponDamage(weapon.damage);
     const speedMult = this.ctx.player.stats.projectileSpeed / 300;
     const speed     = Math.round(weapon.projectileSpeed * speedMult);
     const baseDur   = weapon.duration + (this.ctx.player.stats.projectileDuration - 2) * 1000;
@@ -879,7 +818,7 @@ export class WeaponSystem {
   private fireTrap(weapon: WeaponConfig) {
     const count      = (weapon.projectileCount ?? 2) + (this.ctx.player.stats.projectileCount - 1);
     const radius     = (weapon.meleeRange ?? 45) * (this.ctx.player.stats.projectileRange ?? 1);
-    const damage     = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+    const damage     = this.dmg.calcWeaponDamage(weapon.damage);
     const color      = TYPE_COLORS[weapon.type] ?? 0xffffff;
     const lifeMs     = 4500;
     const sourceName = weapon.name;
@@ -920,14 +859,14 @@ export class WeaponSystem {
               flash.fillCircle(tx, ty, radius * 1.6);
               this.ctx.scene.time.delayedCall(150, () => flash.destroy());
               this.spawnHitBurst(tx, ty, color, Math.round(radius / 5 + 8));
-              this.currentDamageSource = sourceName;
+              this.dmg.currentSource = sourceName;
               (this.ctx.enemies.getChildren() as Enemy[]).forEach(e2 => {
                 if (!e2.active || e2.isDead()) return;
                 if (Phaser.Math.Distance.Between(tx, ty, e2.x, e2.y) <= radius + 20) {
-                  this.applyDamageToEnemy(e2, damage, weapon.type, { x: tx, y: ty });
+                  this.dmg.apply(e2, damage, weapon.type, { x: tx, y: ty });
                 }
               });
-              this.currentDamageSource = '';
+              this.dmg.currentSource = '';
             }
           });
         },
@@ -1005,13 +944,13 @@ export class WeaponSystem {
     zoneData.damageTimer += delta;
     if (zoneData.damageTimer >= interval) {
       zoneData.damageTimer -= interval;
-      const damage = Math.floor(weapon.damage * this.ctx.player.stats.attackPower / 10);
+      const damage = this.dmg.calcWeaponDamage(weapon.damage);
       this.ctx.enemies.getChildren().forEach(obj => {
         const enemy = obj as Enemy;
         if (!enemy.active) return;
         const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
         if (dist > radius) return;
-        this.applyDamageToEnemy(enemy, damage, weapon.type, undefined, 0);
+        this.dmg.apply(enemy, damage, weapon.type, undefined, 0);
       });
     }
   }

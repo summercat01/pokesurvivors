@@ -4,9 +4,11 @@ import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
 import { ExpOrb } from '../entities/ExpOrb';
 import { TOP_H, BOT_H, MAP_SCALE, MAX_ENEMIES } from '../constants/layout';
-import { TYPE_KR } from '../constants/typeLabels';
 import { getBgmVolume } from '../lib/storage';
 import { GameHud } from '../ui/GameHud';
+import { JoystickInput } from '../input/JoystickInput';
+import { AudioManager } from '../managers/AudioManager';
+import { ComboSystem } from '../managers/ComboSystem';
 import { PauseOverlay } from '../ui/PauseOverlay';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { PokeballSystem } from '../systems/PokeballSystem';
@@ -33,27 +35,6 @@ import { recordDefeatedId } from '../data/pokedex';
 import { getCurrentUser } from '../lib/auth';
 import { pushLocalToCloud } from '../lib/userDB';
 
-
-// 스테이지별 BGM 키
-const STAGE_BGM: Record<number, string> = {
-   1: 'bgm_stage_1',   // Pallet Town
-   2: 'bgm_stage_2',   // Viridian Forest
-   3: 'bgm_stage_3',   // Route 24
-   4: 'bgm_stage_4',   // Cinnabar Island
-   5: 'bgm_stage_5',   // Surf
-   6: 'bgm_stage_6',   // Pokémon Gym
-   7: 'bgm_stage_7',   // Route 3
-   8: 'bgm_stage_8',   // Rocket Hideout
-   9: 'bgm_stage_9',   // Mt. Moon
-  10: 'bgm_stage_10',  // Victory Road
-  11: 'bgm_stage_11',  // Route 11
-  12: 'bgm_stage_12',  // Lavender Town
-  13: 'bgm_stage_13',  // Pokémon Tower
-  14: 'bgm_stage_14',  // Silph Co.
-  15: 'bgm_stage_15',  // Battle! (Legendary)
-  16: 'bgm_stage_16',  // S.S. Anne
-  17: 'bgm_stage_17',  // Pokémon Mansion
-};
 
 export class GameScene extends Phaser.Scene {
   player!: Player;
@@ -82,10 +63,6 @@ export class GameScene extends Phaser.Scene {
   private isLevelingUp: boolean = false;
   private needsLevelUp: boolean = false;
 
-  // BGM
-  private stageBgmKey: string = '';
-  private bossBgmActive: boolean = false;
-
   // 일시정지
   private isPaused: boolean = false;
 
@@ -98,19 +75,10 @@ export class GameScene extends Phaser.Scene {
   private spawnSystem!: SpawnSystem;
   private bossPatternSystem!: BossPatternSystem;
 
-  // 가상 조이스틱
-  private joystickActive    = false;
-  private joystickPointerId = -1;
-  private joystickOriginX   = 0;
-  private joystickOriginY   = 0;
-  private joystickDx        = 0;   // -1 ~ 1
-  private joystickDy        = 0;   // -1 ~ 1
-  private readonly JOY_RADIUS = 52;
-  private readonly JOY_KNOB_R = 22;
-  private readonly JOY_UI_TOP = 70;
-  private JOY_UI_BOT = 0;
-  private joyBase!:  Phaser.GameObjects.Graphics;
-  private joyStick!: Phaser.GameObjects.Graphics;
+  // 외부 시스템
+  private joystick!: JoystickInput;
+  private audio!: AudioManager;
+  private combo!: ComboSystem;
 
   // 웨이브
   private waveTimer: number = 0;
@@ -123,11 +91,6 @@ export class GameScene extends Phaser.Scene {
   isGodMode: boolean = false;
   private currentBossWave: number = 0;         // 10 or 20
 
-  // 콤보
-  private comboCount: number = 0;
-  private comboTimer: number = 0;
-  private maxCombo:   number = 0;
-  private readonly COMBO_TIMEOUT = 1800; // ms
 
   // 마일스톤
   private readonly KILL_MILESTONES = [10, 25, 50, 100, 200, 500];
@@ -165,9 +128,7 @@ export class GameScene extends Phaser.Scene {
     this.darkraiSpawned   = false;
     this.stageCleared     = false;
     this.currentBoss = null;
-    this.comboCount   = 0;
-    this.comboTimer   = 0;
-    this.maxCombo     = 0;
+    this.combo?.reset();
     this.reachedKillMilestones = new Set();
     this.reachedLevelMilestones = new Set();
     this.weapons      = [];
@@ -182,11 +143,7 @@ export class GameScene extends Phaser.Scene {
     this.needsLevelUp = false;
     this.isPaused     = false;
 
-    // 조이스틱 상태 초기화
-    this.joystickActive     = false;
-    this.joystickPointerId  = -1;
-    this.joystickDx         = 0;
-    this.joystickDy         = 0;
+    this.joystick?.reset();
 
 
     // physics가 이전 게임오버로 pause됐을 수 있으므로 resume
@@ -198,7 +155,6 @@ export class GameScene extends Phaser.Scene {
     const stage1Frame = this.textures.get('stage1').get();
     this.worldW = stage1Frame.realWidth * MAP_SCALE;
     this.worldH = stage1Frame.realHeight * MAP_SCALE;
-    this.JOY_UI_BOT = this.scale.height - BOT_H;
     this.bgImage = this.add.image(0, 0, 'stage1').setOrigin(0, 0).setScale(MAP_SCALE);
 
     // 플레이어
@@ -249,12 +205,12 @@ export class GameScene extends Phaser.Scene {
       onResume:           (fromEvolution) => {
         if (fromEvolution) {
           this.sound.stopByKey('bgm_evolution');
-          this.playBgm(this.bossBgmActive ? 'bgm_boss' : this.stageBgmKey);
+          this.audio.play(this.audio.bossBgmActive ? 'bgm_boss' : this.audio.stageBgmKey);
         } else {
-          const bgmKey = this.bossBgmActive ? 'bgm_boss' : this.stageBgmKey;
+          const bgmKey = this.audio.bossBgmActive ? 'bgm_boss' : this.audio.stageBgmKey;
           const snd = this.sound.get(bgmKey);
           if (snd?.isPaused) snd.resume();
-          else if (!snd?.isPlaying) this.playBgm(bgmKey);
+          else if (!snd?.isPlaying) this.audio.play(bgmKey);
         }
         this.isPaused = false;
         this.physics.resume();
@@ -274,7 +230,7 @@ export class GameScene extends Phaser.Scene {
         this.currentBossWave = wave;
         this.hud.resetBossHpRatio();
         this.hud.setBossPanelVisible(true);
-        this.startBossBgm();
+        this.audio.startBossBgm();
       },
       onDarkraiPhase: () => {
         this.darkraiSpawned   = true;
@@ -306,7 +262,8 @@ export class GameScene extends Phaser.Scene {
     });
     this.hud.createUI();
     this.hud.updateSlots(this.weapons, this.weaponLevels, this.equippedPassives);
-    this.setupJoystick();
+    this.combo = new ComboSystem();
+    this.audio = new AudioManager(this);
 
     // 카메라 설정 (TOP_H, BOT_H는 constants/layout.ts)
     // cameras.main: 전체 화면, UI 전용 (고정, 스크롤 없음)
@@ -320,13 +277,13 @@ export class GameScene extends Phaser.Scene {
     this.hud.createHudOverlay();   // 골드/웨이브/킬/콤보/보스HP
     this.pauseOverlay.create(() => { if (!this.isLevelingUp) this.pauseGame(); }); // 일시정지 오버레이
 
-    // 가상 조이스틱 그래픽 (cameras.main에서만 렌더링)
-    this.joyBase  = this.add.graphics();
-    this.joyStick = this.add.graphics();
-    this.gameCam.ignore([this.joyBase, this.joyStick]);
-    this.drawJoystickGraphics();
-    this.joyBase.setVisible(false);
-    this.joyStick.setVisible(false);
+    // 가상 조이스틱
+    this.joystick = new JoystickInput(this, this.gameCam, {
+      isBlocked: () => this.isGameOver || this.isLevelingUp,
+      onPause:   () => this.pauseGame(),
+      onResume:  () => this.resumeGame(),
+      isPaused:  () => this.isPaused,
+    });
 
     // 개발자 모드
     if (IS_DEV_MODE) {
@@ -373,14 +330,11 @@ export class GameScene extends Phaser.Scene {
     this.gameCam.fadeIn(400, 0, 0, 0);
 
     // BGM
-    this.sound.setMute(localStorage.getItem('bgmMuted') === '1');
-    this.stageBgmKey = STAGE_BGM[this.stageId] ?? 'bgm_stage_1';
-    this.bossBgmActive = false;
-    this.playBgm(this.stageBgmKey);
+    this.audio.init(this.stageId);
 
     // 씬 종료 시 정리
     this.events.once('shutdown', () => {
-      this.sound.stopAll();
+      this.audio.stopAll();
       this.weaponSystem?.reset();
       this.pokeballSystem?.reset();
       this.bossPatternSystem?.reset();
@@ -401,7 +355,7 @@ export class GameScene extends Phaser.Scene {
     this.gameTime += delta;
     this.waveTimer += delta;
 
-    this.player.update(delta, this.joystickDx, this.joystickDy);
+    this.player.update(delta, this.joystick.dx, this.joystick.dy);
 
     // 게임오버 체크 (부활 처리 포함)
     if (this.player.isDead()) {
@@ -434,7 +388,7 @@ export class GameScene extends Phaser.Scene {
     this.bossPatternSystem.update(delta);
     this.applySeparation();
     this.renderEnemyHpBars();
-    this.updateCombo(delta);
+    this.combo.update(delta);
     this.pokeballSystem.checkAndPickup();
     this.pokeballSystem.updateArrows();
 
@@ -608,7 +562,7 @@ export class GameScene extends Phaser.Scene {
     if (!enemy.isElite && !enemy.isBoss) {
       this.gold += Math.ceil(enemy.goldValue * this.player.stats.goldGain);
     }
-    this.addComboKill();
+    this.combo.addKill();
     // 처치 마일스톤
     for (const m of this.KILL_MILESTONES) {
       if (this.killCount >= m && !this.reachedKillMilestones.has(m)) {
@@ -627,10 +581,10 @@ export class GameScene extends Phaser.Scene {
       // 5분/10분 보스 처치 → 스테이지 BGM 복귀
       if (this.currentBossWave === 10) {
         this.pokeballSystem.spawn(enemy.x, enemy.y, 'superball', 1);
-        this.stopBossBgm();
+        this.audio.stopBossBgm();
       } else if (this.currentBossWave === 20) {
         this.pokeballSystem.spawn(enemy.x, enemy.y, 'hyperball', 1);
-        this.stopBossBgm();
+        this.audio.stopBossBgm();
       } else if (this.darkraiSpawned) {
         // 다크라이 처치 → 스테이지 클리어 (bgm은 triggerGameOver에서 처리)
         this.time.delayedCall(2500, () => this.triggerGameOver());
@@ -753,7 +707,7 @@ export class GameScene extends Phaser.Scene {
   private triggerGameOver() {
     this.isGameOver = true;
     this.physics.pause();
-    this.sound.stopAll();
+    this.audio.stopAll();
     this.cameras.main.shake(400, 0.02);
     // UI 정리
     this.hud.bossArrow.setVisible(false);
@@ -777,7 +731,7 @@ export class GameScene extends Phaser.Scene {
         weaponDamageLog: Object.fromEntries(this.weaponSystem.weaponDamageLog),
         stageId:      this.stageId,
         stageCleared: this.stageCleared,
-        maxCombo:     this.maxCombo,
+        maxCombo:     this.combo.max,
       });
     });
   }
@@ -861,7 +815,7 @@ export class GameScene extends Phaser.Scene {
       // 레벨업 BGM (짧은 징글, 1회)
       const vol = getBgmVolume() * 0.6;
       if (this.cache.audio.exists('bgm_levelup')) {
-        const lvlSnd = this.sound.get(this.stageBgmKey);
+        const lvlSnd = this.sound.get(this.audio.stageBgmKey);
         lvlSnd?.pause();
         const jingle = this.sound.add('bgm_levelup', { loop: false, volume: vol });
         jingle.play();
@@ -975,20 +929,6 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  // ===== 콤보 시스템 =====
-  private updateCombo(delta: number) {
-    if (this.comboCount < 3) return;
-    this.comboTimer -= delta;
-    if (this.comboTimer <= 0) {
-      this.comboCount = 0;
-    }
-  }
-
-  private addComboKill() {
-    this.comboCount++;
-    this.comboTimer = this.COMBO_TIMEOUT;
-    if (this.comboCount > this.maxCombo) this.maxCombo = this.comboCount;
-  }
 
   // ===== 적 HP바 렌더 =====
   private renderEnemyHpBars() {
@@ -996,108 +936,6 @@ export class GameScene extends Phaser.Scene {
     this.enemyHpGraphics.clear();
   }
 
-  // ===== 가상 조이스틱 =====
-  private drawJoystickGraphics() {
-    const R = this.JOY_RADIUS;
-    const K = this.JOY_KNOB_R;
-
-    // 베이스 링
-    this.joyBase.clear();
-    this.joyBase.fillStyle(0xffffff, 0.10);
-    this.joyBase.fillCircle(0, 0, R);
-    this.joyBase.lineStyle(2, 0xffffff, 0.35);
-    this.joyBase.strokeCircle(0, 0, R);
-
-    // 스틱 노브
-    this.joyStick.clear();
-    this.joyStick.fillStyle(0xffffff, 0.55);
-    this.joyStick.fillCircle(0, 0, K);
-    this.joyStick.fillStyle(0xffffff, 0.85);
-    this.joyStick.fillCircle(0, 0, K * 0.45);
-  }
-
-  private showJoystick(x: number, y: number) {
-    this.joyBase.setPosition(x, y).setVisible(true).setAlpha(1);
-    this.joyStick.setPosition(x, y).setVisible(true).setAlpha(1);
-  }
-
-  private moveJoystickKnob(ox: number, oy: number, tx: number, ty: number) {
-    const dx    = tx - ox;
-    const dy    = ty - oy;
-    const dist  = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx);
-    const clamp = Math.min(dist, this.JOY_RADIUS);
-    this.joyStick.setPosition(ox + Math.cos(angle) * clamp, oy + Math.sin(angle) * clamp);
-  }
-
-  private hideJoystick() {
-    this.joyBase.setVisible(false);
-    this.joyStick.setVisible(false);
-  }
-
-  private setupJoystick() {
-    // 탭 비활성화 시 자동 일시정지 (game 전역 이벤트 → shutdown 시 명시적 제거)
-    const onHidden = () => {
-      if (!this.isGameOver && !this.isLevelingUp && !this.isPaused) {
-        this.pauseGame();
-      }
-    };
-    this.game.events.on('hidden', onHidden);
-    this.events.once('shutdown', () => this.game.events.off('hidden', onHidden));
-
-    // 키보드 일시정지 (ESC / P)
-    this.input.keyboard!.on('keydown-ESC', () => {
-      if (this.isGameOver || this.isLevelingUp) return;
-      if (this.isPaused) this.resumeGame(); else this.pauseGame();
-    });
-    this.input.keyboard!.on('keydown-P', () => {
-      if (this.isGameOver || this.isLevelingUp) return;
-      if (this.isPaused) this.resumeGame(); else this.pauseGame();
-    });
-
-    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (this.isGameOver) return;
-      if (p.y < this.JOY_UI_TOP || p.y > this.JOY_UI_BOT) return;
-      if (this.joystickActive) return;
-
-      this.joystickActive     = true;
-      this.joystickPointerId  = p.id;
-      this.joystickOriginX    = p.x;
-      this.joystickOriginY    = p.y;
-      this.showJoystick(p.x, p.y);
-    });
-
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (!this.joystickActive || p.id !== this.joystickPointerId) return;
-
-      const dx    = p.x - this.joystickOriginX;
-      const dy    = p.y - this.joystickOriginY;
-      const dist  = Math.sqrt(dx * dx + dy * dy);
-      const angle = Math.atan2(dy, dx);
-
-      if (dist < 5) {
-        this.joystickDx = 0;
-        this.joystickDy = 0;
-      } else {
-        const ratio = Math.min(dist / this.JOY_RADIUS, 1);
-        this.joystickDx = Math.cos(angle) * ratio;
-        this.joystickDy = Math.sin(angle) * ratio;
-      }
-      this.moveJoystickKnob(this.joystickOriginX, this.joystickOriginY, p.x, p.y);
-    });
-
-    const resetJoystick = (p: Phaser.Input.Pointer) => {
-      if (p.id !== this.joystickPointerId) return;
-      this.joystickActive     = false;
-      this.joystickPointerId  = -1;
-      this.joystickDx         = 0;
-      this.joystickDy         = 0;
-      this.hideJoystick();
-    };
-
-    this.input.on('pointerup',     resetJoystick);
-    this.input.on('pointercancel', resetJoystick);
-  }
 
   // ===== 개발자 모드 API (DevScene에서 호출) =====
   devToggleGodMode(): boolean {
@@ -1126,14 +964,10 @@ export class GameScene extends Phaser.Scene {
   pauseGame() {
     this.isPaused = true;
     this.physics.pause();
-    this.joystickActive = false;
-    this.joystickDx     = 0;
-    this.joystickDy     = 0;
-    this.hideJoystick();
+    this.joystick.reset();
     this.gameCam.setVisible(false);
     this.pauseOverlay.show(this.weapons, this.weaponLevels, this.equippedPassives, this.player.stats);
-    this.sound.get(this.stageBgmKey)?.pause();
-    this.sound.get('bgm_boss')?.pause();
+    this.audio.pauseCurrent();
   }
 
   resumeGame() {
@@ -1142,44 +976,8 @@ export class GameScene extends Phaser.Scene {
     this.physics.resume();
     this.gameCam.setVisible(true);
     this.pauseOverlay.hide();
-    if (this.bossBgmActive) {
-      this.sound.get('bgm_boss')?.resume();
-    } else {
-      this.sound.get(this.stageBgmKey)?.resume();
-    }
+    this.audio.resumeCurrent();
   }
 
-  /** 스테이지 BGM 시작 */
-  private playBgm(key: string) {
-    const vol = getBgmVolume() * 0.45;
-    this.sound.stopAll();
-    if (!this.cache.audio.exists(key)) return;
-    if ((this.sound as any).locked) {
-      this.sound.once('unlocked', () => {
-        this.sound.stopAll();
-        if (this.cache.audio.exists(key)) this.sound.play(key, { loop: true, volume: vol });
-      });
-    } else {
-      this.sound.play(key, { loop: true, volume: vol });
-    }
-  }
-
-  /** 보스 BGM 시작 (스테이지 BGM 페이드아웃 후 보스 BGM) */
-  private startBossBgm() {
-    this.bossBgmActive = true;
-    const stageSnd = this.sound.get(this.stageBgmKey);
-    if (stageSnd?.isPlaying) stageSnd.stop();
-    const vol = getBgmVolume() * 0.45;
-    if (this.cache.audio.exists('bgm_boss')) {
-      this.sound.play('bgm_boss', { loop: true, volume: vol });
-    }
-  }
-
-  /** 보스 BGM 종료 후 스테이지 BGM 복귀 */
-  private stopBossBgm() {
-    this.bossBgmActive = false;
-    this.sound.stopByKey('bgm_boss');
-    this.playBgm(this.stageBgmKey);
-  }
 
 }
