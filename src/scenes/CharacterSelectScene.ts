@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { ALL_WEAPONS, TYPE_COLORS } from '../data/weapons';
-import { getBgmVolume } from '../lib/storage';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { ScrollablePanel } from '../ui/ScrollablePanel';
+import { SceneHelper } from '../utils/SceneHelper';
 
 
 interface CardControl {
@@ -23,29 +24,11 @@ export class CharacterSelectScene extends Phaser.Scene {
     const CX = W / 2;
 
     // BGM (bgm_select 이미 재생 중이면 유지)
-    const vol = getBgmVolume() * 0.5;
-    if (this.cache.audio.exists('bgm_select') && !this.sound.get('bgm_select')?.isPlaying) {
-      this.sound.stopAll();
-      const play = () => { if (this.cache.audio.exists('bgm_select')) this.sound.play('bgm_select', { loop: true, volume: vol }); };
-      if ((this.sound as any).locked) { this.sound.once('unlocked', play); } else { play(); }
-    }
+    SceneHelper.playBGM(this, 'bgm_select');
 
-    // ── 배경 ──
-    this.add.rectangle(0, 0, W, H, 0xe8e8d8).setOrigin(0, 0);
-    const g = this.add.graphics();
-    g.lineStyle(1, 0xd0d0c0, 0.5);
-    for (let x = 0; x < W; x += 40) g.lineBetween(x, 0, x, H);
-    for (let y = 0; y < H; y += 40) g.lineBetween(0, y, W, y);
-
-    // ── 헤더 (포켓몬 스타일) ──
-    PokeUI.panel(this, CX, 36, W - 4, 66, PokePalette.headerBg, 9);
-    this.add.text(CX, 24, '트레이너 선택', {
-      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
-      stroke: '#101840', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(10);
-    this.add.text(CX, 50, '함께 싸울 트레이너를 선택하세요', {
-      fontFamily: POKE_FONT, fontSize: '10px', color: '#aaccff',
-    }).setOrigin(0.5).setDepth(10);
+    // ── 배경 + 헤더 ──
+    PokeUI.gridBackground(this);
+    PokeUI.sceneHeader(this, '트레이너 선택', '함께 싸울 트레이너를 선택하세요');
 
     // ── 하단 버튼 2개: [뒤로] [게임 시작] ──
     const BTN_Y  = H - 44;
@@ -53,47 +36,26 @@ export class CharacterSelectScene extends Phaser.Scene {
     const backX  = CX - BTN_W / 2 - 4;
     const startX = CX + BTN_W / 2 + 4;
 
-    // 뒤로 버튼 (포켓몬 스타일)
-    const backBg = this.add.rectangle(backX, BTN_Y, BTN_W, 40, PokePalette.btnNormal).setDepth(10)
-      .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(2, PokePalette.panelBorder)
-      .strokeRect(backX - BTN_W / 2, BTN_Y - 20, BTN_W, 40).setDepth(10);
-    const backTxt = this.add.text(backX, BTN_Y, '← 뒤로', {
-      fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textDark,
-    }).setOrigin(0.5).setDepth(11);
-
-    backBg.on('pointerover', () => { backBg.setFillStyle(PokePalette.btnHover); backTxt.setColor('#003399'); });
-    backBg.on('pointerout',  () => { backBg.setFillStyle(PokePalette.btnNormal); backTxt.setColor(PokePalette.textDark); });
-    backBg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(200, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        if (this.scene.manager.isSleeping('StageSelectScene')) {
-          this.scene.stop();
-          this.scene.wake('StageSelectScene');
-        } else {
-          this.scene.start('StageSelectScene');
-        }
+    // 뒤로 버튼
+    PokeUI.navButton(this, backX, BTN_Y, BTN_W, 40, '← 뒤로', () => {
+      SceneHelper.transitionTo(this, 'StageSelectScene', {
+        before: () => {
+          if (this.scene.manager.isSleeping('StageSelectScene')) {
+            this.scene.stop();
+            this.scene.wake('StageSelectScene');
+          }
+        },
       });
     });
 
-    // 게임 시작 버튼 (포켓몬 스타일)
-    const startBg = this.add.rectangle(startX, BTN_Y, BTN_W, 40, PokePalette.btnPrimary).setDepth(10)
-      .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(2, PokePalette.panelBorder)
-      .strokeRect(startX - BTN_W / 2, BTN_Y - 20, BTN_W, 40).setDepth(10);
-    const startTxt = this.add.text(startX, BTN_Y, '▶ 게임 시작', {
-      fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textWhite,
-    }).setOrigin(0.5).setDepth(11);
-
-    startBg.on('pointerover', () => { startBg.setFillStyle(0x3366cc); });
-    startBg.on('pointerout',  () => { startBg.setFillStyle(PokePalette.btnPrimary); });
-    startBg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(250, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.stop('StageSelectScene');
-        this.scene.start('GameScene', { weaponIndex: selectedWeaponIndex, stageId: this.stageId });
+    // 게임 시작 버튼
+    PokeUI.navButton(this, startX, BTN_Y, BTN_W, 40, '▶ 게임 시작', () => {
+      SceneHelper.transitionTo(this, 'GameScene', {
+        duration: 250,
+        data: { weaponIndex: selectedWeaponIndex, stageId: this.stageId },
+        before: () => this.scene.stop('StageSelectScene'),
       });
-    });
+    }, { fill: PokePalette.btnPrimary, hoverFill: 0x3366cc, textColor: PokePalette.textWhite, hoverTextColor: PokePalette.textWhite });
 
     // ── 카드 크기 (화면 높이 기반 반응형) ──
     const CARD_H      = Math.round(Math.max(140, H * 0.18));
@@ -103,16 +65,10 @@ export class CharacterSelectScene extends Phaser.Scene {
     // ── 스크롤 영역 ──
     const SCROLL_TOP = 88;
     const SCROLL_BOT = BTN_Y - 16;
-    const viewH      = SCROLL_BOT - SCROLL_TOP;
-    const totalH     = ALL_WEAPONS.length * CARD_STRIDE;
-    const maxScroll  = Math.max(0, totalH - viewH);
-
-    const maskGfx = this.add.graphics();
-    maskGfx.fillRect(0, SCROLL_TOP, W, viewH);
-    const mask = new Phaser.Display.Masks.GeometryMask(this, maskGfx);
-
-    const container = this.add.container(0, SCROLL_TOP);
-    container.setMask(mask);
+    const scrollPanel = new ScrollablePanel(this, { top: SCROLL_TOP, bottom: SCROLL_BOT });
+    const totalH = ALL_WEAPONS.length * CARD_STRIDE;
+    scrollPanel.setContentHeight(totalH);
+    const container = scrollPanel.container;
 
     const CARD_W = W - 32;
 
@@ -128,41 +84,12 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     ALL_WEAPONS.forEach((_, i) => {
       const cy   = i * CARD_STRIDE + CARD_H / 2;
-      const ctrl = this.createCharacterCard(i, CX, cy, CARD_W, CARD_H, container, () => hasDragged, () => selectWeapon(i));
+      const ctrl = this.createCharacterCard(i, CX, cy, CARD_W, CARD_H, container, () => scrollPanel.hasDragged, () => selectWeapon(i));
       cardControls.push(ctrl);
     });
 
     // 초기 선택
     cardControls[0]?.select();
-
-    // ── 드래그 스크롤 ──
-    let lastY      = 0;
-    let isDragging = false;
-    let scrollY    = 0;
-    let hasDragged = false;
-    const DRAG_THRESHOLD = 8;
-
-    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-      if (ptr.y < SCROLL_TOP || ptr.y > SCROLL_BOT) return;
-      lastY      = ptr.y;
-      isDragging = true;
-      hasDragged = false;
-    });
-
-    this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
-      if (!isDragging) return;
-      const dy = ptr.y - lastY;
-      lastY     = ptr.y;
-      if (Math.abs(dy) > DRAG_THRESHOLD || hasDragged) {
-        hasDragged = true;
-        scrollY = Phaser.Math.Clamp(scrollY + dy, -maxScroll, 0);
-        container.y = SCROLL_TOP + scrollY;
-      }
-    });
-
-    this.input.on('pointerup',  () => { isDragging = false; });
-    this.input.on('pointerout', () => { isDragging = false; });
-    this.events.once('shutdown', () => this.input.removeAllListeners());
 
     this.cameras.main.fadeIn(300, 0, 0, 0);
   }

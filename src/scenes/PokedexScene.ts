@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { getDefeatedIds } from '../data/pokedex';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { SceneHelper } from '../utils/SceneHelper';
 
 const HEADER_H = 54;
 const TAB_H    = 36;
@@ -36,37 +37,17 @@ export class PokedexScene extends Phaser.Scene {
 
     this.defeatedIds = getDefeatedIds();
 
-    // ── 배경 ──
-    this.add.rectangle(0, 0, W, H, 0xe8e8d8).setOrigin(0, 0);
-    const g = this.add.graphics();
-    g.lineStyle(1, 0xd0d0c0, 0.5);
-    for (let x = 0; x < W; x += 40) g.lineBetween(x, 0, x, H);
-    for (let y = 0; y < H; y += 40) g.lineBetween(0, y, W, y);
-
-    // ── 헤더 (포켓몬 스타일) ──
-    PokeUI.panel(this, CX, HEADER_H / 2, W - 4, HEADER_H, PokePalette.headerBg, 10);
-    this.add.text(CX, 16, '포켓몬 도감', {
-      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
-      stroke: '#101840', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(11);
+    // ── 배경 + 헤더 ──
+    PokeUI.gridBackground(this);
+    PokeUI.sceneHeader(this, '포켓몬 도감', undefined, { depth: 10, headerH: HEADER_H });
     this.countTxt = this.add.text(CX, 38, this.getTotalCountText(), {
       fontFamily: POKE_FONT, fontSize: '9px', color: '#aaccff',
     }).setOrigin(0.5).setDepth(11);
 
     // ── 뒤로 버튼 ──
-    const backBg = this.add.rectangle(42, HEADER_H / 2, 68, 28, PokePalette.btnNormal)
-      .setDepth(12).setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(2, PokePalette.panelBorder)
-      .strokeRect(8, HEADER_H / 2 - 14, 68, 28).setDepth(12);
-    const backTxt = this.add.text(42, HEADER_H / 2, '← 뒤로', {
-      fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textDark,
-    }).setOrigin(0.5).setDepth(13);
-    backBg.on('pointerover', () => { backBg.setFillStyle(PokePalette.btnHover); backTxt.setColor('#003399'); });
-    backBg.on('pointerout',  () => { backBg.setFillStyle(PokePalette.btnNormal); backTxt.setColor(PokePalette.textDark); });
-    backBg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(200, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
-    });
+    PokeUI.navButton(this, 42, HEADER_H / 2, 68, 28, '← 뒤로',
+      () => SceneHelper.transitionTo(this, 'TitleScene'),
+      { depth: 12 });
 
     // ── 세대 탭 ──
     const TAB_Y = HEADER_H + TAB_H / 2;

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { api } from './api';
 
 export interface PlayerSession {
   id:       string;
@@ -34,25 +34,14 @@ function saveSession(user: PlayerSession) {
 
 // ── 회원가입 ──────────────────────────────────────
 export async function signUp(username: string, password: string, nickname: string): Promise<PlayerSession> {
-  const { data, error } = await supabase.rpc('signup', {
-    p_username: username,
-    p_password: password,
-    p_nickname: nickname,
-  });
-  if (error) throw new Error(error.message);
-  const user = data as PlayerSession;
+  const user = await api.post<PlayerSession>('/auth/signup', { username, password, nickname });
   saveSession(user);
   return user;
 }
 
 // ── 로그인 ────────────────────────────────────────
 export async function signIn(username: string, password: string): Promise<PlayerSession> {
-  const { data, error } = await supabase.rpc('login', {
-    p_username: username,
-    p_password: password,
-  });
-  if (error) throw new Error(error.message);
-  const user = data as PlayerSession;
+  const user = await api.post<PlayerSession>('/auth/login', { username, password });
   saveSession(user);
   return user;
 }

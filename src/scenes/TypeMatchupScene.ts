@@ -4,6 +4,7 @@ import type { GameScene } from './GameScene';
 import { TYPE_COLORS } from '../data/weapons';
 import { TYPE_KR } from '../constants/typeLabels';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { SceneHelper } from '../utils/SceneHelper';
 
 // ===== Gen IV 타입 상성 테이블 =====
 const TYPES: PokemonType[] = [
@@ -70,35 +71,19 @@ export class TypeMatchupScene extends Phaser.Scene {
     // ── 배경 ──
     this.add.rectangle(0, 0, W, H, 0xe8e8d8).setOrigin(0, 0);
 
-    // ── 헤더 (포켓몬 스타일) ──
-    PokeUI.panel(this, CX, HEADER_H / 2, W - 4, HEADER_H, PokePalette.headerBg, 10);
-    this.add.text(CX, 18, '타입 상성표', {
-      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
-      stroke: '#101840', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(11);
-    this.add.text(CX, 40, '↓ 공격 타입   →  방어 타입', {
-      fontFamily: POKE_FONT, fontSize: '9px', color: '#aaccff',
-    }).setOrigin(0.5).setDepth(11);
+    // ── 헤더 ──
+    PokeUI.sceneHeader(this, '타입 상성표', '↓ 공격 타입   →  방어 타입', { depth: 10, headerH: HEADER_H });
 
     // ── 뒤로 버튼 ──
-    const backBg = this.add.rectangle(48, HEADER_H / 2, 88, 40, PokePalette.btnNormal)
-      .setDepth(12).setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(2, PokePalette.panelBorder).strokeRect(4, HEADER_H / 2 - 20, 88, 40).setDepth(12);
-    const backTxt = this.add.text(48, HEADER_H / 2, '← 뒤로', {
-      fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textDark,
-    }).setOrigin(0.5).setDepth(13);
-    backBg.on('pointerover',  () => { backBg.setFillStyle(PokePalette.btnHover); backTxt.setColor('#003399'); });
-    backBg.on('pointerout',   () => { backBg.setFillStyle(PokePalette.btnNormal); backTxt.setColor(PokePalette.textDark); });
-    backBg.on('pointerdown', () => {
+    PokeUI.navButton(this, 48, HEADER_H / 2, 88, 40, '← 뒤로', () => {
       if (caller === 'GameScene') {
         this.scene.stop('TypeMatchupScene');
         const gs = this.scene.get('GameScene') as unknown as GameScene;
         gs.pauseGame();
       } else {
-        this.cameras.main.fadeOut(200, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(caller));
+        SceneHelper.transitionTo(this, caller);
       }
-    });
+    }, { depth: 12 });
 
     // ── 범례 (포켓몬 스타일) ──
     this.add.rectangle(CX, HEADER_H + LEGEND_H / 2, W, LEGEND_H, PokePalette.panelBg, 1).setDepth(10);

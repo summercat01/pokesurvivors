@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { getCurrentUser } from '../lib/auth';
 import { pushLocalToCloud } from '../lib/userDB';
-import { getBgmVolume, getStoredInt } from '../lib/storage';
+import { getStoredInt } from '../lib/storage';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { SceneHelper } from '../utils/SceneHelper';
 
 interface GameOverData {
   level:           number;
@@ -42,12 +43,8 @@ export class GameOverScene extends Phaser.Scene {
     const maxCombo     = data.maxCombo     ?? 0;
 
     // ── BGM ──────────────────────────────────────────────
-    const vol    = getBgmVolume() * 0.5;
     const endKey = stageCleared ? 'bgm_clear' : 'bgm_gameover';
-    if (this.cache.audio.exists(endKey)) {
-      this.sound.stopAll();
-      this.sound.play(endKey, { loop: false, volume: vol });
-    }
+    SceneHelper.playBGM(this, endKey, { loop: false });
 
     // ── 베스트 기록 ──────────────────────────────────────
     const bestWave  = getStoredInt('bestWave');
@@ -240,12 +237,10 @@ export class GameOverScene extends Phaser.Scene {
     };
 
     makeBtn(CX - BTN_W / 2 - 6, '▶ 다시 도전', PokePalette.btnPrimary, 0x3366cc, PokePalette.textWhite, () => {
-      this.cameras.main.fadeOut(300, 12, 10, 24);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('GameScene', { stageId }));
+      SceneHelper.transitionTo(this, 'GameScene', { duration: 300, r: 12, g: 10, b: 24, data: { stageId } });
     });
     makeBtn(CX + BTN_W / 2 + 6, '⌂ 타이틀로', PokePalette.btnNormal, PokePalette.btnHover, PokePalette.textDark, () => {
-      this.cameras.main.fadeOut(300, 12, 10, 24);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
+      SceneHelper.transitionTo(this, 'TitleScene', { duration: 300, r: 12, g: 10, b: 24 });
     });
 
     this.cameras.main.fadeIn(500, 12, 10, 24);

@@ -292,4 +292,90 @@ export class PokeUI {
     g.lineBetween(x1, y, x2, y);
     return g;
   }
+
+  /**
+   * 포켓몬 스타일 배경 격자 (크림 배경 + 연한 격자선)
+   * @param bgColor 배경 색상, 기본 0xe8e8d8
+   * @param gridColor 격자 색상, 기본 0xd0d0c0
+   * @param spacing 격자 간격, 기본 40
+   */
+  static gridBackground(
+    scene: Phaser.Scene,
+    bgColor = 0xe8e8d8,
+    gridColor = 0xd0d0c0,
+    spacing = 40,
+  ): void {
+    const W = scene.scale.width;
+    const H = scene.scale.height;
+    scene.add.rectangle(0, 0, W, H, bgColor).setOrigin(0, 0);
+    const g = scene.add.graphics();
+    g.lineStyle(1, gridColor, 0.5);
+    for (let x = 0; x < W; x += spacing) g.lineBetween(x, 0, x, H);
+    for (let y = 0; y < H; y += spacing) g.lineBetween(0, y, W, y);
+  }
+
+  /**
+   * 포켓몬 스타일 씬 헤더 (파란 패널 + 제목 + 부제)
+   */
+  static sceneHeader(
+    scene: Phaser.Scene,
+    title: string,
+    subtitle?: string,
+    options?: { depth?: number; headerH?: number },
+  ): void {
+    const W = scene.scale.width;
+    const CX = W / 2;
+    const depth = options?.depth ?? 9;
+    const headerH = options?.headerH ?? 66;
+
+    PokeUI.panel(scene, CX, headerH / 2 + 3, W - 4, headerH, PokePalette.headerBg, depth);
+    scene.add.text(CX, headerH / 2 + 3 - 12, title, {
+      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
+      stroke: '#101840', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(depth + 1);
+    if (subtitle) {
+      scene.add.text(CX, headerH / 2 + 3 + 14, subtitle, {
+        fontFamily: POKE_FONT, fontSize: '10px', color: '#aaccff',
+      }).setOrigin(0.5).setDepth(depth + 1);
+    }
+  }
+
+  /**
+   * 포켓몬 스타일 네비게이션 버튼 (테두리 + hover/click 효과)
+   * @returns 버튼 배경 Rectangle (상태 제어용)
+   */
+  static navButton(
+    scene: Phaser.Scene,
+    cx: number, cy: number,
+    w: number, h: number,
+    label: string,
+    onClick: () => void,
+    options?: {
+      depth?: number;
+      fill?: number;
+      hoverFill?: number;
+      textColor?: string;
+      hoverTextColor?: string;
+    },
+  ): { bg: Phaser.GameObjects.Rectangle; txt: Phaser.GameObjects.Text } {
+    const depth = options?.depth ?? 10;
+    const fill = options?.fill ?? PokePalette.btnNormal;
+    const hoverFill = options?.hoverFill ?? PokePalette.btnHover;
+    const textColor = options?.textColor ?? PokePalette.textDark;
+    const hoverTextColor = options?.hoverTextColor ?? '#003399';
+
+    const bg = scene.add.rectangle(cx, cy, w, h, fill)
+      .setDepth(depth).setInteractive({ useHandCursor: true });
+    scene.add.graphics().lineStyle(2, PokePalette.panelBorder)
+      .strokeRect(cx - w / 2, cy - h / 2, w, h).setDepth(depth);
+    const txt = scene.add.text(cx, cy, label, {
+      fontFamily: POKE_FONT, fontSize: '13px', color: textColor,
+    }).setOrigin(0.5).setDepth(depth + 1);
+
+    bg.on('pointerover', () => { bg.setFillStyle(hoverFill); txt.setColor(hoverTextColor); });
+    bg.on('pointerout',  () => { bg.setFillStyle(fill); txt.setColor(textColor); });
+    bg.on('pointerdown', onClick);
+
+    return { bg, txt };
+  }
 }

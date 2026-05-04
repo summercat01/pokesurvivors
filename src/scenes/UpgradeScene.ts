@@ -7,6 +7,8 @@ import {
 import { getCurrentUser } from '../lib/auth';
 import { pushLocalToCloud } from '../lib/userDB';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { ScrollablePanel } from '../ui/ScrollablePanel';
+import { SceneHelper } from '../utils/SceneHelper';
 
 export class UpgradeScene extends Phaser.Scene {
   private selectedIdx = 0;
@@ -36,20 +38,9 @@ export class UpgradeScene extends Phaser.Scene {
     const H  = this.scale.height;
     const CX = W / 2;
 
-    // ── 배경 ──
-    this.add.rectangle(0, 0, W, H, 0xe8e8d8).setOrigin(0, 0);
-    // 포켓몬 스타일 격자 패턴 (연하게)
-    const bgGfx = this.add.graphics();
-    bgGfx.lineStyle(1, 0xd0d0c0, 0.5);
-    for (let x = 0; x < W; x += 40) bgGfx.lineBetween(x, 0, x, H);
-    for (let y = 0; y < H; y += 40) bgGfx.lineBetween(0, y, W, y);
-
-    // ── 헤더 (포켓몬 스타일) ──
-    PokeUI.panel(this, CX, 36, W - 4, 66, PokePalette.headerBg);
-    this.add.text(CX, 22, '영구 업그레이드', {
-      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
-      stroke: '#101840', strokeThickness: 3,
-    }).setOrigin(0.5);
+    // ── 배경 + 헤더 ──
+    PokeUI.gridBackground(this);
+    PokeUI.sceneHeader(this, '영구 업그레이드');
 
     this.goldTxt = this.add.text(CX, 48, `💰 ${getTotalGold().toLocaleString()} G`, {
       fontFamily: POKE_FONT, fontSize: '11px', color: '#ffdd44', fontStyle: 'bold',
@@ -72,15 +63,13 @@ export class UpgradeScene extends Phaser.Scene {
     const ROWS      = Math.ceil(UPGRADES.length / COLS);
     const totalH    = ROWS * (CARD_H + GAP) - GAP;
 
-    // ── 스크롤 마스크 ──
-    const viewH    = PANEL_Y - GRID_TOP - 4;
-    const maxScroll = Math.max(0, totalH - viewH);
-    const maskGfx  = this.add.graphics();
-    maskGfx.fillRect(0, GRID_TOP, W, viewH);
-    const mask = new Phaser.Display.Masks.GeometryMask(this, maskGfx);
-
-    const container = this.add.container(0, GRID_TOP);
-    container.setMask(mask);
+    // ── 스크롤 영역 ──
+    const scrollPanel = new ScrollablePanel(this, {
+      top: GRID_TOP, bottom: PANEL_Y - 4,
+      scrollDirection: 'positive',
+    });
+    scrollPanel.setContentHeight(totalH);
+    const container = scrollPanel.container;
 
     // ── 카드 그리드 ──
     UPGRADES.forEach((upg, idx) => {
@@ -158,28 +147,6 @@ export class UpgradeScene extends Phaser.Scene {
       container.add([shadow, cardBorder, cardBg, sg, iconBg, iconOutline, iconTxt, nameTxt, lvTxt, ...dots, previewTxt, gfx, hit]);
     });
 
-    // ── 스크롤 입력 ──
-    let lastY = 0, isDragging = false, scrollY = 0, hasDragged = false;
-    const DRAG_THRESHOLD = 6;
-
-    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-      const worldY = ptr.y;
-      if (worldY < GRID_TOP || worldY > PANEL_Y) return;
-      lastY = worldY; isDragging = true; hasDragged = false;
-    });
-    this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
-      if (!isDragging) return;
-      const dy = ptr.y - lastY; lastY = ptr.y;
-      if (Math.abs(dy) > DRAG_THRESHOLD || hasDragged) {
-        hasDragged = true;
-        scrollY = Phaser.Math.Clamp(scrollY - dy, 0, maxScroll);
-        container.y = GRID_TOP - scrollY;
-      }
-    });
-    this.input.on('pointerup',  () => { isDragging = false; });
-    this.input.on('pointerout', () => { isDragging = false; });
-    this.events.once('shutdown', () => this.input.removeAllListeners());
-
     // ── 하단 고정 영역 ──
     this.createBottomSection(W, H, CX, PANEL_Y, INFO_H, BUY_BTN_H, BACK_BTN_H);
 
@@ -247,20 +214,8 @@ export class UpgradeScene extends Phaser.Scene {
 
     // ── 뒤로 버튼 ──
     const BACK_Y = H - BACK_BTN_H / 2 - 4;
-    const backBg = this.add.rectangle(CX, BACK_Y, W - 20, BACK_BTN_H, PokePalette.btnNormal)
-      .setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(2, PokePalette.panelBorder)
-      .strokeRect(CX - (W - 20) / 2, BACK_Y - BACK_BTN_H / 2, W - 20, BACK_BTN_H);
-    const backTxt = this.add.text(CX, BACK_Y, '← 타이틀로', {
-      fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textDark,
-    }).setOrigin(0.5);
-
-    backBg.on('pointerover', () => { backBg.setFillStyle(PokePalette.btnHover); backTxt.setColor('#003399'); });
-    backBg.on('pointerout',  () => { backBg.setFillStyle(PokePalette.btnNormal); backTxt.setColor(PokePalette.textDark); });
-    backBg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(200, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
-    });
+    PokeUI.navButton(this, CX, BACK_Y, W - 20, BACK_BTN_H, '← 타이틀로',
+      () => SceneHelper.transitionTo(this, 'TitleScene'));
   }
 
   // ────────────────────────────────────────────────────

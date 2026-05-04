@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { signIn, signUp } from '../lib/auth';
 import { syncLocalWithCloud, overwriteLocalWithCloud } from '../lib/userDB';
 import { POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { SceneHelper } from '../utils/SceneHelper';
 
 /**
  * LoginScene
@@ -200,8 +201,7 @@ export class LoginScene extends Phaser.Scene {
 
   private proceed() {
     this.destroyOverlay();
-    this.cameras.main.fadeOut(300, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
+    SceneHelper.transitionTo(this, 'TitleScene', { duration: 300 });
   }
 
   // ── 모드 전환 ─────────────────────────────────────

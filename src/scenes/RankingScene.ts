@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { ScrollablePanel } from '../ui/ScrollablePanel';
+import { SceneHelper } from '../utils/SceneHelper';
 
 interface LeaderboardEntry {
   rank: number;
@@ -20,38 +22,14 @@ export class RankingScene extends Phaser.Scene {
     const H  = this.scale.height;
     const CX = W / 2;
 
-    // ── 배경 ──
-    this.add.rectangle(0, 0, W, H, 0xe8e8d8).setOrigin(0, 0);
-    const g = this.add.graphics();
-    g.lineStyle(1, 0xd0d0c0, 0.5);
-    for (let x = 0; x < W; x += 40) g.lineBetween(x, 0, x, H);
-    for (let y = 0; y < H; y += 40) g.lineBetween(0, y, W, y);
-
-    // ── 헤더 (포켓몬 스타일) ──
-    PokeUI.panel(this, CX, 36, W - 4, 66, PokePalette.headerBg, 10);
-    this.add.text(CX, 24, '🏆 랭킹', {
-      fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
-      stroke: '#101840', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(11);
-    this.add.text(CX, 50, '최고 스테이지 · 최고 시간 기준', {
-      fontFamily: POKE_FONT, fontSize: '10px', color: '#aaccff',
-    }).setOrigin(0.5).setDepth(11);
+    // ── 배경 + 헤더 ──
+    PokeUI.gridBackground(this);
+    PokeUI.sceneHeader(this, '🏆 랭킹', '최고 스테이지 · 최고 시간 기준', { depth: 10 });
 
     // ── 뒤로 버튼 ──
-    const backY  = H - 44;
-    const backBg = this.add.rectangle(CX, backY, 160, 40, PokePalette.btnNormal)
-      .setDepth(10).setInteractive({ useHandCursor: true });
-    this.add.graphics().lineStyle(2, PokePalette.panelBorder)
-      .strokeRect(CX - 80, backY - 20, 160, 40).setDepth(10);
-    const backTxt = this.add.text(CX, backY, '← 뒤로', {
-      fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textDark,
-    }).setOrigin(0.5).setDepth(10);
-    backBg.on('pointerover', () => { backBg.setFillStyle(PokePalette.btnHover); backTxt.setColor('#003399'); });
-    backBg.on('pointerout',  () => { backBg.setFillStyle(PokePalette.btnNormal); backTxt.setColor(PokePalette.textDark); });
-    backBg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(200, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('TitleScene'));
-    });
+    const backY = H - 44;
+    PokeUI.navButton(this, CX, backY, 160, 40, '← 뒤로',
+      () => SceneHelper.transitionTo(this, 'TitleScene'));
 
     // ── 컬럼 헤더 ──
     const TABLE_TOP = 90;
@@ -75,9 +53,7 @@ export class RankingScene extends Phaser.Scene {
     let fetchError = false;
 
     try {
-      const { data, error } = await supabase.rpc('get_leaderboard');
-      if (error) { fetchError = true; }
-      else { entries = (data as LeaderboardEntry[]) ?? []; }
+      entries = await api.get<LeaderboardEntry[]>('/leaderboard');
     } catch {
       fetchError = true;
     }
@@ -94,16 +70,9 @@ export class RankingScene extends Phaser.Scene {
     // ── 스크롤 영역 ──
     const SCROLL_TOP = TABLE_TOP + 36;
     const SCROLL_BOT = backY - 16;
-    const viewH      = SCROLL_BOT - SCROLL_TOP;
-    const totalH     = entries.length * ROW_H;
-    const maxScroll  = Math.max(0, totalH - viewH);
-
-    const maskGfx = this.add.graphics();
-    maskGfx.fillRect(0, SCROLL_TOP, W, viewH);
-    const mask = new Phaser.Display.Masks.GeometryMask(this, maskGfx);
-
-    const container = this.add.container(0, SCROLL_TOP);
-    container.setMask(mask);
+    const scrollPanel = new ScrollablePanel(this, { top: SCROLL_TOP, bottom: SCROLL_BOT });
+    scrollPanel.setContentHeight(entries.length * ROW_H);
+    const container = scrollPanel.container;
 
     entries.forEach((entry, i) => {
       const rowY   = i * ROW_H + ROW_H / 2;
@@ -142,20 +111,5 @@ export class RankingScene extends Phaser.Scene {
       container.add([rowBg, rankTxt, nickTxt, stageTxt, timeTxt]);
     });
 
-    // ── 드래그 스크롤 ──
-    let lastY = 0, isDragging = false, scrollY = 0;
-    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
-      if (ptr.y < SCROLL_TOP || ptr.y > SCROLL_BOT) return;
-      lastY = ptr.y; isDragging = true;
-    });
-    this.input.on('pointermove', (ptr: Phaser.Input.Pointer) => {
-      if (!isDragging) return;
-      const dy = ptr.y - lastY; lastY = ptr.y;
-      scrollY = Phaser.Math.Clamp(scrollY + dy, -maxScroll, 0);
-      container.y = SCROLL_TOP + scrollY;
-    });
-    this.input.on('pointerup',  () => { isDragging = false; });
-    this.input.on('pointerout', () => { isDragging = false; });
-    this.events.once('shutdown', () => this.input.removeAllListeners());
   }
 }

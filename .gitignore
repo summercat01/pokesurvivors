@@ -3,3 +3,6 @@ dist/
 cowork.md
 .env
 .env.local
+.env.server
+
+.vercel

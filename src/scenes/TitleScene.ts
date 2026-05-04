@@ -3,6 +3,7 @@ import { getCurrentUser, getNickname, signOut } from '../lib/auth';
 import { loadUserRecord } from '../lib/userDB';
 import { getBgmVolume } from '../lib/storage';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { SceneHelper } from '../utils/SceneHelper';
 
 // ── 패치 노트 ──
 interface PatchEntry { version: string; date: string; changes: string[] }
@@ -290,10 +291,7 @@ export class TitleScene extends Phaser.Scene {
       BTN_W, BTN_H,
       '▶  게임 시작',
       0x44cc66,      // 포인트 컬러 (초록)
-      () => {
-        this.cameras.main.fadeOut(200, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('StageSelectScene'));
-      },
+      () => SceneHelper.transitionTo(this, 'StageSelectScene'),
     );
 
     this.createDPButton(
@@ -301,10 +299,7 @@ export class TitleScene extends Phaser.Scene {
       BTN_W, BTN_H,
       '⬆  업그레이드',
       null,
-      () => {
-        this.cameras.main.fadeOut(200, 24, 16, 40);
-        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('UpgradeScene'));
-      },
+      () => SceneHelper.transitionTo(this, 'UpgradeScene', { r: 24, g: 16, b: 40 }),
     );
 
     const HALF_W = (BTN_W - 8) / 2;
@@ -313,10 +308,7 @@ export class TitleScene extends Phaser.Scene {
       HALF_W, BTN_H,
       '🏆 랭킹',
       null,
-      () => {
-        this.cameras.main.fadeOut(200, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('RankingScene'));
-      },
+      () => SceneHelper.transitionTo(this, 'RankingScene'),
     );
     this.createDPButton(
       BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP * 2,
@@ -662,8 +654,7 @@ export class TitleScene extends Phaser.Scene {
       logoutBg.on('pointerout',  () => { logoutBg.setFillStyle(0x441122); logoutTxt.setColor('#ff8888'); });
       logoutBg.on('pointerdown', async () => {
         await signOut();
-        this.cameras.main.fadeOut(200, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('LoginScene'));
+        SceneHelper.transitionTo(this, 'LoginScene');
       });
 
       void [badgeBg, emailTxt, logoutTxt];
@@ -677,10 +668,7 @@ export class TitleScene extends Phaser.Scene {
 
       loginBg.on('pointerover', () => { loginBg.setFillStyle(0x335577); loginTxt.setColor('#bbddff'); });
       loginBg.on('pointerout',  () => { loginBg.setFillStyle(0x223355); loginTxt.setColor('#88bbee'); });
-      loginBg.on('pointerdown', () => {
-        this.cameras.main.fadeOut(200, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('LoginScene'));
-      });
+      loginBg.on('pointerdown', () => SceneHelper.transitionTo(this, 'LoginScene'));
     }
   }
 
@@ -729,10 +717,7 @@ export class TitleScene extends Phaser.Scene {
     matchupBg.on('pointerover', () => { matchupBg.setFillStyle(0x336666); matchupTxt.setColor('#aaffff'); });
     matchupBg.on('pointerout',  () => { matchupBg.setFillStyle(0x224444); matchupTxt.setColor('#88eeee'); });
     matchupBg.on('pointerdown', () => {
-      this.cameras.main.fadeOut(200, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () =>
-        this.scene.start('TypeMatchupScene', { caller: 'TitleScene' })
-      );
+      SceneHelper.transitionTo(this, 'TypeMatchupScene', { data: { caller: 'TitleScene' } });
     });
 
     // ── 음소거 버튼 (도감 오른쪽) ──
@@ -772,10 +757,7 @@ export class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(13);
     dexBg.on('pointerover',  () => { dexBg.setFillStyle(0x333366); dexTxt.setColor('#bbccff'); });
     dexBg.on('pointerout',   () => { dexBg.setFillStyle(0x222244); dexTxt.setColor('#88aaee'); });
-    dexBg.on('pointerdown',  () => {
-      this.cameras.main.fadeOut(200, 0, 0, 0);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('PokedexScene'));
-    });
+    dexBg.on('pointerdown', () => SceneHelper.transitionTo(this, 'PokedexScene'));
 
     // ── 저작권 텍스트 ──
     this.add.text(W / 2, FOOTER_TOP + 48,

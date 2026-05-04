@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { api } from './api';
 import { UPGRADES, getUpgradeLevel, setUpgradeLevel } from '../data/upgrades';
 
 export interface UserRecord {
@@ -14,24 +14,28 @@ export interface UserRecord {
 }
 
 export async function loadUserRecord(userId: string): Promise<UserRecord | null> {
-  const { data, error } = await supabase.rpc('get_user_records', { p_user_id: userId });
-  if (error || !data) return null;
-  return data as UserRecord;
+  try {
+    return await api.get<UserRecord>(`/user/${userId}`);
+  } catch {
+    return null;
+  }
 }
 
 export async function saveUserRecord(userId: string, record: Partial<UserRecord>) {
-  const { error } = await supabase.rpc('save_user_records', {
-    p_user_id:    userId,
-    p_total_gold: record.total_gold ?? 0,
-    p_best_wave:  record.best_wave  ?? 0,
-    p_best_kills: record.best_kills ?? 0,
-    p_best_time:  record.best_time  ?? 0,
-    p_best_stage: record.best_stage ?? 0,
-    p_rank_stage: record.rank_stage ?? 1,
-    p_rank_time:  record.rank_time  ?? 0,
-    p_upgrades:   record.upgrades   ?? {},
-  });
-  if (error) console.error('[userDB] save error:', error.message);
+  try {
+    await api.post(`/user/${userId}`, {
+      total_gold: record.total_gold ?? 0,
+      best_wave:  record.best_wave  ?? 0,
+      best_kills: record.best_kills ?? 0,
+      best_time:  record.best_time  ?? 0,
+      best_stage: record.best_stage ?? 0,
+      rank_stage: record.rank_stage ?? 1,
+      rank_time:  record.rank_time  ?? 0,
+      upgrades:   record.upgrades   ?? {},
+    });
+  } catch (err) {
+    console.error('[userDB] save error:', err);
+  }
 }
 
 function getLocalUpgrades(): Record<string, number> {
