@@ -24,7 +24,7 @@ const distPath = join(__dirname, '../dist');
 app.use(express.static(distPath));
 
 // SPA fallback — 모든 경로를 index.html로
-app.get('*', (_req, res) => {
+app.get('/{*path}', (_req, res) => {
   res.sendFile(join(distPath, 'index.html'));
 });
 
