@@ -5,10 +5,12 @@ import { isStageUnlocked, isStageCleared } from '../lib/stageProgress';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { ScrollablePanel } from '../ui/ScrollablePanel';
 import { SceneHelper } from '../utils/SceneHelper';
+import { t, getLang } from '../i18n';
 
 interface StageConfig {
   id: number;
   name: string;
+  nameEn: string;
   subtitle: string;
   enemyTypes: PokemonType[];
   bgColor: number;
@@ -16,23 +18,23 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  { id:  1, name: '태초마을',    subtitle: 'Pallet Town',    enemyTypes: ['normal'],               bgColor: 0x2a5c1a, bgPokemon: ['pokemon_040', 'pokemon_143', 'pokemon_039'] },
-  { id:  2, name: '벌레숲',      subtitle: 'Bug Forest',     enemyTypes: ['bug'],                  bgColor: 0x2d5c1a, bgPokemon: ['pokemon_267', 'pokemon_127', 'pokemon_012'] },
-  { id:  3, name: '풀밭 지대',   subtitle: 'Grass Fields',   enemyTypes: ['grass'],                bgColor: 0x1a4a10, bgPokemon: ['pokemon_254', 'pokemon_003', 'pokemon_389'] },
-  { id:  4, name: '불꽃 산지',   subtitle: 'Fire Mountain',  enemyTypes: ['fire'],                 bgColor: 0x8a2010, bgPokemon: ['pokemon_006', 'pokemon_059', 'pokemon_157'] },
-  { id:  5, name: '수로 지대',   subtitle: 'Water Route',    enemyTypes: ['water'],                bgColor: 0x1a3a8a, bgPokemon: ['pokemon_395', 'pokemon_130', 'pokemon_009'] },
-  { id:  6, name: '전기 평원',   subtitle: 'Electric Plains', enemyTypes: ['electric'],            bgColor: 0x7a6010, bgPokemon: ['pokemon_026', 'pokemon_466', 'pokemon_181'] },
-  { id:  7, name: '구름 위',     subtitle: 'Sky Ruins',      enemyTypes: ['flying'],               bgColor: 0x3a6a9a, bgPokemon: ['pokemon_398', 'pokemon_142', 'pokemon_227'] },
-  { id:  8, name: '독 늪지',     subtitle: 'Poison Marsh',   enemyTypes: ['poison'],               bgColor: 0x5a1a7a, bgPokemon: ['pokemon_034', 'pokemon_089', 'pokemon_452'] },
-  { id:  9, name: '사막 지대',   subtitle: 'Desert Sands',   enemyTypes: ['ground'],               bgColor: 0x8a5a10, bgPokemon: ['pokemon_076', 'pokemon_450', 'pokemon_208'] },
-  { id: 10, name: '암석 지대',   subtitle: 'Rocky Cavern',   enemyTypes: ['rock'],                 bgColor: 0x4a4a4a, bgPokemon: ['pokemon_248', 'pokemon_409', 'pokemon_306'] },
-  { id: 11, name: '격투 도장',   subtitle: 'Fighting Dojo',  enemyTypes: ['fighting'],             bgColor: 0x8a2020, bgPokemon: ['pokemon_068', 'pokemon_448', 'pokemon_297'] },
-  { id: 12, name: '에스퍼 궁전', subtitle: 'Psychic Palace', enemyTypes: ['psychic'],              bgColor: 0x8a206a, bgPokemon: ['pokemon_065', 'pokemon_282', 'pokemon_376'] },
-  { id: 13, name: '보라타운',    subtitle: 'Lavender Town',    enemyTypes: ['ghost'],                bgColor: 0x2a0a4a, bgPokemon: ['pokemon_094', 'pokemon_429', 'pokemon_477'] },
-  { id: 14, name: '강철 공장',   subtitle: 'Steel Factory',  enemyTypes: ['steel'],                bgColor: 0x3a4a5a, bgPokemon: ['pokemon_376', 'pokemon_306', 'pokemon_212'] },
-  { id: 15, name: '용의 소굴',   subtitle: "Dragon's Den",   enemyTypes: ['dragon'],               bgColor: 0x2a1a7a, bgPokemon: ['pokemon_445', 'pokemon_149', 'pokemon_373'] },
-  { id: 16, name: '설산',        subtitle: 'Ice Mountain',   enemyTypes: ['ice'],                  bgColor: 0x4a7a9a, bgPokemon: ['pokemon_473', 'pokemon_131', 'pokemon_461'] },
-  { id: 17, name: '신월섬',      subtitle: 'Newmoon Island',     enemyTypes: ['dark'],                 bgColor: 0x0a0a1a, bgPokemon: ['pokemon_442', 'pokemon_262', 'pokemon_197'] },
+  { id:  1, name: '태초마을',    nameEn: 'Pallet Town',     subtitle: 'Pallet Town',    enemyTypes: ['normal'],               bgColor: 0x2a5c1a, bgPokemon: ['pokemon_040', 'pokemon_143', 'pokemon_039'] },
+  { id:  2, name: '벌레숲',      nameEn: 'Bug Forest',      subtitle: 'Bug Forest',     enemyTypes: ['bug'],                  bgColor: 0x2d5c1a, bgPokemon: ['pokemon_267', 'pokemon_127', 'pokemon_012'] },
+  { id:  3, name: '풀밭 지대',   nameEn: 'Grass Fields',    subtitle: 'Grass Fields',   enemyTypes: ['grass'],                bgColor: 0x1a4a10, bgPokemon: ['pokemon_254', 'pokemon_003', 'pokemon_389'] },
+  { id:  4, name: '불꽃 산지',   nameEn: 'Fire Mountain',   subtitle: 'Fire Mountain',  enemyTypes: ['fire'],                 bgColor: 0x8a2010, bgPokemon: ['pokemon_006', 'pokemon_059', 'pokemon_157'] },
+  { id:  5, name: '수로 지대',   nameEn: 'Water Route',     subtitle: 'Water Route',    enemyTypes: ['water'],                bgColor: 0x1a3a8a, bgPokemon: ['pokemon_395', 'pokemon_130', 'pokemon_009'] },
+  { id:  6, name: '전기 평원',   nameEn: 'Electric Plains', subtitle: 'Electric Plains', enemyTypes: ['electric'],            bgColor: 0x7a6010, bgPokemon: ['pokemon_026', 'pokemon_466', 'pokemon_181'] },
+  { id:  7, name: '구름 위',     nameEn: 'Sky Ruins',       subtitle: 'Sky Ruins',      enemyTypes: ['flying'],               bgColor: 0x3a6a9a, bgPokemon: ['pokemon_398', 'pokemon_142', 'pokemon_227'] },
+  { id:  8, name: '독 늪지',     nameEn: 'Poison Marsh',    subtitle: 'Poison Marsh',   enemyTypes: ['poison'],               bgColor: 0x5a1a7a, bgPokemon: ['pokemon_034', 'pokemon_089', 'pokemon_452'] },
+  { id:  9, name: '사막 지대',   nameEn: 'Desert Sands',    subtitle: 'Desert Sands',   enemyTypes: ['ground'],               bgColor: 0x8a5a10, bgPokemon: ['pokemon_076', 'pokemon_450', 'pokemon_208'] },
+  { id: 10, name: '암석 지대',   nameEn: 'Rocky Cavern',    subtitle: 'Rocky Cavern',   enemyTypes: ['rock'],                 bgColor: 0x4a4a4a, bgPokemon: ['pokemon_248', 'pokemon_409', 'pokemon_306'] },
+  { id: 11, name: '격투 도장',   nameEn: 'Fighting Dojo',   subtitle: 'Fighting Dojo',  enemyTypes: ['fighting'],             bgColor: 0x8a2020, bgPokemon: ['pokemon_068', 'pokemon_448', 'pokemon_297'] },
+  { id: 12, name: '에스퍼 궁전', nameEn: 'Psychic Palace',  subtitle: 'Psychic Palace', enemyTypes: ['psychic'],              bgColor: 0x8a206a, bgPokemon: ['pokemon_065', 'pokemon_282', 'pokemon_376'] },
+  { id: 13, name: '보라타운',    nameEn: 'Lavender Town',   subtitle: 'Lavender Town',    enemyTypes: ['ghost'],                bgColor: 0x2a0a4a, bgPokemon: ['pokemon_094', 'pokemon_429', 'pokemon_477'] },
+  { id: 14, name: '강철 공장',   nameEn: 'Steel Factory',   subtitle: 'Steel Factory',  enemyTypes: ['steel'],                bgColor: 0x3a4a5a, bgPokemon: ['pokemon_376', 'pokemon_306', 'pokemon_212'] },
+  { id: 15, name: '용의 소굴',   nameEn: "Dragon's Den",    subtitle: "Dragon's Den",   enemyTypes: ['dragon'],               bgColor: 0x2a1a7a, bgPokemon: ['pokemon_445', 'pokemon_149', 'pokemon_373'] },
+  { id: 16, name: '설산',        nameEn: 'Ice Mountain',    subtitle: 'Ice Mountain',   enemyTypes: ['ice'],                  bgColor: 0x4a7a9a, bgPokemon: ['pokemon_473', 'pokemon_131', 'pokemon_461'] },
+  { id: 17, name: '신월섬',      nameEn: 'Newmoon Island',  subtitle: 'Newmoon Island',     enemyTypes: ['dark'],                 bgColor: 0x0a0a1a, bgPokemon: ['pokemon_442', 'pokemon_262', 'pokemon_197'] },
 ];
 
 
@@ -56,7 +58,7 @@ export class StageSelectScene extends Phaser.Scene {
 
     // ── 배경 + 헤더 ──
     PokeUI.gridBackground(this);
-    PokeUI.sceneHeader(this, '스테이지 선택', '탐험할 지역을 선택하세요');
+    PokeUI.sceneHeader(this, t('스테이지 선택', 'Select Stage'), t('탐험할 지역을 선택하세요', 'Choose an area to explore'));
 
     // ── 하단 버튼 2개: [뒤로] [다음] ──
     const BTN_Y  = H - 44;
@@ -65,11 +67,11 @@ export class StageSelectScene extends Phaser.Scene {
     const nextX  = CX + BTN_W / 2 + 4;
 
     // 뒤로 버튼
-    PokeUI.navButton(this, backX, BTN_Y, BTN_W, 40, '← 뒤로',
+    PokeUI.navButton(this, backX, BTN_Y, BTN_W, 40, t('← 뒤로', '← Back'),
       () => SceneHelper.transitionTo(this, 'TitleScene'));
 
     // 다음 버튼
-    PokeUI.navButton(this, nextX, BTN_Y, BTN_W, 40, '다음 →', () => {
+    PokeUI.navButton(this, nextX, BTN_Y, BTN_W, 40, t('다음 →', 'Next →'), () => {
       if (selectedStageId === 0) return;
       this.cameras.main.fadeOut(250, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -149,7 +151,7 @@ export class StageSelectScene extends Phaser.Scene {
 
     if (!unlocked) {
       const lockIcon = this.add.text(cx, cy - 14, '🔒', { fontSize: '28px' }).setOrigin(0.5);
-      const lockText = this.add.text(cx, cy + 18, `${stage.name}  —  STAGE ${stage.id - 1} 클리어 필요`, {
+      const lockText = this.add.text(cx, cy + 18, t(`${stage.name}  —  STAGE ${stage.id - 1} 클리어 필요`, `${stage.nameEn}  —  Clear STAGE ${stage.id - 1}`), {
         fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textGray,
       }).setOrigin(0.5);
       container.add([lockIcon, lockText]);
@@ -164,7 +166,7 @@ export class StageSelectScene extends Phaser.Scene {
     const badgeTxt = this.add.text(L + 32, row1Y, `STAGE ${stage.id}`, {
       fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
     }).setOrigin(0.5);
-    const nameTxt = this.add.text(L + 72, row1Y, stage.name, {
+    const nameTxt = this.add.text(L + 72, row1Y, getLang() === 'ko' ? stage.name : stage.nameEn, {
       fontFamily: POKE_FONT, fontSize: '20px', color: PokePalette.textDark, fontStyle: 'bold',
     }).setOrigin(0, 0.5);
 
@@ -175,7 +177,7 @@ export class StageSelectScene extends Phaser.Scene {
     const line = this.add.graphics().lineStyle(1, 0x989880, 0.5)
       .lineBetween(L, cardTop + 70, R, cardTop + 70);
 
-    const typeLabel = this.add.text(L, cardTop + 86, '출현 타입', {
+    const typeLabel = this.add.text(L, cardTop + 86, t('출현 타입', 'Enemy Types'), {
       fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray,
     }).setOrigin(0, 0.5);
 

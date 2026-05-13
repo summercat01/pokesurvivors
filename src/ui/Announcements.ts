@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TOP_H, BOT_H } from '../constants/layout';
 import type { Player } from '../entities/Player';
 import { PokeUI, POKE_FONT, PokePalette } from './PokeUI';
+import { t } from '../i18n';
 
 /** 웨이브 번호 알림 */
 export function showWaveAnnouncement(
@@ -54,7 +55,7 @@ export function showBossAlert(
   bg.setScrollFactor(0);
   // 빨간 상단 강조선
   const redBar = scene.add.rectangle(W / 2, cy - 28, W - 30, 4, 0xcc2222).setScrollFactor(0).setDepth(92);
-  const txt = scene.add.text(W / 2, cy, '⚠  BOSS 등장!  ⚠', {
+  const txt = scene.add.text(W / 2, cy, t('⚠  BOSS 등장!  ⚠', '⚠  BOSS INCOMING!  ⚠'), {
     fontFamily: POKE_FONT, fontSize: '18px', color: '#cc2222', fontStyle: 'bold',
     stroke: '#ffffff', strokeThickness: 2,
   }).setOrigin(0.5).setScrollFactor(0).setDepth(92);
@@ -91,11 +92,11 @@ export function showDarkraiAlert(
 
   const bg = PokeUI.panel(scene, W / 2, cy, W - 30, 80, 0x200830, 96);
   bg.setScrollFactor(0);
-  const title = scene.add.text(W / 2, cy - 16, '⚠  다크라이가 나타났다!  ⚠', {
+  const title = scene.add.text(W / 2, cy - 16, t('⚠  다크라이가 나타났다!  ⚠', '⚠  Darkrai has appeared!  ⚠'), {
     fontFamily: POKE_FONT, fontSize: '16px', color: '#cc88ff', fontStyle: 'bold',
     stroke: '#000000', strokeThickness: 4,
   }).setOrigin(0.5).setScrollFactor(0).setDepth(97).setAlpha(0);
-  const sub = scene.add.text(W / 2, cy + 16, '도망쳐라, 트레이너!', {
+  const sub = scene.add.text(W / 2, cy + 16, t('도망쳐라, 트레이너!', 'Run, Trainer!'), {
     fontFamily: POKE_FONT, fontSize: '12px', color: '#ff8888',
     stroke: '#000000', strokeThickness: 3,
   }).setOrigin(0.5).setScrollFactor(0).setDepth(97).setAlpha(0);
@@ -134,7 +135,7 @@ export function showBossDefeated(
   const txt = scene.add.text(W / 2, cy - 8, 'BOSS DEFEATED!', {
     fontFamily: POKE_FONT, fontSize: '18px', color: '#116622', fontStyle: 'bold',
   }).setOrigin(0.5).setScrollFactor(0).setDepth(93).setAlpha(0);
-  const sub = scene.add.text(W / 2, cy + 18, `${bossName ?? 'BOSS'} 처치!`, {
+  const sub = scene.add.text(W / 2, cy + 18, t(`${bossName ?? 'BOSS'} 처치!`, `${bossName ?? 'BOSS'} defeated!`), {
     fontFamily: POKE_FONT, fontSize: '11px', color: '#338844',
   }).setOrigin(0.5).setScrollFactor(0).setDepth(93).setAlpha(0);
   gameCam.ignore([bg, greenBar, txt, sub]);
@@ -191,7 +192,7 @@ export function showReviveEffect(
   const cy = TOP_H + (scene.scale.height - TOP_H - BOT_H) / 2;
   const flash = scene.add.rectangle(W / 2, scene.scale.height / 2, W, scene.scale.height, 0xffffff, 0.85)
     .setScrollFactor(0).setDepth(95);
-  const txt = scene.add.text(W / 2, cy, '부활!', {
+  const txt = scene.add.text(W / 2, cy, t('부활!', 'Revived!'), {
     fontFamily: POKE_FONT, fontSize: '30px', color: '#ffdd00', fontStyle: 'bold',
     stroke: '#aa4400', strokeThickness: 6,
   }).setOrigin(0.5).setScrollFactor(0).setDepth(96).setAlpha(0);

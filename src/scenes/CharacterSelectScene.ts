@@ -3,6 +3,8 @@ import { ALL_WEAPONS, TYPE_COLORS } from '../data/weapons';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { ScrollablePanel } from '../ui/ScrollablePanel';
 import { SceneHelper } from '../utils/SceneHelper';
+import { t } from '../i18n';
+import { getWeaponDisplayName } from '../data/weapons';
 
 
 interface CardControl {
@@ -28,7 +30,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // ── 배경 + 헤더 ──
     PokeUI.gridBackground(this);
-    PokeUI.sceneHeader(this, '트레이너 선택', '함께 싸울 트레이너를 선택하세요');
+    PokeUI.sceneHeader(this, t('트레이너 선택', 'Select Trainer'), t('함께 싸울 트레이너를 선택하세요', 'Choose a trainer to battle with'));
 
     // ── 하단 버튼 2개: [뒤로] [게임 시작] ──
     const BTN_Y  = H - 44;
@@ -37,7 +39,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     const startX = CX + BTN_W / 2 + 4;
 
     // 뒤로 버튼
-    PokeUI.navButton(this, backX, BTN_Y, BTN_W, 40, '← 뒤로', () => {
+    PokeUI.navButton(this, backX, BTN_Y, BTN_W, 40, t('← 뒤로', '← Back'), () => {
       SceneHelper.transitionTo(this, 'StageSelectScene', {
         before: () => {
           if (this.scene.manager.isSleeping('StageSelectScene')) {
@@ -49,7 +51,7 @@ export class CharacterSelectScene extends Phaser.Scene {
     });
 
     // 게임 시작 버튼
-    PokeUI.navButton(this, startX, BTN_Y, BTN_W, 40, '▶ 게임 시작', () => {
+    PokeUI.navButton(this, startX, BTN_Y, BTN_W, 40, t('▶ 게임 시작', '▶ Start Game'), () => {
       SceneHelper.transitionTo(this, 'GameScene', {
         duration: 250,
         data: { weaponIndex: selectedWeaponIndex, stageId: this.stageId },
@@ -146,11 +148,11 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     const textX = stripeRight + 16;
 
-    const nameTxt = this.add.text(textX, cardTop + 26, '광휘', {
+    const nameTxt = this.add.text(textX, cardTop + 26, t('광휘', 'Trainer'), {
       fontFamily: POKE_FONT, fontSize: '20px', color: PokePalette.textDark, fontStyle: 'bold',
     }).setOrigin(0, 0.5);
 
-    const subtitleTxt = this.add.text(textX, cardTop + 50, '포켓몬 트레이너', {
+    const subtitleTxt = this.add.text(textX, cardTop + 50, t('포켓몬 트레이너', 'Pokémon Trainer'), {
       fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textGray,
     }).setOrigin(0, 0.5);
 
@@ -158,11 +160,11 @@ export class CharacterSelectScene extends Phaser.Scene {
     divLine.lineStyle(1, 0x989880, 0.5);
     divLine.lineBetween(textX, cardTop + 64, cx + cardW / 2 - 12, cardTop + 64);
 
-    const partnerLabel = this.add.text(textX, cardTop + 82, '파트너 포켓몬', {
+    const partnerLabel = this.add.text(textX, cardTop + 82, t('파트너 포켓몬', 'Partner Pokémon'), {
       fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray,
     }).setOrigin(0, 0.5);
 
-    const weaponNameTxt = this.add.text(textX, cardTop + 102, weapon.name, {
+    const weaponNameTxt = this.add.text(textX, cardTop + 102, getWeaponDisplayName(weapon), {
       fontFamily: POKE_FONT, fontSize: '14px', color: PokePalette.textDark, fontStyle: 'bold',
     }).setOrigin(0, 0.5);
 

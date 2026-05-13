@@ -4,6 +4,7 @@ import { pushLocalToCloud } from '../lib/userDB';
 import { getStoredInt } from '../lib/storage';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { SceneHelper } from '../utils/SceneHelper';
+import { t } from '../i18n';
 
 interface GameOverData {
   level:           number;
@@ -92,7 +93,9 @@ export class GameOverScene extends Phaser.Scene {
     const headerBg = stageCleared ? 0x3050a0 : 0x802010;
     PokeUI.panel(this, CX, HEADER_CY, W - 16, HEADER_H, headerBg);
 
-    const headerTxt = stageCleared ? `✦  STAGE ${stageId}  클리어!  ✦` : '트레이너가 쓰러졌다!';
+    const headerTxt = stageCleared
+      ? t(`✦  STAGE ${stageId}  클리어!  ✦`, `✦  STAGE ${stageId}  CLEAR!  ✦`)
+      : t('트레이너가 쓰러졌다!', 'The trainer has fallen!');
     this.add.text(CX, HEADER_CY, headerTxt, {
       fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
       stroke: '#101020', strokeThickness: 3,
@@ -124,18 +127,18 @@ export class GameOverScene extends Phaser.Scene {
     const SECTION_SPLIT = CONTENT_T + CONTENT_H * 0.55;
 
     // ── 스탯 섹션 ─────────────────────────────────────────
-    this.add.text(CX, CONTENT_T + 10, '─  결과  ─', {
+    this.add.text(CX, CONTENT_T + 10, t('─  결과  ─', '─  Results  ─'), {
       fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textGray,
     }).setOrigin(0.5, 0);
 
     const statData: { icon: string; label: string; value: string; isRecord?: boolean }[] = [
-      { icon: '⏱', label: '생존 시간',  value: timeStr,                    isRecord: newTimeRecord },
-      { icon: '🌊', label: '웨이브',     value: `${waveNumber} Wave`,       isRecord: newWaveRecord },
-      { icon: '⭐', label: '도달 레벨', value: `Lv.${level}` },
-      { icon: '✕',  label: '처치 수',   value: `${killCount.toLocaleString()}마리`, isRecord: newKillRecord },
-      { icon: '💥', label: '총 피해량', value: totalDmg > 0 ? totalDmg.toLocaleString() : '-' },
-      { icon: '🔥', label: '최대 콤보', value: maxCombo > 0 ? `${maxCombo} combo` : '-' },
-      { icon: '★',  label: '획득 골드', value: `${goldEarned.toLocaleString()} G` },
+      { icon: '⏱', label: t('생존 시간', 'Survive Time'),  value: timeStr,                    isRecord: newTimeRecord },
+      { icon: '🌊', label: t('웨이브', 'Wave'),     value: `${waveNumber} Wave`,       isRecord: newWaveRecord },
+      { icon: '⭐', label: t('도달 레벨', 'Level'), value: `Lv.${level}` },
+      { icon: '✕',  label: t('처치 수', 'Kills'),   value: killCount.toLocaleString(), isRecord: newKillRecord },
+      { icon: '💥', label: t('총 피해량', 'Total Damage'), value: totalDmg > 0 ? totalDmg.toLocaleString() : '-' },
+      { icon: '🔥', label: t('최대 콤보', 'Max Combo'), value: maxCombo > 0 ? `${maxCombo} combo` : '-' },
+      { icon: '★',  label: t('획득 골드', 'Gold Earned'), value: `${goldEarned.toLocaleString()} G` },
     ];
 
     const STAT_START = CONTENT_T + 30;
@@ -161,7 +164,7 @@ export class GameOverScene extends Phaser.Scene {
     // ── 무기 딜 섹션 ─────────────────────────────────────
     PokeUI.divider(this, LX, SECTION_SPLIT, RX);
 
-    this.add.text(LX, SECTION_SPLIT + 8, '무기 딜 순위', {
+    this.add.text(LX, SECTION_SPLIT + 8, t('무기 딜 순위', 'Weapon Damage'), {
       fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray,
     }).setOrigin(0, 0);
 
@@ -191,7 +194,7 @@ export class GameOverScene extends Phaser.Scene {
         }).setOrigin(1, 0);
       });
     } else {
-      this.add.text(CX, SECTION_SPLIT + 40, '피해 기록 없음', {
+      this.add.text(CX, SECTION_SPLIT + 40, t('피해 기록 없음', 'No damage recorded'), {
         fontSize: '12px', color: '#445566',
       }).setOrigin(0.5);
     }
@@ -200,7 +203,7 @@ export class GameOverScene extends Phaser.Scene {
     const FOOTER_T = CONTENT_B + 6;
     const goldY = FOOTER_T + 10;
 
-    this.add.text(CX, goldY, `보유 골드  ✦  ${totalGold.toLocaleString()} G`, {
+    this.add.text(CX, goldY, t(`보유 골드  ✦  ${totalGold.toLocaleString()} G`, `Total Gold  ✦  ${totalGold.toLocaleString()} G`), {
       fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textGold, fontStyle: 'bold',
     }).setOrigin(0.5, 0);
 
@@ -211,7 +214,7 @@ export class GameOverScene extends Phaser.Scene {
       unlockH = 26;
       const unlockBg = this.add.rectangle(CX, uy, W - 40, 24, 0xe8f0e8)
         .setStrokeStyle(1, 0x228833);
-      this.add.text(CX, uy, `🔓  STAGE ${stageId + 1}  해금!`, {
+      this.add.text(CX, uy, t(`🔓  STAGE ${stageId + 1}  해금!`, `🔓  STAGE ${stageId + 1}  Unlocked!`), {
         fontFamily: POKE_FONT, fontSize: '10px', color: '#228833', fontStyle: 'bold',
       }).setOrigin(0.5);
       this.tweens.add({ targets: unlockBg, scaleX: { from: 0, to: 1 }, duration: 450, ease: 'Back.easeOut', delay: 600 });
@@ -220,7 +223,7 @@ export class GameOverScene extends Phaser.Scene {
     // 최고 스테이지 신기록 배너
     if (newStageRecord) {
       const recY = goldY + 26 + unlockH;
-      this.add.text(CX, recY, `🏆  최고 스테이지 신기록!  STAGE ${stageId}`, {
+      this.add.text(CX, recY, t(`🏆  최고 스테이지 신기록!  STAGE ${stageId}`, `🏆  New Best Stage!  STAGE ${stageId}`), {
         fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGold, fontStyle: 'bold',
       }).setOrigin(0.5, 0);
     }
@@ -236,10 +239,10 @@ export class GameOverScene extends Phaser.Scene {
       hit.on('pointerdown', onTap);
     };
 
-    makeBtn(CX - BTN_W / 2 - 6, '▶ 다시 도전', PokePalette.btnPrimary, 0x3366cc, PokePalette.textWhite, () => {
+    makeBtn(CX - BTN_W / 2 - 6, t('▶ 다시 도전', '▶ Retry'), PokePalette.btnPrimary, 0x3366cc, PokePalette.textWhite, () => {
       SceneHelper.transitionTo(this, 'GameScene', { duration: 300, r: 12, g: 10, b: 24, data: { stageId } });
     });
-    makeBtn(CX + BTN_W / 2 + 6, '⌂ 타이틀로', PokePalette.btnNormal, PokePalette.btnHover, PokePalette.textDark, () => {
+    makeBtn(CX + BTN_W / 2 + 6, t('⌂ 타이틀로', '⌂ Title'), PokePalette.btnNormal, PokePalette.btnHover, PokePalette.textDark, () => {
       SceneHelper.transitionTo(this, 'TitleScene', { duration: 300, r: 12, g: 10, b: 24 });
     });
 

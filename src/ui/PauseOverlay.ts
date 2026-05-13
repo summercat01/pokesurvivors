@@ -4,6 +4,8 @@ import type { WeaponConfig } from '../data/weapons';
 import { TYPE_COLORS, getUpgradedWeapon } from '../data/weapons';
 import type { PokemonType, PlayerStats } from '../types';
 import { PokeUI, POKE_FONT, PokePalette } from './PokeUI';
+import { t } from '../i18n';
+import { getWeaponDisplayName, getWeaponDisplayDesc } from '../data/weapons';
 
 export interface PauseCallbacks {
   onResume: () => void;
@@ -76,7 +78,7 @@ export class PauseOverlay {
     const headerG = PokeUI.panel(this.scene, CX, HEADER_Y, PW - 6, 44, PokePalette.headerBg, D + 2);
     headerG.setScrollFactor(0).setDepth(D + 2).setVisible(false);
     this.overlayItems.push(headerG);
-    addOverlay(this.scene.add.text(CX, HEADER_Y - 2, '⏸  일시정지', {
+    addOverlay(this.scene.add.text(CX, HEADER_Y - 2, t('⏸  일시정지', '⏸  Paused'), {
       fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite,
       stroke: '#101840', strokeThickness: 3, padding: { top: 4 },
     }).setOrigin(0.5));
@@ -97,10 +99,10 @@ export class PauseOverlay {
 
     // 스탯 셀 (fn은 show()에서 player stats를 받아서 설정)
     const cellDefs: Array<[number, number, string]> = [
-      [0, 0, 'HP'], [0, 1, '공격력'],
-      [1, 0, '방어'], [1, 1, '이동속도'],
-      [2, 0, '치명타확률'], [2, 1, '회피율'],
-      [3, 0, '쿨다운 감소'], [3, 1, '투사체 수'],
+      [0, 0, 'HP'], [0, 1, t('공격력', 'ATK')],
+      [1, 0, t('방어', 'DEF')], [1, 1, t('이동속도', 'SPD')],
+      [2, 0, t('치명타확률', 'CRIT%')], [2, 1, t('회피율', 'EVA%')],
+      [3, 0, t('쿨다운 감소', 'CDR')], [3, 1, t('투사체 수', 'PROJ')],
     ];
 
     cellDefs.forEach(([row, col, label]) => {
@@ -125,7 +127,7 @@ export class PauseOverlay {
     const POKE_GAP    = Math.floor((PW - 20 - 6 * POKE_SLOT_W) / 5);
     const POKE_X0     = COL_L + POKE_SLOT_W / 2;
 
-    addOverlay(this.scene.add.text(COL_L, POKE_TOP + 12, '장착 포켓몬', { fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray }).setOrigin(0, 0.5));
+    addOverlay(this.scene.add.text(COL_L, POKE_TOP + 12, t('장착 포켓몬', 'Pokémon'), { fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray }).setOrigin(0, 0.5));
     addOverlay(this.scene.add.graphics().lineStyle(1, 0x989880, 0.5).lineBetween(COL_L, POKE_TOP + 22, COL_L + PW - 20, POKE_TOP + 22));
 
     for (let i = 0; i < 6; i++) {
@@ -163,7 +165,7 @@ export class PauseOverlay {
     const DMG_TOP    = POKE_TOP + 28 + POKE_SLOT_H + 12;
     const RIGHT_END_X = COL_L + PW - 20;
 
-    addOverlay(this.scene.add.text(COL_L, DMG_TOP + 10, '무기 DPS', { fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray }).setOrigin(0, 0.5));
+    addOverlay(this.scene.add.text(COL_L, DMG_TOP + 10, t('무기 DPS', 'Weapon DPS'), { fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray }).setOrigin(0, 0.5));
     addOverlay(this.scene.add.graphics().lineStyle(1, 0x989880, 0.5).lineBetween(COL_L, DMG_TOP + 20, COL_L + PW - 20, DMG_TOP + 20));
     addOverlay(this.scene.add.graphics().lineStyle(1, 0x989880, 0.5).lineBetween(CX, DMG_TOP + 20, CX, DMG_TOP + 20 + 3 * 22 + 4));
 
@@ -197,7 +199,7 @@ export class PauseOverlay {
     const resumeBg = this.scene.add.rectangle(resumeX, BTN_Y, BTN_W2, BTN_H2, PokePalette.btnPrimary)
       .setScrollFactor(0).setDepth(D + 2).setVisible(false).setInteractive({ useHandCursor: true });
     this.overlayItems.push(resumeBg);
-    const resumeTxt = this.scene.add.text(resumeX, BTN_Y, '▶  계속하기', {
+    const resumeTxt = this.scene.add.text(resumeX, BTN_Y, t('▶  계속하기', '▶  Resume'), {
       fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textWhite, padding: { top: 4 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
     this.overlayItems.push(resumeTxt);
@@ -210,7 +212,7 @@ export class PauseOverlay {
     const titleBg = this.scene.add.rectangle(titleX, BTN_Y, BTN_W2, BTN_H2, 0x445566)
       .setScrollFactor(0).setDepth(D + 2).setVisible(false).setInteractive({ useHandCursor: true });
     this.overlayItems.push(titleBg);
-    const titleTxt = this.scene.add.text(titleX, BTN_Y, '⌂  메인으로', {
+    const titleTxt = this.scene.add.text(titleX, BTN_Y, t('⌂  메인으로', '⌂  Main Menu'), {
       fontFamily: POKE_FONT, fontSize: '13px', color: PokePalette.textWhite, padding: { top: 4 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
     this.overlayItems.push(titleTxt);
@@ -225,7 +227,7 @@ export class PauseOverlay {
     const matchupBg = this.scene.add.rectangle(CX, matchupBtnY, PW - 20, 36, PokePalette.btnPrimary)
       .setScrollFactor(0).setDepth(D + 2).setVisible(false).setInteractive({ useHandCursor: true });
     this.overlayItems.push(matchupBg);
-    const matchupTxt = this.scene.add.text(CX, matchupBtnY, '⚡ 상성표 보기', {
+    const matchupTxt = this.scene.add.text(CX, matchupBtnY, t('⚡ 상성표 보기', '⚡ Type Chart'), {
       fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textWhite, padding: { top: 4 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3).setVisible(false);
     this.overlayItems.push(matchupTxt);
@@ -292,7 +294,7 @@ export class PauseOverlay {
         const upg = getUpgradedWeapon(w, lv);
         const cnt = upg.projectileCount ?? 1;
         const dps = Math.round(upg.damage * cnt / (upg.cooldown / 1000));
-        this.dpsNameTexts[i]?.setText(w.name);
+        this.dpsNameTexts[i]?.setText(getWeaponDisplayName(w));
         this.dpsDmgTexts[i]?.setText(`${dps}`);
       } else {
         this.dpsNameTexts[i]?.setText('');
@@ -319,11 +321,11 @@ export class PauseOverlay {
 
     const behavior = weapon.behavior ?? 'projectile';
     const behaviorLabel: Record<string, string> = {
-      projectile: '투사체', melee: '근접', beam: '빔',
-      orbit: '궤도', zone: '장판', lightning: '번개',
-      homing: '유도탄', explosion: '폭발', rotating_beam: '회전빔',
-      falling: '낙하', nova: '충격파', boomerang: '부메랑',
-      scatter: '산탄', trap: '트랩',
+      projectile: t('투사체', 'Projectile'), melee: t('근접', 'Melee'), beam: t('빔', 'Beam'),
+      orbit: t('궤도', 'Orbit'), zone: t('장판', 'Zone'), lightning: t('번개', 'Lightning'),
+      homing: t('유도탄', 'Homing'), explosion: t('폭발', 'Explosion'), rotating_beam: t('회전빔', 'Rot. Beam'),
+      falling: t('낙하', 'Falling'), nova: t('충격파', 'Nova'), boomerang: t('부메랑', 'Boomerang'),
+      scatter: t('산탄', 'Scatter'), trap: t('트랩', 'Trap'),
     };
     const typeColor = TYPE_COLORS[weapon.type] ?? 0x888888;
     const typeHex   = `#${typeColor.toString(16).padStart(6, '0')}`;
@@ -347,32 +349,32 @@ export class PauseOverlay {
     }
 
     const TX = LEFT + 64;
-    push(this.scene.add.text(TX, CY - 68, `${weapon.name}`, { fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textDark, fontStyle: 'bold', padding: { top: 4 } }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
+    push(this.scene.add.text(TX, CY - 68, getWeaponDisplayName(weapon), { fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textDark, fontStyle: 'bold', padding: { top: 4 } }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
     push(this.scene.add.text(TX, CY - 46, `Lv.${weaponLevel}`, { fontFamily: POKE_FONT, fontSize: '11px', color: '#2255aa', fontStyle: 'bold' }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
     push(this.scene.add.text(TX, CY - 28, `  ${weapon.type.toUpperCase()}  `, { fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold', backgroundColor: typeHex, padding: { x: 4, y: 3 } }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
     push(this.scene.add.text(TX + 80, CY - 28, `  ${behaviorLabel[behavior]}  `, { fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textDark, backgroundColor: '#c8c8b0', padding: { x: 4, y: 3 } }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
     push(this.scene.add.graphics().lineStyle(1, typeColor, 0.6).lineBetween(LEFT, CY - 10, CX + PW / 2 - 16, CY - 10).setScrollFactor(0).setDepth(D + 3));
-    push(this.scene.add.text(LEFT, CY + 4, weapon.description ?? '', { fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textGray, lineSpacing: 6, wordWrap: { width: PW - 32 } }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
+    push(this.scene.add.text(LEFT, CY + 4, getWeaponDisplayDesc(weapon), { fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textGray, lineSpacing: 6, wordWrap: { width: PW - 32 } }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
 
-    const statParts = [`공격력 ${weapon.damage}`, `쿨다운 ${(weapon.cooldown / 1000).toFixed(1)}s`];
+    const statParts = [`${t('공격력', 'ATK')} ${weapon.damage}`, `${t('쿨다운', 'CD')} ${(weapon.cooldown / 1000).toFixed(1)}s`];
     switch (behavior) {
-      case 'melee':         statParts.push(`범위 ${weapon.meleeRange ?? 120}`); break;
-      case 'beam':          statParts.push(`길이 ${weapon.beamLength ?? 270}`); break;
-      case 'orbit':         statParts.push(`구체 ×${weapon.orbitCount ?? 1}`); break;
-      case 'zone':          statParts.push(`반경 ${weapon.zoneRadius ?? 180}`); break;
-      case 'lightning':     statParts.push(`체인 ${weapon.lightningChainCount ?? 3}회${(weapon.explosionRadius ?? 0) > 0 ? ` / 스플래시 ${weapon.explosionRadius}` : ''}`); break;
-      case 'explosion':     statParts.push(`폭발 반경 ${weapon.explosionRadius ?? 90}`); break;
-      case 'rotating_beam': statParts.push(`회전속도 ${((weapon.rotateSpeed ?? 1.8) * 60).toFixed(0)}°/s`); break;
-      case 'nova':          statParts.push(`충격 범위 ${weapon.meleeRange ?? 170}`); break;
-      case 'boomerang':     statParts.push(`사거리 ${weapon.meleeRange ?? 200}`); break;
-      case 'scatter':       statParts.push(`산탄 ×${weapon.projectileCount ?? 8}`); break;
-      case 'trap':          statParts.push(`트랩 ×${weapon.fallingCount ?? 2}`); break;
-      case 'falling':       statParts.push(`낙하 ×${weapon.fallingCount ?? 3}`); break;
-      case 'homing':        statParts.push(`관통 ${weapon.pierce ?? 1}회`); break;
-      default:              statParts.push(`투사체 ×${weapon.projectileCount}`); break;
+      case 'melee':         statParts.push(`${t('범위', 'Range')} ${weapon.meleeRange ?? 120}`); break;
+      case 'beam':          statParts.push(`${t('길이', 'Length')} ${weapon.beamLength ?? 270}`); break;
+      case 'orbit':         statParts.push(`${t('구체', 'Orbs')} ×${weapon.orbitCount ?? 1}`); break;
+      case 'zone':          statParts.push(`${t('반경', 'Radius')} ${weapon.zoneRadius ?? 180}`); break;
+      case 'lightning':     statParts.push(`${t('체인', 'Chain')} ${weapon.lightningChainCount ?? 3}${(weapon.explosionRadius ?? 0) > 0 ? ` / ${t('스플래시', 'Splash')} ${weapon.explosionRadius}` : ''}`); break;
+      case 'explosion':     statParts.push(`${t('폭발 반경', 'Blast')} ${weapon.explosionRadius ?? 90}`); break;
+      case 'rotating_beam': statParts.push(`${t('회전속도', 'Rot.Spd')} ${((weapon.rotateSpeed ?? 1.8) * 60).toFixed(0)}°/s`); break;
+      case 'nova':          statParts.push(`${t('충격 범위', 'Nova')} ${weapon.meleeRange ?? 170}`); break;
+      case 'boomerang':     statParts.push(`${t('사거리', 'Range')} ${weapon.meleeRange ?? 200}`); break;
+      case 'scatter':       statParts.push(`${t('산탄', 'Scatter')} ×${weapon.projectileCount ?? 8}`); break;
+      case 'trap':          statParts.push(`${t('트랩', 'Trap')} ×${weapon.fallingCount ?? 2}`); break;
+      case 'falling':       statParts.push(`${t('낙하', 'Fall')} ×${weapon.fallingCount ?? 3}`); break;
+      case 'homing':        statParts.push(`${t('관통', 'Pierce')} ${weapon.pierce ?? 1}`); break;
+      default:              statParts.push(`${t('투사체', 'Proj.')} ×${weapon.projectileCount}`); break;
     }
     push(this.scene.add.text(LEFT, CY + 68, statParts.join('  /  '), { fontFamily: POKE_FONT, fontSize: '9px', color: '#2255aa' }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 3));
-    push(this.scene.add.text(CX, CY + PH / 2 - 14, '탭하면 닫힙니다', { fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D + 3));
+    push(this.scene.add.text(CX, CY + PH / 2 - 14, t('탭하면 닫힙니다', 'Tap to close'), { fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(D + 3));
   }
 
   closeWeaponPopup() {

@@ -2,9 +2,10 @@ import Phaser from 'phaser';
 import type { PokemonType } from '../types';
 import type { GameScene } from './GameScene';
 import { TYPE_COLORS } from '../data/weapons';
-import { TYPE_KR } from '../constants/typeLabels';
+import { getTypeName, getTypeAbbr } from '../constants/typeLabels';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { SceneHelper } from '../utils/SceneHelper';
+import { t } from '../i18n';
 
 // ===== Gen IV 타입 상성 테이블 =====
 const TYPES: PokemonType[] = [
@@ -13,13 +14,7 @@ const TYPES: PokemonType[] = [
   'rock', 'ghost', 'dragon', 'dark', 'steel',
 ];
 
-// 컬럼 헤더용 1~2자 약칭
-const TYPE_ABBR: Record<PokemonType, string> = {
-  normal: '노', fire: '불', water: '물', grass: '풀',
-  electric: '전', ice: '얼', fighting: '격', poison: '독',
-  ground: '땅', flying: '비', psychic: '에', bug: '벌',
-  rock: '바', ghost: '고', dragon: '드', dark: '악', steel: '강',
-};
+// 컬럼 헤더용 약칭은 getTypeAbbr() 사용
 
 // 공격 → 방어 배율 (1이 아닌 것만)
 const TYPE_CHART: Partial<Record<PokemonType, Partial<Record<PokemonType, number>>>> = {
@@ -72,10 +67,10 @@ export class TypeMatchupScene extends Phaser.Scene {
     this.add.rectangle(0, 0, W, H, 0xe8e8d8).setOrigin(0, 0);
 
     // ── 헤더 ──
-    PokeUI.sceneHeader(this, '타입 상성표', '↓ 공격 타입   →  방어 타입', { depth: 10, headerH: HEADER_H });
+    PokeUI.sceneHeader(this, t('타입 상성표', 'Type Chart'), t('↓ 공격 타입   →  방어 타입', '↓ Attack Type   →  Defense Type'), { depth: 10, headerH: HEADER_H });
 
     // ── 뒤로 버튼 ──
-    PokeUI.navButton(this, 48, HEADER_H / 2, 88, 40, '← 뒤로', () => {
+    PokeUI.navButton(this, 48, HEADER_H / 2, 88, 40, t('← 뒤로', '← Back'), () => {
       if (caller === 'GameScene') {
         this.scene.stop('TypeMatchupScene');
         const gs = this.scene.get('GameScene') as unknown as GameScene;
@@ -91,10 +86,10 @@ export class TypeMatchupScene extends Phaser.Scene {
       .lineBetween(0, HEADER_H + LEGEND_H, W, HEADER_H + LEGEND_H).setDepth(10);
 
     const legends: Array<{ sym: string; label: string; symColor: string; bg: number }> = [
-      { sym: '◎',  label: '2배 (효과적)',   symColor: '#228833', bg: 0xd0f0d0 },
-      { sym: '▽',  label: '½배 (반감)',     symColor: '#cc4422', bg: 0xf8d8d0 },
-      { sym: '✕',  label: '0배 (무효)',     symColor: '#888888', bg: 0xe0ddd0 },
-      { sym: '·',  label: '1배',            symColor: PokePalette.textGray, bg: PokePalette.panelBg },
+      { sym: '◎',  label: t('2배 (효과적)', '2x (effective)'),   symColor: '#228833', bg: 0xd0f0d0 },
+      { sym: '▽',  label: t('½배 (반감)', '½x (resist)'),     symColor: '#cc4422', bg: 0xf8d8d0 },
+      { sym: '✕',  label: t('0배 (무효)', '0x (immune)'),     symColor: '#888888', bg: 0xe0ddd0 },
+      { sym: '·',  label: t('1배', '1x'),            symColor: PokePalette.textGray, bg: PokePalette.panelBg },
     ];
     const LEG_W = (W - 16) / 4;
     legends.forEach((leg, i) => {
@@ -141,7 +136,7 @@ export class TypeMatchupScene extends Phaser.Scene {
 
       const bg = this.add.rectangle(cx2, cy2, CELL_W - 1, COL_H - 1, bgColor);
       const stripe = this.add.rectangle(cx2, cy2 + COL_H / 2 - 2, CELL_W - 1, 2, typeColor, 0.9);
-      const txt = this.add.text(cx2, cy2 + 1, TYPE_ABBR[defType], {
+      const txt = this.add.text(cx2, cy2 + 1, getTypeAbbr(defType), {
         fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5);
@@ -166,7 +161,7 @@ export class TypeMatchupScene extends Phaser.Scene {
       const lblBgColor = dimColor(typeColor, 0.60);
       const labelBg = this.add.rectangle(LABEL_W / 2, rowY + CELL_H / 2, LABEL_W - 1, CELL_H - 1, lblBgColor);
       const labelStripe = this.add.rectangle(2, rowY + CELL_H / 2, 4, CELL_H - 1, typeColor, 0.9);
-      const labelTxt = this.add.text(LABEL_W / 2 + 2, rowY + CELL_H / 2 + 1, TYPE_KR[atkType], {
+      const labelTxt = this.add.text(LABEL_W / 2 + 2, rowY + CELL_H / 2 + 1, getTypeName(atkType), {
         fontFamily: POKE_FONT, fontSize: '9px', color: '#ffffff', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5);

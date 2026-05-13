@@ -1,13 +1,16 @@
 import type { PokemonType } from '../types';
+import { getLang } from '../i18n';
 
 export type WeaponBehavior = 'projectile' | 'melee' | 'beam' | 'orbit' | 'zone' | 'lightning' | 'homing' | 'explosion' | 'rotating_beam' | 'falling' | 'nova' | 'boomerang' | 'scatter' | 'trap';
 
 export interface WeaponConfig {
   pokemonId: number;
   name: string;
+  nameEn?: string;
   type: PokemonType;
   basePokemonId?: number;  // 진화 전 원본 pokemonId (진화 무기에만 설정)
   description?: string;   // 무기 행동 설명
+  descriptionEn?: string;
   damage: number;
   cooldown: number;       // 밀리초
   projectileSpeed: number;
@@ -61,8 +64,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 252,
     name: '나무지기',
+    nameEn: 'Treecko',
     type: 'grass',
     description: '전방 135° 범위의 덩굴채찍으로\n주변 적을 후려칩니다.',
+    descriptionEn: 'Whips nearby enemies with\na vine in a 135° arc.',
     damage: 22,
     cooldown: 1800,
     projectileSpeed: 0,
@@ -77,8 +82,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 4,
     name: '파이리',
+    nameEn: 'Charmander',
     type: 'fire',
     description: '화염방사가 플레이어 주위를\n360° 회전하며 적을 태웁니다.',
+    descriptionEn: 'A flamethrower rotates 360°\naround the player, burning enemies.',
     damage: 28,
     cooldown: 2200,
     projectileSpeed: 0,
@@ -94,8 +101,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 393,
     name: '팽도리',
+    nameEn: 'Piplup',
     type: 'water',
     description: '물 투사체를 발사합니다.\n느리지만 꾸준히 적을 압박합니다.',
+    descriptionEn: 'Fires water projectiles.\nSlow but steady pressure.',
     damage: 24,
     cooldown: 1600,
     projectileSpeed: 200,
@@ -109,8 +118,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 172,
     name: '피츄',
+    nameEn: 'Pichu',
     type: 'electric',
     description: '가장 가까운 적부터 번개를\n최대 3마리까지 연쇄시킵니다.',
+    descriptionEn: 'Chains lightning from the\nnearest enemy to up to 3 targets.',
     damage: 18,
     cooldown: 1400,
     projectileSpeed: 0,
@@ -126,8 +137,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 63,
     name: '캐이시',
+    nameEn: 'Abra',
     type: 'psychic',
     description: '에스퍼 구체가 주위를 공전하며\n닿는 적에게 지속 피해를 줍니다.',
+    descriptionEn: 'Psychic orbs orbit around you,\ndealing continuous damage on contact.',
     damage: 18,
     cooldown: 1500,
     projectileSpeed: 0,
@@ -143,8 +156,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 246,
     name: '애버라스',
+    nameEn: 'Larvitar',
     type: 'rock',
     description: '바위를 굴려 착탄 지점에서\n범위 폭발을 일으킵니다.',
+    descriptionEn: 'Rolls a boulder that explodes\non impact with AoE damage.',
     damage: 35,
     cooldown: 2800,
     projectileSpeed: 180,
@@ -158,8 +173,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 396,
     name: '찌르꼬',
+    nameEn: 'Starly',
     type: 'flying',
     description: '초음파를 부채꼴로 3발 발사합니다.\n빠른 속도로 전방의 적을 공격합니다.',
+    descriptionEn: 'Fires 3 sonic waves in a fan.\nFast projectiles hit forward enemies.',
     damage: 15,
     cooldown: 1800,
     projectileSpeed: 520,
@@ -172,8 +189,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 92,
     name: '고오스',
+    nameEn: 'Gastly',
     type: 'ghost',
     description: '저주받은 영혼이 적을 집요하게\n추적해 공격합니다.',
+    descriptionEn: 'A cursed spirit relentlessly\nhomes in on enemies.',
     damage: 22,
     cooldown: 1800,
     projectileSpeed: 150,
@@ -187,8 +206,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 66,
     name: '알통몬',
+    nameEn: 'Machop',
     type: 'fighting',
     description: '강력한 주먹 충격파를 일으킵니다.\n원형 파동이 주변 모든 적을 강타합니다.',
+    descriptionEn: 'Unleashes a powerful shockwave.\nA circular pulse hits all nearby enemies.',
     damage: 28,
     cooldown: 2400,
     projectileSpeed: 0,
@@ -202,8 +223,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 74,
     name: '꼬마돌',
+    nameEn: 'Geodude',
     type: 'ground',
     description: '발밑 지진으로 주변의 모든 적을\n동시에 강타합니다.',
+    descriptionEn: 'Triggers an earthquake beneath,\nhitting all surrounding enemies.',
     damage: 35,
     cooldown: 2200,
     projectileSpeed: 0,
@@ -218,8 +241,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 265,
     name: '개무소',
+    nameEn: 'Wurmple',
     type: 'bug',
     description: '포자 함정을 주변에 설치합니다.\n적이 밟으면 폭발하며 범위 피해를 줍니다.',
+    descriptionEn: 'Places spore traps nearby.\nExplodes with AoE when stepped on.',
     damage: 22,
     cooldown: 3000,
     projectileSpeed: 0,
@@ -233,8 +258,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 220,
     name: '꾸꾸리',
+    nameEn: 'Swinub',
     type: 'ice',
     description: '얼음 덩어리 3개가 무작위 위치에\n떨어져 범위 피해를 줍니다.',
+    descriptionEn: 'Drops 3 ice chunks at random spots,\ndealing AoE damage on impact.',
     damage: 24,
     cooldown: 2800,
     projectileSpeed: 0,
@@ -249,8 +276,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 443,
     name: '딥상어동',
+    nameEn: 'Gible',
     type: 'dragon',
     description: '용의 파동이 적을 연쇄로 튕기며\n각 지점마다 범위 폭발을 일으킵니다.',
+    descriptionEn: 'Dragon pulse chains between enemies,\ncausing AoE explosions at each point.',
     damage: 28,
     cooldown: 1800,
     projectileSpeed: 0,
@@ -268,8 +297,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 32,
     name: '니드런♂',
+    nameEn: 'Nidoran♂',
     type: 'poison',
     description: '독가스 장판을 주변에 생성합니다.\n범위 내 모든 적에게 지속 피해를 줍니다.',
+    descriptionEn: 'Creates a poison gas zone.\nDeals continuous damage to all inside.',
     damage: 14,
     cooldown: 1400,
     projectileSpeed: 0,
@@ -284,8 +315,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 174,
     name: '푸푸린',
+    nameEn: 'Igglybuff',
     type: 'normal',
     description: '노래 에너지가 8방향으로 퍼져나갑니다.\n전방위 동시 공격으로 모든 적을 노립니다.',
+    descriptionEn: 'Song energy spreads in 8 directions.\nHits enemies from all angles at once.',
     damage: 12,
     cooldown: 2000,
     projectileSpeed: 300,
@@ -298,8 +331,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 374,
     name: '메탕',
+    nameEn: 'Beldum',
     type: 'steel',
     description: '강철 방패를 앞으로 밀어붙입니다.\n범위는 짧지만 강력한 넉백을 줍니다.',
+    descriptionEn: 'Pushes a steel shield forward.\nShort range but strong knockback.',
     damage: 30,
     cooldown: 1400,
     projectileSpeed: 0,
@@ -315,8 +350,10 @@ export const ALL_WEAPONS: WeaponConfig[] = [
   {
     pokemonId: 261,
     name: '포챠나',
+    nameEn: 'Poochyena',
     type: 'dark',
     description: '예리한 발톱을 던져 적을 할퀴고\n돌아옵니다. 왕복 모두 피해를 줍니다.',
+    descriptionEn: 'Throws sharp claws that slash\nand return. Damages both ways.',
     damage: 28,
     cooldown: 1800,
     projectileSpeed: 0,
@@ -331,6 +368,16 @@ export const ALL_WEAPONS: WeaponConfig[] = [
 
 // 하위 호환성 alias
 export const STARTER_WEAPON = ALL_WEAPONS[0];
+
+/** 현재 언어에 맞는 무기 이름 */
+export function getWeaponDisplayName(w: WeaponConfig): string {
+  return getLang() === 'ko' ? w.name : (w.nameEn ?? w.name);
+}
+
+/** 현재 언어에 맞는 무기 설명 */
+export function getWeaponDisplayDesc(w: WeaponConfig): string {
+  return getLang() === 'ko' ? (w.description ?? '') : (w.descriptionEn ?? w.description ?? '');
+}
 
 // ===== 유틸 함수 =====
 export function getWeaponByPokemonId(id: number): WeaponConfig | undefined {
@@ -367,39 +414,40 @@ export function getUpgradeDescription(base: WeaponConfig, fromLevel: number, toL
   const before  = getUpgradedWeapon(base, fromLevel);
   const after   = getUpgradedWeapon(base, toLevel);
   const behavior = base.behavior ?? 'projectile';
+  const en = getLang() === 'en';
 
-  const dmg = `공격력 ${before.damage}→${after.damage}`;
-  const cd  = `쿨다운 ${(before.cooldown / 1000).toFixed(1)}→${(after.cooldown / 1000).toFixed(1)}s`;
+  const dmg = en ? `ATK ${before.damage}→${after.damage}` : `공격력 ${before.damage}→${after.damage}`;
+  const cd  = en ? `CD ${(before.cooldown / 1000).toFixed(1)}→${(after.cooldown / 1000).toFixed(1)}s` : `쿨다운 ${(before.cooldown / 1000).toFixed(1)}→${(after.cooldown / 1000).toFixed(1)}s`;
 
   switch (behavior) {
     case 'orbit':
-      return `${dmg} / ${cd} / 구체 ×${before.orbitCount ?? 1}→×${after.orbitCount ?? 1}`;
+      return `${dmg} / ${cd} / ${en ? 'Orbs' : '구체'} ×${before.orbitCount ?? 1}→×${after.orbitCount ?? 1}`;
     case 'lightning':
-      return `${dmg} / ${cd} / 체인 ${before.lightningChainCount ?? 3}→${after.lightningChainCount ?? 3}회`;
+      return `${dmg} / ${cd} / ${en ? 'Chain' : '체인'} ${before.lightningChainCount ?? 3}→${after.lightningChainCount ?? 3}`;
     case 'melee':
-      return `${dmg} / ${cd} / 범위 ${before.meleeRange ?? 45}→${after.meleeRange ?? 45}px`;
+      return `${dmg} / ${cd} / ${en ? 'Range' : '범위'} ${before.meleeRange ?? 45}→${after.meleeRange ?? 45}px`;
     case 'zone':
-      return `${dmg} / ${cd} / 반경 ${before.zoneRadius ?? 60}→${after.zoneRadius ?? 60}px`;
+      return `${dmg} / ${cd} / ${en ? 'Radius' : '반경'} ${before.zoneRadius ?? 60}→${after.zoneRadius ?? 60}px`;
     case 'beam':
-      return `${dmg} / ${cd} / 길이 ${before.beamLength ?? 55}→${after.beamLength ?? 55}px`;
+      return `${dmg} / ${cd} / ${en ? 'Length' : '길이'} ${before.beamLength ?? 55}→${after.beamLength ?? 55}px`;
     case 'rotating_beam':
-      return `${dmg} / 회전속도 ${before.rotateSpeed?.toFixed(1) ?? 1.2}→${after.rotateSpeed?.toFixed(1) ?? 1.2}rad/s`;
+      return `${dmg} / ${en ? 'Speed' : '회전속도'} ${before.rotateSpeed?.toFixed(1) ?? 1.2}→${after.rotateSpeed?.toFixed(1) ?? 1.2}rad/s`;
     case 'explosion':
-      return `${dmg} / ${cd} / 폭발반경 ${before.explosionRadius ?? 90}→${after.explosionRadius ?? 90}px`;
+      return `${dmg} / ${cd} / ${en ? 'Blast' : '폭발반경'} ${before.explosionRadius ?? 90}→${after.explosionRadius ?? 90}px`;
     case 'homing':
       return `${dmg} / ${cd}`;
     case 'falling':
-      return `${dmg} / ${cd} / 낙하 ${before.fallingCount ?? 3}→${after.fallingCount ?? 3}개`;
+      return `${dmg} / ${cd} / ${en ? 'Drops' : '낙하'} ${before.fallingCount ?? 3}→${after.fallingCount ?? 3}`;
     case 'nova':
-      return `${dmg} / ${cd} / 반경 ${before.meleeRange ?? 60}→${after.meleeRange ?? 60}px`;
+      return `${dmg} / ${cd} / ${en ? 'Radius' : '반경'} ${before.meleeRange ?? 60}→${after.meleeRange ?? 60}px`;
     case 'boomerang':
-      return `${dmg} / ${cd} / 사거리 ${before.meleeRange ?? 70}→${after.meleeRange ?? 70}px`;
+      return `${dmg} / ${cd} / ${en ? 'Range' : '사거리'} ${before.meleeRange ?? 70}→${after.meleeRange ?? 70}px`;
     case 'scatter':
-      return `${dmg} / ${cd} / ${before.projectileCount ?? 8}→${after.projectileCount ?? 8}발`;
+      return `${dmg} / ${cd} / ${before.projectileCount ?? 8}→${after.projectileCount ?? 8}`;
     case 'trap':
-      return `${dmg} / ${cd} / 함정 ${before.projectileCount ?? 2}→${after.projectileCount ?? 2}개`;
+      return `${dmg} / ${cd} / ${en ? 'Traps' : '함정'} ${before.projectileCount ?? 2}→${after.projectileCount ?? 2}`;
     default:
-      return `${dmg} / ${cd} / 투사체 ×${before.projectileCount}→×${after.projectileCount}`;
+      return `${dmg} / ${cd} / ${en ? 'Proj' : '투사체'} ×${before.projectileCount}→×${after.projectileCount}`;
   }
 }
 
@@ -469,57 +517,63 @@ export interface WeaponEvolution {
   fromId: number;          // 현재 pokemonId
   toId: number;            // 진화 후 pokemonId
   toName: string;          // 진화 후 이름
+  toNameEn?: string;       // 진화 후 영어 이름
   requireStoneLv: number;  // 필요 돌 레벨 (1차=1, 2차=5)
   damageMult: number;      // 원본 Lv1 대비 배율
   cooldownMult: number;    // 원본 Lv1 대비 배율
 }
 
+/** 현재 언어에 맞는 진화 이름 */
+export function getEvoDisplayName(evo: WeaponEvolution): string {
+  return getLang() === 'ko' ? evo.toName : (evo.toNameEn ?? evo.toName);
+}
+
 /** pokemonId → 진화 정보 맵 */
 export const WEAPON_EVOLUTIONS: Record<number, WeaponEvolution> = {};
 const _evo = (
-  fromId: number, toId: number, toName: string,
+  fromId: number, toId: number, toName: string, toNameEn: string,
   requireStoneLv: number, damageMult: number, cooldownMult: number,
-) => { WEAPON_EVOLUTIONS[fromId] = { fromId, toId, toName, requireStoneLv, damageMult, cooldownMult }; };
+) => { WEAPON_EVOLUTIONS[fromId] = { fromId, toId, toName, toNameEn, requireStoneLv, damageMult, cooldownMult }; };
 
 // ── 1차 진화 (해당 타입 돌 Lv1+) ──
 // 진화 직후 Lv1이 원본 Lv5(×3.0)보다 강하도록: damageMult 3.5, cooldownMult 0.60
-_evo(174, 39,  '푸린',     1, 3.5, 0.60);  // 노말: 푸푸린→푸린
-_evo(4,   5,   '리자드',   1, 3.5, 0.60);  // 불꽃: 파이리→리자드
-_evo(393, 394, '팽태자',   1, 3.5, 0.60);  // 물:   팽도리→팽태자
-_evo(252, 253, '나무돌이', 1, 3.5, 0.60);  // 풀:   나무지기→나무돌이
-_evo(265, 266, '실쿤',     1, 3.5, 0.60);  // 벌레: 개무소→실쿤
-_evo(172, 25,  '피카츄',   1, 3.5, 0.60);  // 전기: 피츄→피카츄
-_evo(66,  67,  '근육몬',   1, 3.5, 0.60);  // 격투: 알통몬→근육몬
-_evo(246, 247, '데기라스', 1, 3.5, 0.60);  // 바위: 애버라스→데기라스
-_evo(74,  75,  '데구리',   1, 3.5, 0.60);  // 땅:   꼬마돌→데구리
-_evo(63,  64,  '윤겔라',   1, 3.5, 0.60);  // 에스퍼: 캐이시→윤겔라
-_evo(220, 221, '메꾸리',   1, 3.5, 0.60);  // 얼음: 꾸꾸리→메꾸리
-_evo(32,  33,  '니드리노', 1, 3.5, 0.60);  // 독:   니드런♂→니드리노
-_evo(396, 397, '찌르버드', 1, 3.5, 0.60);  // 비행: 찌르꼬→찌르버드
-_evo(92,  93,  '고우스트', 1, 3.5, 0.60);  // 고스트: 고오스→고우스트
-_evo(374, 375, '메탕구',   1, 3.5, 0.60);  // 강철: 메탕→메탕구
-_evo(443, 444, '한바이트', 1, 3.5, 0.60);  // 드래곤: 딥상어동→한바이트
-_evo(261, 262, '그라에나', 1, 3.5, 0.60);  // 악:   포치에나→그라에나
+_evo(174, 39,  '푸린',     'Jigglypuff',  1, 3.5, 0.60);  // 노말
+_evo(4,   5,   '리자드',   'Charmeleon',  1, 3.5, 0.60);  // 불꽃
+_evo(393, 394, '팽태자',   'Prinplup',    1, 3.5, 0.60);  // 물
+_evo(252, 253, '나무돌이', 'Grovyle',     1, 3.5, 0.60);  // 풀
+_evo(265, 266, '실쿤',     'Silcoon',     1, 3.5, 0.60);  // 벌레
+_evo(172, 25,  '피카츄',   'Pikachu',     1, 3.5, 0.60);  // 전기
+_evo(66,  67,  '근육몬',   'Machoke',     1, 3.5, 0.60);  // 격투
+_evo(246, 247, '데기라스', 'Pupitar',     1, 3.5, 0.60);  // 바위
+_evo(74,  75,  '데구리',   'Graveler',    1, 3.5, 0.60);  // 땅
+_evo(63,  64,  '윤겔라',   'Kadabra',     1, 3.5, 0.60);  // 에스퍼
+_evo(220, 221, '메꾸리',   'Piloswine',   1, 3.5, 0.60);  // 얼음
+_evo(32,  33,  '니드리노', 'Nidorino',    1, 3.5, 0.60);  // 독
+_evo(396, 397, '찌르버드', 'Staravia',    1, 3.5, 0.60);  // 비행
+_evo(92,  93,  '고우스트', 'Haunter',     1, 3.5, 0.60);  // 고스트
+_evo(374, 375, '메탕구',   'Metang',      1, 3.5, 0.60);  // 강철
+_evo(443, 444, '한바이트', 'Gabite',      1, 3.5, 0.60);  // 드래곤
+_evo(261, 262, '그라에나', 'Mightyena',   1, 3.5, 0.60);  // 악
 
 // ── 2차 진화 (해당 타입 돌 Lv5) ──
 // 1차 Lv5 = origBase × 10.5, 진화 직후가 더 강하도록: damageMult 11.5, cooldownMult 0.36
-_evo(39,  40,  '푸크린',    5, 11.5, 0.36);  // 노말: 푸린→푸크린
-_evo(5,   6,   '리자몽',    5, 11.5, 0.36);  // 불꽃: 리자드→리자몽
-_evo(394, 395, '엠페르트',  5, 11.5, 0.36);  // 물:   팽태자→엠페르트
-_evo(253, 254, '나무킹',    5, 11.5, 0.36);  // 풀:   나무돌이→나무킹
-_evo(266, 267, '뷰티플라이',5, 11.5, 0.36);  // 벌레: 실쿤→뷰티플라이
-_evo(25,  26,  '라이츄',    5, 11.5, 0.36);  // 전기: 피카츄→라이츄
-_evo(67,  68,  '괴력몬',    5, 11.5, 0.36);  // 격투: 근육몬→괴력몬
-_evo(247, 248, '마기라스',  5, 11.5, 0.36);  // 바위: 데기라스→마기라스
-_evo(75,  76,  '딱구리',    5, 11.5, 0.36);  // 땅:   데구리→딱구리
-_evo(64,  65,  '후딘',      5, 11.5, 0.36);  // 에스퍼: 윤겔라→후딘
-_evo(221, 473, '맘모꾸리',  5, 11.5, 0.36);  // 얼음: 메꾸리→맘모꾸리
-_evo(33,  34,  '니드킹',    5, 11.5, 0.36);  // 독:   니드리노→니드킹
-_evo(397, 398, '찌르호크',  5, 11.5, 0.36);  // 비행: 찌르버드→찌르호크
-_evo(93,  94,  '팬텀',      5, 11.5, 0.36);  // 고스트: 고우스트→팬텀
-_evo(375, 376, '메타그로스', 5, 11.5, 0.36); // 강철: 메탕구→메타그로스
-_evo(444, 445, '한카리아스', 5, 11.5, 0.36); // 드래곤: 한바이트→한카리아스
-// 그라에나는 최종형 — 2차 진화 없음
+_evo(39,  40,  '푸크린',    'Wigglytuff',  5, 11.5, 0.36);  // 노말
+_evo(5,   6,   '리자몽',    'Charizard',   5, 11.5, 0.36);  // 불꽃
+_evo(394, 395, '엠페르트',  'Empoleon',    5, 11.5, 0.36);  // 물
+_evo(253, 254, '나무킹',    'Sceptile',    5, 11.5, 0.36);  // 풀
+_evo(266, 267, '뷰티플라이','Beautifly',   5, 11.5, 0.36);  // 벌레
+_evo(25,  26,  '라이츄',    'Raichu',      5, 11.5, 0.36);  // 전기
+_evo(67,  68,  '괴력몬',    'Machamp',     5, 11.5, 0.36);  // 격투
+_evo(247, 248, '마기라스',  'Tyranitar',   5, 11.5, 0.36);  // 바위
+_evo(75,  76,  '딱구리',    'Golem',       5, 11.5, 0.36);  // 땅
+_evo(64,  65,  '후딘',      'Alakazam',    5, 11.5, 0.36);  // 에스퍼
+_evo(221, 473, '맘모꾸리',  'Mamoswine',   5, 11.5, 0.36);  // 얼음
+_evo(33,  34,  '니드킹',    'Nidoking',    5, 11.5, 0.36);  // 독
+_evo(397, 398, '찌르호크',  'Staraptor',   5, 11.5, 0.36);  // 비행
+_evo(93,  94,  '팬텀',      'Gengar',      5, 11.5, 0.36);  // 고스트
+_evo(375, 376, '메타그로스','Metagross',   5, 11.5, 0.36);  // 강철
+_evo(444, 445, '한카리아스','Garchomp',    5, 11.5, 0.36);  // 드래곤
+// 그라에나(Mightyena)는 최종형 — 2차 진화 없음
 
 /** 진화 무기 생성: 원본 Lv1 스탯 기반으로 배율 적용, Lv1로 초기화 */
 export function buildEvolvedWeapon(
@@ -533,6 +587,7 @@ export function buildEvolvedWeapon(
     ...base,
     pokemonId:    evo.toId,
     name:         evo.toName,
+    nameEn:       evo.toNameEn,
     damage:       Math.round(base.damage * evo.damageMult),
     cooldown:     Math.round(base.cooldown * evo.cooldownMult),
     basePokemonId: origId,

@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { TOP_H, BOT_H } from '../constants/layout';
-import { TYPE_KR } from '../constants/typeLabels';
+import { getTypeName } from '../constants/typeLabels';
 import type { WeaponConfig } from '../data/weapons';
 import { TYPE_COLORS } from '../data/weapons';
 import type { PokemonType } from '../types';
 import { PokeUI, POKE_FONT, PokePalette } from './PokeUI';
+import { t } from '../i18n';
 
 export interface HudUpdateData {
   hp: number;
@@ -76,7 +77,7 @@ export class GameHud {
       .setScrollFactor(0);
 
     // 타이틀 (이름)
-    this.scene.add.text(10, 8, '광휘', {
+    this.scene.add.text(10, 8, t('광휘', 'Trainer'), {
       fontFamily: POKE_FONT,
       fontSize: '11px',
       color: PokePalette.textDark,
@@ -151,7 +152,7 @@ export class GameHud {
     const ROW_A_Y = ROW_P_Y + SLOT_H / 2 + 8 + 14 + SLOT_H / 2;
     const labelStyle = { fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textDark, fontStyle: 'bold' as const };
 
-    this.scene.add.text(8, ROW_P_Y - SLOT_H / 2 - 13, '포켓몬', labelStyle).setScrollFactor(0).setDepth(D + 2);
+    this.scene.add.text(8, ROW_P_Y - SLOT_H / 2 - 13, t('포켓몬', 'Pokémon'), labelStyle).setScrollFactor(0).setDepth(D + 2);
     for (let i = 0; i < 6; i++) {
       const sx = SLOT_X0 + i * (SLOT_W + SLOT_GAP);
       // 슬롯 테두리 (포켓몬 스타일 패널)
@@ -168,7 +169,7 @@ export class GameHud {
       this.pokemonSlotLvs.push(lv);
     }
 
-    this.scene.add.text(8, ROW_A_Y - SLOT_H / 2 - 13, '장신구', labelStyle).setScrollFactor(0).setDepth(D + 2);
+    this.scene.add.text(8, ROW_A_Y - SLOT_H / 2 - 13, t('장신구', 'Accessory'), labelStyle).setScrollFactor(0).setDepth(D + 2);
     for (let i = 0; i < 6; i++) {
       const sx = SLOT_X0 + i * (SLOT_W + SLOT_GAP);
       this.scene.add.rectangle(sx, ROW_A_Y, SLOT_W, SLOT_H, PokePalette.panelBorder).setScrollFactor(0).setDepth(D + 2);
@@ -324,7 +325,7 @@ export class GameHud {
         bg.setFillStyle(0xd0c8f0);
         this.accessorySlotLvs[i].setText(`Lv${passiveEntries[i][1]}`);
         this.accessorySlotTypes[i].setFillStyle(TYPE_COLORS[passiveEntries[i][0]] ?? 0x888888, 1);
-        this.accessorySlotNames[i].setText(TYPE_KR[passiveEntries[i][0]] ?? '');
+        this.accessorySlotNames[i].setText(getTypeName(passiveEntries[i][0]));
       } else {
         bg.setFillStyle(0xe0d8f0);
         this.accessorySlotLvs[i].setText('');

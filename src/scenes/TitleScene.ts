@@ -4,6 +4,8 @@ import { loadUserRecord } from '../lib/userDB';
 import { getBgmVolume } from '../lib/storage';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { SceneHelper } from '../utils/SceneHelper';
+import { t, getLang, setLang } from '../i18n';
+import type { Lang } from '../i18n';
 
 // ── 패치 노트 ──
 interface PatchEntry { version: string; date: string; changes: string[] }
@@ -200,7 +202,7 @@ export class TitleScene extends Phaser.Scene {
     const H = this.scale.height;
     const W = this.scale.width;
     // ── "포켓몬" 소제목 ──
-    this.add.text(W / 2, Math.round(H * 0.142), '포켓몬', {
+    this.add.text(W / 2, Math.round(H * 0.142), t('포켓몬', 'Pokémon'), {
       fontFamily: POKE_FONT,
       fontSize: '18px',
       color: '#ffe040',
@@ -211,7 +213,7 @@ export class TitleScene extends Phaser.Scene {
 
     // ── 메인 타이틀 ──
     const titleY = Math.round(H * 0.211);
-    const title = this.add.text(W / 2, titleY, '서바이버즈', {
+    const title = this.add.text(W / 2, titleY, t('서바이버즈', 'Survivors'), {
       fontFamily: POKE_FONT,
       fontSize: '44px',
       color: '#ffffff',
@@ -289,7 +291,7 @@ export class TitleScene extends Phaser.Scene {
     this.createDPButton(
       BTN_CX, BTN_Y0,
       BTN_W, BTN_H,
-      '▶  게임 시작',
+      t('▶  게임 시작', '▶  Start Game'),
       0x44cc66,      // 포인트 컬러 (초록)
       () => SceneHelper.transitionTo(this, 'StageSelectScene'),
     );
@@ -297,7 +299,7 @@ export class TitleScene extends Phaser.Scene {
     this.createDPButton(
       BTN_CX, BTN_Y0 + BTN_GAP,
       BTN_W, BTN_H,
-      '⬆  업그레이드',
+      t('⬆  업그레이드', '⬆  Upgrades'),
       null,
       () => SceneHelper.transitionTo(this, 'UpgradeScene', { r: 24, g: 16, b: 40 }),
     );
@@ -306,14 +308,14 @@ export class TitleScene extends Phaser.Scene {
     this.createDPButton(
       BTN_CX - HALF_W / 2 - 4, BTN_Y0 + BTN_GAP * 2,
       HALF_W, BTN_H,
-      '🏆 랭킹',
+      t('🏆 랭킹', '🏆 Ranking'),
       null,
       () => SceneHelper.transitionTo(this, 'RankingScene'),
     );
     this.createDPButton(
       BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP * 2,
       HALF_W, BTN_H,
-      '⚙ 설정',
+      t('⚙ 설정', '⚙ Settings'),
       null,
       () => this.showSettingsModal(),
     );
@@ -422,7 +424,7 @@ export class TitleScene extends Phaser.Scene {
     const headerG = PokeUI.panel(this, CX, PANEL_Y - PANEL_H / 2 + HEADER_H / 2, PANEL_W - 6, HEADER_H, PokePalette.headerBg, D + 2);
     headerG.setDepth(D + 2);
     allItems.push(headerG);
-    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + HEADER_H / 2 - 2, '패치 노트', {
+    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + HEADER_H / 2 - 2, t('패치 노트', 'Patch Notes'), {
       fontFamily: POKE_FONT, fontSize: '14px', color: PokePalette.textWhite, fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(D + 3);
     allItems.push(titleTxt);
@@ -515,7 +517,7 @@ export class TitleScene extends Phaser.Scene {
 
     // 패널 (포켓몬 스타일)
     const PANEL_W = W - 28;
-    const PANEL_H = 260;
+    const PANEL_H = 320;
     const PANEL_Y = H / 2;
     const SETT_HEADER_H = 48;
     const settPanelG = PokeUI.panel(this, CX, PANEL_Y, PANEL_W, PANEL_H, PokePalette.panelBg, D + 1);
@@ -526,7 +528,7 @@ export class TitleScene extends Phaser.Scene {
     allItems.push(settHeaderG);
 
     // 타이틀
-    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + SETT_HEADER_H / 2 - 2, '⚙ 설정', {
+    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + SETT_HEADER_H / 2 - 2, t('⚙ 설정', '⚙ Settings'), {
       fontFamily: POKE_FONT, fontSize: '14px', color: PokePalette.textWhite, fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(D + 3);
     allItems.push(titleTxt);
@@ -600,15 +602,57 @@ export class TitleScene extends Phaser.Scene {
     };
 
     const BASE_Y = PANEL_Y - PANEL_H / 2 + 72;
-    makeSlider('BGM 볼륨',  'bgmVolume',  BASE_Y);
-    makeSlider('효과음 볼륨', 'sfxVolume', BASE_Y + 80);
+    makeSlider(t('BGM 볼륨', 'BGM Volume'),  'bgmVolume',  BASE_Y);
+    makeSlider(t('효과음 볼륨', 'SFX Volume'), 'sfxVolume', BASE_Y + 80);
+
+    // ── 언어 선택 ──
+    const LANG_Y = BASE_Y + 170;
+    const langLabel = this.add.text(LEFT, LANG_Y, t('언어 / Language', 'Language / 언어'), {
+      fontSize: '13px', color: '#ccddee',
+    }).setOrigin(0, 0.5).setDepth(D + 2);
+    allItems.push(langLabel);
+
+    const curLang = getLang();
+    const btnW = 60;
+    const btnGap = 8;
+    const langBtnX = CX + PANEL_W / 2 - 18 - btnW * 2 - btnGap;
+
+    const koBg = this.add.rectangle(langBtnX + btnW / 2, LANG_Y, btnW, 28, curLang === 'ko' ? PokePalette.btnPrimary : PokePalette.btnNormal)
+      .setDepth(D + 3).setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(1, PokePalette.panelBorder).strokeRect(langBtnX, LANG_Y - 14, btnW, 28).setDepth(D + 3);
+    const koTxt = this.add.text(langBtnX + btnW / 2, LANG_Y, '한국어', {
+      fontFamily: POKE_FONT, fontSize: '11px',
+      color: curLang === 'ko' ? PokePalette.textWhite : PokePalette.textGray,
+      fontStyle: curLang === 'ko' ? 'bold' : 'normal',
+    }).setOrigin(0.5).setDepth(D + 4);
+    allItems.push(koBg, koTxt);
+
+    const enX = langBtnX + btnW + btnGap;
+    const enBg = this.add.rectangle(enX + btnW / 2, LANG_Y, btnW, 28, curLang === 'en' ? PokePalette.btnPrimary : PokePalette.btnNormal)
+      .setDepth(D + 3).setInteractive({ useHandCursor: true });
+    this.add.graphics().lineStyle(1, PokePalette.panelBorder).strokeRect(enX, LANG_Y - 14, btnW, 28).setDepth(D + 3);
+    const enTxt = this.add.text(enX + btnW / 2, LANG_Y, 'English', {
+      fontFamily: POKE_FONT, fontSize: '11px',
+      color: curLang === 'en' ? PokePalette.textWhite : PokePalette.textGray,
+      fontStyle: curLang === 'en' ? 'bold' : 'normal',
+    }).setOrigin(0.5).setDepth(D + 4);
+    allItems.push(enBg, enTxt);
+
+    const switchLang = (lang: Lang) => {
+      if (lang === getLang()) return;
+      setLang(lang);
+      close();
+      this.scene.restart();
+    };
+    koBg.on('pointerdown', () => switchLang('ko'));
+    enBg.on('pointerdown', () => switchLang('en'));
   }
 
   // ─────────────────────────────────────────────
   // 준비중 팝업
   // ─────────────────────────────────────────────
   private showComingSoon(x: number, y: number) {
-    const txt = this.add.text(x, y, '🚧 준비 중...', {
+    const txt = this.add.text(x, y, t('🚧 준비 중...', '🚧 Coming Soon...'), {
       fontSize: '16px',
       color: '#ffdd44',
       stroke: '#302000',
@@ -662,7 +706,7 @@ export class TitleScene extends Phaser.Scene {
       // 게스트 상태: 로그인 버튼
       const loginBg = this.add.rectangle(W - 38, 20, 68, 26, 0x223355, 0.9)
         .setDepth(30).setInteractive({ useHandCursor: true });
-      const loginTxt = this.add.text(W - 38, 20, '🔑 로그인', {
+      const loginTxt = this.add.text(W - 38, 20, t('🔑 로그인', '🔑 Login'), {
         fontSize: '10px', color: '#88bbee',
       }).setOrigin(0.5).setDepth(31);
 
@@ -689,7 +733,7 @@ export class TitleScene extends Phaser.Scene {
       .setDepth(12).setInteractive({ useHandCursor: true });
     this.add.graphics().lineStyle(1, 0x44aa44, 0.8)
       .strokeRect(W - 92, guideY - 15, 84, 30).setDepth(12);
-    const bookTxt = this.add.text(W - 50, guideY, '📖 가이드', {
+    const bookTxt = this.add.text(W - 50, guideY, t('📖 가이드', '📖 Guide'), {
       fontSize: '12px', color: '#88eeaa', fontStyle: 'bold',
       padding: { top: 2 },
     }).setOrigin(0.5).setDepth(13);
@@ -710,7 +754,7 @@ export class TitleScene extends Phaser.Scene {
       .setDepth(12).setInteractive({ useHandCursor: true });
     this.add.graphics().lineStyle(1, 0x44aaaa, 0.8)
       .strokeRect(matchupX - 42, guideY - 15, 84, 30).setDepth(12);
-    const matchupTxt = this.add.text(matchupX, guideY, '⚡ 상성표', {
+    const matchupTxt = this.add.text(matchupX, guideY, t('⚡ 상성표', '⚡ Types'), {
       fontSize: '12px', color: '#88eeee', fontStyle: 'bold',
       padding: { top: 2 },
     }).setOrigin(0.5).setDepth(13);
@@ -727,7 +771,7 @@ export class TitleScene extends Phaser.Scene {
       .setDepth(12).setInteractive({ useHandCursor: true });
     this.add.graphics().lineStyle(1, 0x8844aa, 0.8)
       .strokeRect(muteX - 42, guideY - 15, 84, 30).setDepth(12);
-    const muteTxt = this.add.text(muteX, guideY, isMuted() ? '🔇 음소거' : '🔊 소리', {
+    const muteTxt = this.add.text(muteX, guideY, isMuted() ? t('🔇 음소거', '🔇 Muted') : t('🔊 소리', '🔊 Sound'), {
       fontSize: '12px', color: '#ccaaee', fontStyle: 'bold',
       padding: { top: 2 },
     }).setOrigin(0.5).setDepth(13);
@@ -741,7 +785,7 @@ export class TitleScene extends Phaser.Scene {
       const muted = !isMuted();
       localStorage.setItem('bgmMuted', muted ? '1' : '0');
       this.sound.setMute(muted);
-      muteTxt.setText(muted ? '🔇 음소거' : '🔊 소리');
+      muteTxt.setText(muted ? t('🔇 음소거', '🔇 Muted') : t('🔊 소리', '🔊 Sound'));
       if (!muted && !this.sound.get('bgm_title')?.isPlaying) this.playBGM();
     });
 
@@ -751,7 +795,7 @@ export class TitleScene extends Phaser.Scene {
       .setDepth(12).setInteractive({ useHandCursor: true });
     this.add.graphics().lineStyle(1, 0x4444aa, 0.8)
       .strokeRect(dexX - 42, guideY - 15, 84, 30).setDepth(12);
-    const dexTxt = this.add.text(dexX, guideY, '📋 도감', {
+    const dexTxt = this.add.text(dexX, guideY, t('📋 도감', '📋 Pokédex'), {
       fontSize: '12px', color: '#88aaee', fontStyle: 'bold',
       padding: { top: 2 },
     }).setOrigin(0.5).setDepth(13);
@@ -761,7 +805,10 @@ export class TitleScene extends Phaser.Scene {
 
     // ── 저작권 텍스트 ──
     this.add.text(W / 2, FOOTER_TOP + 48,
-      'Pokémon and all related names are trademarks of Nintendo / Creatures Inc. / GAME FREAK inc.\n이 게임은 닌텐도와 무관한 비영리 팬 게임입니다.', {
+      t(
+        'Pokémon and all related names are trademarks of Nintendo / Creatures Inc. / GAME FREAK inc.\n이 게임은 닌텐도와 무관한 비영리 팬 게임입니다.',
+        'Pokémon and all related names are trademarks of Nintendo / Creatures Inc. / GAME FREAK inc.\nThis is a non-profit fan game unaffiliated with Nintendo.'
+      ), {
         fontSize: '11px', color: '#aabbaa', align: 'center',
         lineSpacing: 4,
         wordWrap: { width: W - 24 },

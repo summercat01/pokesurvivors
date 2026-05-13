@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { t } from '../i18n';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -16,7 +17,7 @@ export class BootScene extends Phaser.Scene {
     const bar = this.add.rectangle(width / 2 - 150, height / 2, 0, 20, PokePalette.btnPrimary);
     bar.setOrigin(0, 0.5);
 
-    const loadText = this.add.text(width / 2, height / 2 - 34, '로딩 중...', {
+    const loadText = this.add.text(width / 2, height / 2 - 34, t('로딩 중...', 'Loading...'), {
       fontFamily: POKE_FONT, fontSize: '14px',
       color: PokePalette.textDark,
     }).setOrigin(0.5);

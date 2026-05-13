@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import type { LevelUpOption } from '../types';
 import { TYPE_COLORS, getWeaponByPokemonId } from '../data/weapons';
 import type { GameScene } from './GameScene';
-import { TYPE_KR } from '../constants/typeLabels';
+import { getTypeName } from '../constants/typeLabels';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { t } from '../i18n';
 
 export class LevelUpScene extends Phaser.Scene {
   private CARD_W = 360;
@@ -30,7 +31,7 @@ export class LevelUpScene extends Phaser.Scene {
     const headerPanelH = 52;
     const headerY = Math.round(H * 0.065);
     PokeUI.panel(this, W / 2, headerY, W - 20, headerPanelH, PokePalette.headerBg);
-    this.add.text(W / 2, headerY - 4, '레벨이 올랐다!', {
+    this.add.text(W / 2, headerY - 4, t('레벨이 올랐다!', 'Level Up!'), {
       fontFamily: POKE_FONT,
       fontSize: '20px',
       color: PokePalette.textWhite,
@@ -41,7 +42,7 @@ export class LevelUpScene extends Phaser.Scene {
     // ── 서브 패널 ──
     const subY = Math.round(H * 0.13);
     PokeUI.panel(this, W / 2, subY, W - 20, 30);
-    this.add.text(W / 2, subY, '강화할 능력을 고르세요', {
+    this.add.text(W / 2, subY, t('강화할 능력을 고르세요', 'Choose an ability to upgrade'), {
       fontFamily: POKE_FONT,
       fontSize: '11px',
       color: PokePalette.textDark,
@@ -93,7 +94,7 @@ export class LevelUpScene extends Phaser.Scene {
       if (opt.pokemonId != null) {
         const w = getWeaponByPokemonId(opt.pokemonId);
         if (w) {
-          this.add.text(stripeX, cy + 30, `[${TYPE_KR[w.type] ?? w.type}]`, {
+          this.add.text(stripeX, cy + 30, `[${getTypeName(w.type)}]`, {
             fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 2,
           }).setOrigin(0.5);
@@ -102,7 +103,7 @@ export class LevelUpScene extends Phaser.Scene {
     } else if (opt.passiveType) {
       // 타입 이름 심볼 (한글 타입명)
       this.add.text(stripeX, cy - 8, '💎', { fontSize: '28px' }).setOrigin(0.5);
-      this.add.text(stripeX, cy + 20, TYPE_KR[opt.passiveType] ?? opt.passiveType, {
+      this.add.text(stripeX, cy + 20, getTypeName(opt.passiveType), {
         fontSize: '11px', color: '#ffffff', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2,
       }).setOrigin(0.5);
@@ -129,14 +130,14 @@ export class LevelUpScene extends Phaser.Scene {
       const rbg = this.add.graphics();
       rbg.fillStyle(0x181810); rbg.fillRect(rx + 1, ry - 8, 48, 16);
       rbg.fillStyle(0x116633); rbg.fillRect(rx, ry - 9, 48, 16);
-      this.add.text(rx + 24, ry - 1, '★ 추천', { fontSize: '9px', color: '#aaffcc', fontStyle: 'bold' }).setOrigin(0.5);
+      this.add.text(rx + 24, ry - 1, t('★ 추천', '★ REC'), { fontSize: '9px', color: '#aaffcc', fontStyle: 'bold' }).setOrigin(0.5);
     } else if (opt.recommendation === 'bad') {
       const rx = cx - CARD_W / 2 + STRIPE_W + 8;
       const ry = cy + CARD_H / 2 - 13;
       const rbg = this.add.graphics();
       rbg.fillStyle(0x181810); rbg.fillRect(rx + 1, ry - 8, 54, 16);
       rbg.fillStyle(0x662222); rbg.fillRect(rx, ry - 9, 54, 16);
-      this.add.text(rx + 27, ry - 1, '▼ 비추천', { fontSize: '9px', color: '#ffaaaa', fontStyle: 'bold' }).setOrigin(0.5);
+      this.add.text(rx + 27, ry - 1, t('▼ 비추천', '▼ WEAK'), { fontSize: '9px', color: '#ffaaaa', fontStyle: 'bold' }).setOrigin(0.5);
     }
 
     // ── 이름 텍스트 (어두운 색으로) ──
@@ -201,10 +202,10 @@ export class LevelUpScene extends Phaser.Scene {
     this.add.text(stripeX, cy, '💰', { fontSize: '36px' }).setOrigin(0.5);
 
     const textX = cx - CARD_W / 2 + STRIPE_W + 12;
-    this.add.text(textX, cy - 16, '+50 골드', {
+    this.add.text(textX, cy - 16, t('+50 골드', '+50 Gold'), {
       fontSize: '21px', color: '#8a6000', fontStyle: 'bold',
     }).setOrigin(0, 0.5);
-    this.add.text(textX, cy + 14, '골드 50개를 획득합니다.', {
+    this.add.text(textX, cy + 14, t('골드 50개를 획득합니다.', 'Gain 50 gold.'), {
       fontSize: '11px', color: '#606040',
     }).setOrigin(0, 0.5);
 

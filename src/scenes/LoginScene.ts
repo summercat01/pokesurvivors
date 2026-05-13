@@ -3,6 +3,7 @@ import { signIn, signUp } from '../lib/auth';
 import { syncLocalWithCloud, overwriteLocalWithCloud } from '../lib/userDB';
 import { POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { SceneHelper } from '../utils/SceneHelper';
+import { t } from '../i18n';
 
 /**
  * LoginScene
@@ -34,12 +35,12 @@ export class LoginScene extends Phaser.Scene {
     for (let x = 0; x < W; x += 40) g.lineBetween(x, 0, x, H);
     for (let y2 = 0; y2 < H; y2 += 40) g.lineBetween(0, y2, W, y2);
 
-    this.add.text(W / 2, 110, '포켓몬', {
+    this.add.text(W / 2, 110, t('포켓몬', 'Pokémon'), {
       fontFamily: POKE_FONT, fontSize: '18px', color: PokePalette.textGold, fontStyle: 'bold',
       stroke: '#302000', strokeThickness: 3,
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 155, '서바이버즈', {
+    this.add.text(W / 2, 155, t('서바이버즈', 'Survivors'), {
       fontFamily: POKE_FONT, fontSize: '40px', color: PokePalette.textDark, fontStyle: 'bold',
       stroke: '#ffffff', strokeThickness: 5,
     }).setOrigin(0.5);
@@ -85,47 +86,47 @@ export class LoginScene extends Phaser.Scene {
     return `
     <div id="login-box" style="${boxStyle()}">
       <div id="form-title" style="text-align:center; font-size:16px; font-weight:bold; color:#181810; margin-bottom:20px;">
-        로그인
+        ${t('로그인', 'Login')}
       </div>
 
       <div id="msg-area" style="min-height:22px; text-align:center; font-size:12px; color:#cc3311; margin-bottom:8px;"></div>
 
       <div style="margin-bottom:12px;">
-        <label style="${labelStyle()}">아이디</label>
+        <label style="${labelStyle()}">${t('아이디', 'Username')}</label>
         <input id="inp-id" type="text" autocomplete="username"
-          placeholder="트레이너 아이디"
+          placeholder="${t('트레이너 아이디', 'Trainer ID')}"
           style="${inputStyle()}">
       </div>
 
       <div style="margin-bottom:20px;">
-        <label style="${labelStyle()}">비밀번호</label>
+        <label style="${labelStyle()}">${t('비밀번호', 'Password')}</label>
         <input id="inp-pw" type="password" autocomplete="current-password"
-          placeholder="비밀번호 (6자 이상)"
+          placeholder="${t('비밀번호 (6자 이상)', 'Password (6+ chars)')}"
           style="${inputStyle()}">
       </div>
 
       <!-- 로그인 버튼 -->
-      <button id="btn-login" style="${btnStyle('#2255aa')}">▶ 로그인</button>
+      <button id="btn-login" style="${btnStyle('#2255aa')}">▶ ${t('로그인', 'Login')}</button>
 
       <!-- 회원가입 전용 영역 (기본 숨김) -->
       <div id="signup-extra" style="display:none;">
         <div style="margin-bottom:16px;">
-          <label style="${labelStyle()}">닉네임 <span style="color:#484838; font-size:11px;">(게임 내 표시 이름)</span></label>
+          <label style="${labelStyle()}">${t('닉네임', 'Nickname')} <span style="color:#484838; font-size:11px;">${t('(게임 내 표시 이름)', '(display name)')}</span></label>
           <input id="inp-nickname" type="text" autocomplete="off"
-            placeholder="ex) 포켓몬마스터"
+            placeholder="${t('ex) 포켓몬마스터', 'ex) PokeMaster')}"
             style="${inputStyle()}">
         </div>
-        <button id="btn-signup" style="${btnStyle('#228833')}">✦ 회원가입</button>
+        <button id="btn-signup" style="${btnStyle('#228833')}">✦ ${t('회원가입', 'Sign Up')}</button>
       </div>
 
       <div style="text-align:center; margin-top:10px;">
         <a id="link-toggle" href="#" style="font-size:12px; color:#2255aa; cursor:pointer; text-decoration:none;">
-          계정이 없으신가요? 회원가입
+          ${t('계정이 없으신가요? 회원가입', "Don't have an account? Sign Up")}
         </a>
       </div>
 
       <div style="margin-top:16px; border-top:1px solid #989880; padding-top:14px;">
-        <button id="btn-guest" style="${btnStyle('#443322', true)}">👤 게스트로 플레이</button>
+        <button id="btn-guest" style="${btnStyle('#443322', true)}">👤 ${t('게스트로 플레이', 'Play as Guest')}</button>
       </div>
     </div>`;
   }
@@ -145,7 +146,7 @@ export class LoginScene extends Phaser.Scene {
     const id = (this.overlay.querySelector('#inp-id') as HTMLInputElement).value.trim();
     const pw = (this.overlay.querySelector('#inp-pw') as HTMLInputElement).value;
 
-    if (!id || !pw) { this.setMsg('아이디와 비밀번호를 입력해 주세요.'); return; }
+    if (!id || !pw) { this.setMsg(t('아이디와 비밀번호를 입력해 주세요.', 'Please enter username and password.')); return; }
 
     this.setMsg('');
     this.setBusy(true);
@@ -153,7 +154,7 @@ export class LoginScene extends Phaser.Scene {
     try {
       const user = await signIn(id, pw);
       if (user) {
-        this.setMsg('✔ 로그인 성공!', '#228833');
+        this.setMsg(t('✔ 로그인 성공!', '✔ Login successful!'), '#228833');
         await syncLocalWithCloud(user.id);
         this.time.delayedCall(400, () => this.proceed());
       }
@@ -170,12 +171,12 @@ export class LoginScene extends Phaser.Scene {
     const pw       = (this.overlay.querySelector('#inp-pw') as HTMLInputElement).value;
     const nickname = (this.overlay.querySelector('#inp-nickname') as HTMLInputElement).value.trim();
 
-    if (!id)           { this.setMsg('아이디를 입력해 주세요.'); return; }
-    if (id.length < 3) { this.setMsg('아이디는 3자 이상이어야 합니다.'); return; }
-    if (!/^[a-zA-Z0-9_]+$/.test(id)) { this.setMsg('아이디는 영문·숫자·_만 사용 가능합니다.'); return; }
-    if (pw.length < 6) { this.setMsg('비밀번호는 6자 이상이어야 합니다.'); return; }
-    if (!nickname)     { this.setMsg('닉네임을 입력해 주세요.'); return; }
-    if (nickname.length < 2) { this.setMsg('닉네임은 2자 이상이어야 합니다.'); return; }
+    if (!id)           { this.setMsg(t('아이디를 입력해 주세요.', 'Please enter a username.')); return; }
+    if (id.length < 3) { this.setMsg(t('아이디는 3자 이상이어야 합니다.', 'Username must be 3+ characters.')); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(id)) { this.setMsg(t('아이디는 영문·숫자·_만 사용 가능합니다.', 'Username: letters, numbers, _ only.')); return; }
+    if (pw.length < 6) { this.setMsg(t('비밀번호는 6자 이상이어야 합니다.', 'Password must be 6+ characters.')); return; }
+    if (!nickname)     { this.setMsg(t('닉네임을 입력해 주세요.', 'Please enter a nickname.')); return; }
+    if (nickname.length < 2) { this.setMsg(t('닉네임은 2자 이상이어야 합니다.', 'Nickname must be 2+ characters.')); return; }
 
     this.setMsg('');
     this.setBusy(true);
@@ -183,7 +184,7 @@ export class LoginScene extends Phaser.Scene {
     try {
       const user = await signUp(id, pw, nickname);
       if (user) {
-        this.setMsg('✔ 가입 완료! 바로 로그인합니다.', '#228833');
+        this.setMsg(t('✔ 가입 완료! 바로 로그인합니다.', '✔ Signed up! Logging in...'), '#228833');
         await overwriteLocalWithCloud(user.id);
         this.time.delayedCall(400, () => this.proceed());
       }
@@ -216,14 +217,14 @@ export class LoginScene extends Phaser.Scene {
 
     if (this.isSignupMode) {
       signupExtra.style.display = 'block';
-      formTitle.textContent     = '회원가입';
-      linkToggle.textContent    = '이미 계정이 있으신가요? 로그인';
+      formTitle.textContent     = t('회원가입', 'Sign Up');
+      linkToggle.textContent    = t('이미 계정이 있으신가요? 로그인', 'Already have an account? Login');
       btnLogin.style.display    = 'none';
       inpPw.autocomplete        = 'new-password';
     } else {
       signupExtra.style.display = 'none';
-      formTitle.textContent     = '로그인';
-      linkToggle.textContent    = '계정이 없으신가요? 회원가입';
+      formTitle.textContent     = t('로그인', 'Login');
+      linkToggle.textContent    = t('계정이 없으신가요? 회원가입', "Don't have an account? Sign Up");
       btnLogin.style.display    = 'block';
       inpPw.autocomplete        = 'current-password';
     }
@@ -305,11 +306,11 @@ function btnStyle(bg: string, outline = false) {
 }
 
 function translateError(msg: string): string {
-  if (msg.includes('Invalid login credentials')) return '아이디 또는 비밀번호가 올바르지 않습니다.';
-  if (msg.includes('Email not confirmed'))        return '계정 인증이 필요합니다. (관리자에게 문의)';
-  if (msg.includes('User already registered'))   return '이미 사용 중인 아이디입니다.';
-  if (msg.includes('users_nickname_unique'))      return '이미 사용 중인 닉네임입니다.';
-  if (msg.includes('Password should be'))        return '비밀번호는 6자 이상이어야 합니다.';
-  if (msg.includes('Database error'))            return '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-  return '오류가 발생했습니다: ' + msg;
+  if (msg.includes('Invalid login credentials')) return t('아이디 또는 비밀번호가 올바르지 않습니다.', 'Invalid username or password.');
+  if (msg.includes('Email not confirmed'))        return t('계정 인증이 필요합니다. (관리자에게 문의)', 'Account verification needed.');
+  if (msg.includes('User already registered'))   return t('이미 사용 중인 아이디입니다.', 'Username already taken.');
+  if (msg.includes('users_nickname_unique'))      return t('이미 사용 중인 닉네임입니다.', 'Nickname already taken.');
+  if (msg.includes('Password should be'))        return t('비밀번호는 6자 이상이어야 합니다.', 'Password must be 6+ characters.');
+  if (msg.includes('Database error'))            return t('서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.', 'Server error. Please try again later.');
+  return t('오류가 발생했습니다: ', 'Error: ') + msg;
 }

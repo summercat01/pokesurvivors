@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getDefeatedIds } from '../data/pokedex';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { SceneHelper } from '../utils/SceneHelper';
+import { t, getLang } from '../i18n';
 
 const HEADER_H = 54;
 const TAB_H    = 36;
@@ -9,10 +10,10 @@ const FOOTER_H = 48;
 const CELL_H   = 76;
 
 const GENS = [
-  { label: '1세대', start: 1,   end: 151 },
-  { label: '2세대', start: 152, end: 251 },
-  { label: '3세대', start: 252, end: 386 },
-  { label: '4세대', start: 387, end: 493 },
+  { label: 'Gen 1', labelKr: '1세대', start: 1,   end: 151 },
+  { label: 'Gen 2', labelKr: '2세대', start: 152, end: 251 },
+  { label: 'Gen 3', labelKr: '3세대', start: 252, end: 386 },
+  { label: 'Gen 4', labelKr: '4세대', start: 387, end: 493 },
 ];
 
 export class PokedexScene extends Phaser.Scene {
@@ -39,13 +40,13 @@ export class PokedexScene extends Phaser.Scene {
 
     // ── 배경 + 헤더 ──
     PokeUI.gridBackground(this);
-    PokeUI.sceneHeader(this, '포켓몬 도감', undefined, { depth: 10, headerH: HEADER_H });
+    PokeUI.sceneHeader(this, t('포켓몬 도감', 'Pokédex'), undefined, { depth: 10, headerH: HEADER_H });
     this.countTxt = this.add.text(CX, 38, this.getTotalCountText(), {
       fontFamily: POKE_FONT, fontSize: '9px', color: '#aaccff',
     }).setOrigin(0.5).setDepth(11);
 
     // ── 뒤로 버튼 ──
-    PokeUI.navButton(this, 42, HEADER_H / 2, 68, 28, '← 뒤로',
+    PokeUI.navButton(this, 42, HEADER_H / 2, 68, 28, t('← 뒤로', '← Back'),
       () => SceneHelper.transitionTo(this, 'TitleScene'),
       { depth: 12 });
 
@@ -61,7 +62,7 @@ export class PokedexScene extends Phaser.Scene {
       const active  = i === this.currentGen;
       const tabBg   = this.add.rectangle(tabX, TAB_Y, tabW - 2, TAB_H - 6, active ? PokePalette.btnPrimary : PokePalette.btnNormal)
         .setDepth(11).setInteractive({ useHandCursor: true });
-      const tabTxt  = this.add.text(tabX, TAB_Y, gen.label, {
+      const tabTxt  = this.add.text(tabX, TAB_Y, getLang() === 'ko' ? gen.labelKr : gen.label, {
         fontFamily: POKE_FONT, fontSize: '11px',
         color: active ? PokePalette.textWhite : PokePalette.textGray,
         fontStyle: active ? 'bold' : 'normal',
@@ -77,10 +78,10 @@ export class PokedexScene extends Phaser.Scene {
     PokeUI.panel(this, CX, H - FOOTER_H / 2, W - 4, FOOTER_H, PokePalette.panelBg, 10);
     this.add.graphics().lineStyle(1, PokePalette.panelBorder, 0.4)
       .lineBetween(0, H - FOOTER_H, W, H - FOOTER_H).setDepth(10);
-    this.add.text(CX, H - FOOTER_H / 2 - 8, '● 컬러 = 처치 완료', {
+    this.add.text(CX, H - FOOTER_H / 2 - 8, t('● 컬러 = 처치 완료', '● Color = Defeated'), {
       fontFamily: POKE_FONT, fontSize: '9px', color: '#2255aa',
     }).setOrigin(0.5).setDepth(11);
-    this.add.text(CX, H - FOOTER_H / 2 + 8, '■ 실루엣 = 미발견', {
+    this.add.text(CX, H - FOOTER_H / 2 + 8, t('■ 실루엣 = 미발견', '■ Silhouette = Undiscovered'), {
       fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray,
     }).setOrigin(0.5).setDepth(11);
 
@@ -173,7 +174,11 @@ export class PokedexScene extends Phaser.Scene {
 
     // 헤더 카운트 텍스트 갱신
     const totalFound = this.countTotal();
-    this.countTxt.setText(`전체 발견: ${totalFound} / 493   |   ${gen.label}: ${genFound} / ${count}`);
+    const genLabel = getLang() === 'ko' ? gen.labelKr : gen.label;
+    this.countTxt.setText(t(
+      `전체 발견: ${totalFound} / 493   |   ${genLabel}: ${genFound} / ${count}`,
+      `Total: ${totalFound} / 493   |   ${genLabel}: ${genFound} / ${count}`,
+    ));
   }
 
   // ───────────────────────────────────────────────────────
@@ -197,7 +202,7 @@ export class PokedexScene extends Phaser.Scene {
   }
 
   private getTotalCountText(): string {
-    return `전체 발견: ${this.countTotal()} / 493`;
+    return t(`전체 발견: ${this.countTotal()} / 493`, `Total: ${this.countTotal()} / 493`);
   }
 
   // ───────────────────────────────────────────────────────

@@ -34,6 +34,7 @@ import { clearStage } from '../lib/stageProgress';
 import { recordDefeatedId } from '../data/pokedex';
 import { getCurrentUser } from '../lib/auth';
 import { pushLocalToCloud } from '../lib/userDB';
+import { t } from '../i18n';
 
 
 export class GameScene extends Phaser.Scene {
@@ -240,7 +241,7 @@ export class GameScene extends Phaser.Scene {
       },
       onDarkraiSpawned: (darkrai) => {
         this.currentBoss     = darkrai;
-        this.currentBossName = '다크라이';
+        this.currentBossName = t('다크라이', 'Darkrai');
         this.hud.resetBossHpRatio();
         this.hud.setBossPanelVisible(true);
       },
@@ -567,7 +568,7 @@ export class GameScene extends Phaser.Scene {
     for (const m of this.KILL_MILESTONES) {
       if (this.killCount >= m && !this.reachedKillMilestones.has(m)) {
         this.reachedKillMilestones.add(m);
-        showMilestone(this, this.gameCam, `${m}마리 처치 달성!`, '#88ffcc');
+        showMilestone(this, this.gameCam, t(`${m}마리 처치 달성!`, `${m} enemies defeated!`), '#88ffcc');
         break;
       }
     }
@@ -616,7 +617,7 @@ export class GameScene extends Phaser.Scene {
     this.gameCam.ignore(overlay);
 
     // 텍스트
-    const titleTxt = this.add.text(CX, CY - 110, '당신은 쓰러졌습니다', {
+    const titleTxt = this.add.text(CX, CY - 110, t('당신은 쓰러졌습니다', 'You have fallen'), {
       fontSize: '20px', color: '#ff4444', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
@@ -629,8 +630,8 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(201);
     this.gameCam.ignore(reviveBg);
     const reviveLabel = hasRevive
-      ? `부활 (남은 횟수: ${this.player.stats.revives})`
-      : '부활 불가';
+      ? t(`부활 (남은 횟수: ${this.player.stats.revives})`, `Revive (${this.player.stats.revives} left)`)
+      : t('부활 불가', 'No revives');
     const reviveTxt = this.add.text(CX, CY - 30, reviveLabel, {
       fontSize: '15px', color: hasRevive ? '#88ffaa' : '#666666', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
@@ -657,7 +658,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0).setDepth(201)
       .setInteractive({ useHandCursor: true });
     this.gameCam.ignore(quitBg);
-    const quitTxt = this.add.text(CX, CY + 40, '종료', {
+    const quitTxt = this.add.text(CX, CY + 40, t('종료', 'Quit'), {
       fontSize: '15px', color: '#ffaaaa', fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
     this.gameCam.ignore(quitTxt);
@@ -785,7 +786,7 @@ export class GameScene extends Phaser.Scene {
       for (const m of this.LEVEL_MILESTONES) {
         if (this.level >= m && !this.reachedLevelMilestones.has(m)) {
           this.reachedLevelMilestones.add(m);
-          showMilestone(this, this.gameCam, `레벨 ${m} 돌파!`, '#ffdd44');
+          showMilestone(this, this.gameCam, t(`레벨 ${m} 돌파!`, `Reached Level ${m}!`), '#ffdd44');
           break;
         }
       }
@@ -884,7 +885,7 @@ export class GameScene extends Phaser.Scene {
       for (const m of this.LEVEL_MILESTONES) {
         if (this.level >= m && !this.reachedLevelMilestones.has(m)) {
           this.reachedLevelMilestones.add(m);
-          showMilestone(this, this.gameCam, `레벨 ${m} 돌파!`, '#ffdd44');
+          showMilestone(this, this.gameCam, t(`레벨 ${m} 돌파!`, `Reached Level ${m}!`), '#ffdd44');
           break;
         }
       }

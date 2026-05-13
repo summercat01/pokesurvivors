@@ -1,8 +1,18 @@
 import type { PokemonType } from '../types';
+import { getLang } from '../i18n';
+import { POKEMON_NAMES_EN } from './pokemonNamesEn';
 
 export interface PokemonEntry {
   name: string;
   types: PokemonType[];
+}
+
+/** 현재 언어에 맞는 포켓몬 이름 반환 */
+export function getPokemonName(id: number): string {
+  const entry = POKEMON_DATA[id];
+  if (!entry) return '???';
+  if (getLang() === 'en') return POKEMON_NAMES_EN[id] ?? entry.name;
+  return entry.name;
 }
 
 export const POKEMON_DATA: Record<number, PokemonEntry> = {

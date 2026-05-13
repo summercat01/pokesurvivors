@@ -1,29 +1,37 @@
 import Phaser from 'phaser';
 import { getBgmVolume } from '../lib/storage';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
+import { t } from '../i18n';
 
 interface DialogStep {
   text: string;
+  textEn: string;
 }
 
 const DIALOGS: DialogStep[] = [
   {
     text: '안녕하세요!\n저는 포켓몬 연구소의 오박사입니다.\n이 세계에서 살아남으려면\n포켓몬의 힘이 필요합니다!\n잠시 제 이야기를 들어주세요.',
+    textEn: "Hello!\nI'm Professor Oak from the\nPokémon Research Lab.\nYou'll need the power of Pokémon\nto survive in this world!\nPlease listen to what I have to say.",
   },
   {
     text: '【 이동 】\n화면을 터치하면 가상 조이스틱이 나타납니다.\n조이스틱으로 트레이너를 조종하세요.\n\n키보드: WASD 또는 방향키\nESC / P: 일시정지',
+    textEn: '【 Movement 】\nTouch the screen to show a virtual joystick.\nUse it to control your trainer.\n\nKeyboard: WASD or Arrow Keys\nESC / P: Pause',
   },
   {
     text: '【 자동 공격 & 레벨업 】\n파트너 포켓몬이 자동으로 공격합니다!\n\n쓰러진 적에서 경험치 구슬이 떨어집니다.\n구슬을 모으면 레벨업!\n새 포켓몬을 얻거나 기존 기술을 강화하고\n장신구 슬롯에 타입 돌을 끼울 수 있습니다.',
+    textEn: '【 Auto Attack & Level Up 】\nYour partner Pokémon attacks automatically!\n\nDefeated enemies drop EXP orbs.\nCollect orbs to level up!\nGet new Pokémon, upgrade skills,\nor equip Type Stones in accessory slots.',
   },
   {
     text: '【 타입 상성 & 장신구 】\n약점 타입으로 공격하면 1.5배 데미지!\n예) 물→불꽃, 전기→물, 풀→바위\n\n장신구(타입 돌)는 공격력·범위·쿨다운 등\n다양한 스탯을 강화해줍니다.\n최대 6개까지 장착 가능합니다.',
+    textEn: '【 Type Matchups & Accessories 】\nHit weaknesses for 1.5x damage!\ne.g.) Water→Fire, Electric→Water, Grass→Rock\n\nAccessories (Type Stones) boost ATK, range,\ncooldown, and other stats.\nEquip up to 6 at once.',
   },
   {
     text: '【 골드 & 영구 업그레이드 】\n일반 적을 쓰러뜨리면 골드를 얻습니다.\n(엘리트·보스는 몬스터볼로 대체)\n\n게임 종료 후 메인 메뉴의 업그레이드 상점에서\n공격력·체력·쿨다운 등을 영구적으로 강화하세요!\n강화 효과는 모든 게임에 적용됩니다.',
+    textEn: '【 Gold & Permanent Upgrades 】\nDefeat normal enemies to earn gold.\n(Elites & bosses drop Poké Balls instead)\n\nAfter the game, visit the Upgrade Shop\nto permanently boost ATK, HP, cooldown, etc.\nUpgrades apply to all future runs!',
   },
   {
     text: '자, 이제 준비됐나요?\n\n포켓몬과 함께 끝까지 살아남으세요!\n\n행운을 빕니다, 트레이너!',
+    textEn: "Are you ready?\n\nSurvive to the end with your Pokémon!\n\nGood luck, Trainer!",
   },
 ];
 
@@ -73,10 +81,10 @@ export class OakGuideScene extends Phaser.Scene {
 
     // ── 헤더 (포켓몬 스타일) ──
     PokeUI.panel(this, CX, 36, W - 4, 66, PokePalette.headerBg);
-    this.add.text(CX, 24, '포켓몬 서바이버즈', {
+    this.add.text(CX, 24, t('포켓몬 서바이버즈', 'Pokémon Survivors'), {
       fontFamily: POKE_FONT, fontSize: '10px', color: '#aaccff',
     }).setOrigin(0.5);
-    this.add.text(CX, 46, '트레이너 가이드', {
+    this.add.text(CX, 46, t('트레이너 가이드', 'Trainer Guide'), {
       fontFamily: POKE_FONT, fontSize: '16px', color: PokePalette.textWhite, fontStyle: 'bold',
       stroke: '#101840', strokeThickness: 3,
     }).setOrigin(0.5);
@@ -129,7 +137,7 @@ export class OakGuideScene extends Phaser.Scene {
     badgeG.fillStyle(PokePalette.panelBorder); badgeG.fillRect(BOX_L + 1, BOX_TOP - 26 + 1, 90, 24);
     badgeG.fillStyle(PokePalette.headerBg);    badgeG.fillRect(BOX_L, BOX_TOP - 27, 90, 24);
     badgeG.fillStyle(0xffffff, 0.3);           badgeG.fillRect(BOX_L, BOX_TOP - 27, 90, 3);
-    this.add.text(BOX_L + 45, BOX_TOP - 15, '오박사', {
+    this.add.text(BOX_L + 45, BOX_TOP - 15, t('오박사', 'Prof. Oak'), {
       fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textWhite, fontStyle: 'bold',
     }).setOrigin(0.5);
 
@@ -151,7 +159,7 @@ export class OakGuideScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     // 버튼 테두리
     this.add.graphics().lineStyle(2, PokePalette.panelBorder).strokeRect(CX - 66 - 55, BTN_Y - 15, 110, 30);
-    this.prevTxt = this.add.text(CX - 66, BTN_Y, '◀ 이전', {
+    this.prevTxt = this.add.text(CX - 66, BTN_Y, t('◀ 이전', '◀ Prev'), {
       fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textGray,
       padding: { top: 4 },
     }).setOrigin(0.5);
@@ -163,7 +171,7 @@ export class OakGuideScene extends Phaser.Scene {
     this.nextBtn = this.add.rectangle(CX + 66, BTN_Y, 110, 30, PokePalette.btnPrimary)
       .setInteractive({ useHandCursor: true });
     this.add.graphics().lineStyle(2, PokePalette.panelBorder).strokeRect(CX + 66 - 55, BTN_Y - 15, 110, 30);
-    this.nextTxt = this.add.text(CX + 66, BTN_Y, '다음 ▶', {
+    this.nextTxt = this.add.text(CX + 66, BTN_Y, t('다음 ▶', 'Next ▶'), {
       fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textWhite,
       padding: { top: 4 },
     }).setOrigin(0.5);
@@ -179,7 +187,7 @@ export class OakGuideScene extends Phaser.Scene {
     this.checkMark = this.add.text(cbX + 9, CB_Y, '', {
       fontFamily: POKE_FONT, fontSize: '11px', color: '#228822', fontStyle: 'bold',
     }).setOrigin(0.5);
-    this.add.text(cbX + 26, CB_Y, '다시 보지 않기', {
+    this.add.text(cbX + 26, CB_Y, t('다시 보지 않기', "Don't show again"), {
       fontFamily: POKE_FONT, fontSize: '10px', color: PokePalette.textGray,
     }).setOrigin(0, 0.5);
 
@@ -190,7 +198,10 @@ export class OakGuideScene extends Phaser.Scene {
     });
 
     // ── 법적 고지 (마지막 스텝에만 표시) ──
-    this.disclaimerText = this.add.text(CX, CB_Y - 28, '본 게임은 포켓몬 팬 게임으로, 어떠한 수익도 창출하지 않으며\n닌텐도 / 포켓몬컴퍼니 / GAME FREAK과 무관합니다.', {
+    this.disclaimerText = this.add.text(CX, CB_Y - 28, t(
+      '본 게임은 포켓몬 팬 게임으로, 어떠한 수익도 창출하지 않으며\n닌텐도 / 포켓몬컴퍼니 / GAME FREAK과 무관합니다.',
+      'This is a non-profit fan game, not affiliated with\nNintendo / The Pokémon Company / GAME FREAK.'
+    ), {
       fontFamily: POKE_FONT, fontSize: '9px', color: PokePalette.textGray, align: 'center',
       lineSpacing: 4,
       wordWrap: { width: BOX_W - 32 },
@@ -201,7 +212,7 @@ export class OakGuideScene extends Phaser.Scene {
 
   private showStep(index: number) {
     this.step     = index;
-    this.fullText = DIALOGS[index].text;
+    this.fullText = t(DIALOGS[index].text, DIALOGS[index].textEn);
 
     // 도트 갱신
     this.stepDots.forEach((d, i) =>
@@ -225,7 +236,7 @@ export class OakGuideScene extends Phaser.Scene {
 
     // 다음 버튼
     const isLast = index === DIALOGS.length - 1;
-    this.nextTxt.setText(isLast ? '시작! ▶' : '다음 ▶');
+    this.nextTxt.setText(isLast ? t('시작! ▶', 'Start! ▶') : t('다음 ▶', 'Next ▶'));
     this.nextBtn.setFillStyle(isLast ? PokePalette.btnDanger : PokePalette.btnPrimary);
     this.disclaimerText.setVisible(isLast);
 

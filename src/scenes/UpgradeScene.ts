@@ -3,12 +3,14 @@ import {
   UPGRADES,
   getUpgradeLevel, setUpgradeLevel,
   getTotalGold, setTotalGold,
+  getUpgradeDisplayName, getUpgradeDisplayDesc, getUpgradeDisplayLabel,
 } from '../data/upgrades';
 import { getCurrentUser } from '../lib/auth';
 import { pushLocalToCloud } from '../lib/userDB';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { ScrollablePanel } from '../ui/ScrollablePanel';
 import { SceneHelper } from '../utils/SceneHelper';
+import { t } from '../i18n';
 
 export class UpgradeScene extends Phaser.Scene {
   private selectedIdx = 0;
@@ -40,7 +42,7 @@ export class UpgradeScene extends Phaser.Scene {
 
     // ── 배경 + 헤더 ──
     PokeUI.gridBackground(this);
-    PokeUI.sceneHeader(this, '영구 업그레이드');
+    PokeUI.sceneHeader(this, t('영구 업그레이드', 'Permanent Upgrades'));
 
     this.goldTxt = this.add.text(CX, 48, `💰 ${getTotalGold().toLocaleString()} G`, {
       fontFamily: POKE_FONT, fontSize: '11px', color: '#ffdd44', fontStyle: 'bold',
@@ -104,7 +106,7 @@ export class UpgradeScene extends Phaser.Scene {
 
       // 이름
       const TX = cx - CARD_W / 2 + 48;
-      const nameTxt = this.add.text(TX, cy - 22, upg.name, {
+      const nameTxt = this.add.text(TX, cy - 22, getUpgradeDisplayName(upg), {
         fontFamily: POKE_FONT, fontSize: '10px', color: maxed ? '#8a6000' : PokePalette.textDark, fontStyle: 'bold',
       }).setOrigin(0, 0.5);
 
@@ -120,7 +122,7 @@ export class UpgradeScene extends Phaser.Scene {
       }
 
       // 효과 미리보기
-      const preview = maxed ? upg.labels[maxLv - 1] : `→ ${upg.labels[lv] ?? upg.labels[maxLv - 1]}`;
+      const preview = maxed ? getUpgradeDisplayLabel(upg, maxLv - 1) : `→ ${getUpgradeDisplayLabel(upg, lv) || getUpgradeDisplayLabel(upg, maxLv - 1)}`;
       const previewTxt = this.add.text(TX, cy + 20, preview, {
         fontFamily: POKE_FONT, fontSize: '8px', color: maxed ? PokePalette.textGold : '#2255aa',
       }).setOrigin(0, 0.5);
@@ -214,7 +216,7 @@ export class UpgradeScene extends Phaser.Scene {
 
     // ── 뒤로 버튼 ──
     const BACK_Y = H - BACK_BTN_H / 2 - 4;
-    PokeUI.navButton(this, CX, BACK_Y, W - 20, BACK_BTN_H, '← 타이틀로',
+    PokeUI.navButton(this, CX, BACK_Y, W - 20, BACK_BTN_H, t('← 타이틀로', '← Title'),
       () => SceneHelper.transitionTo(this, 'TitleScene'));
   }
 
@@ -246,15 +248,15 @@ export class UpgradeScene extends Phaser.Scene {
     this.goldTxt.setText(`💰 ${gold.toLocaleString()} G`);
     this.infoIconBg.setFillStyle(maxed ? 0xd4a820 : upg.color);
     this.infoIcon.setText(upg.icon);
-    this.infoName.setText(upg.name);
+    this.infoName.setText(getUpgradeDisplayName(upg));
     this.infoLevel.setText(maxed ? `Lv.${maxLv} / ${maxLv}  ✦ MAX` : `Lv.${lv} / ${maxLv}`);
 
     if (maxed) {
-      this.infoBonus.setText(`✦ 최대치 달성  (${upg.labels[maxLv - 1]})`).setColor('#c08000');
+      this.infoBonus.setText(t(`✦ 최대치 달성  (${upg.labels[maxLv - 1]})`, `✦ Max reached  (${upg.labelsEn[maxLv - 1]})`)).setColor('#c08000');
     } else if (lv > 0) {
-      this.infoBonus.setText(`현재 ${upg.labels[lv - 1]}  →  다음 ${upg.labels[lv]}`).setColor('#2255aa');
+      this.infoBonus.setText(t(`현재 ${upg.labels[lv - 1]}  →  다음 ${upg.labels[lv]}`, `Current ${upg.labelsEn[lv - 1]}  →  Next ${upg.labelsEn[lv]}`)).setColor('#2255aa');
     } else {
-      this.infoBonus.setText(`강화 효과: ${upg.labels[0]}`).setColor('#2255aa');
+      this.infoBonus.setText(t(`강화 효과: ${upg.labels[0]}`, `Effect: ${upg.labelsEn[0]}`)).setColor('#2255aa');
     }
 
     this.infoDots.forEach((dot, i) =>
@@ -263,15 +265,15 @@ export class UpgradeScene extends Phaser.Scene {
     if (maxed) {
       this.buyBtn.setFillStyle(0xf0d060).disableInteractive();
       this.buyTxt.setText('✦ MAX').setColor(PokePalette.textGold);
-      this.buySub.setText('이미 최고 레벨입니다').setColor('#8a6000');
+      this.buySub.setText(t('이미 최고 레벨입니다', 'Already at max level')).setColor('#8a6000');
     } else if (can) {
       this.buyBtn.setFillStyle(PokePalette.btnPrimary).setInteractive({ useHandCursor: true });
-      this.buyTxt.setText(`구매  ${nextCost.toLocaleString()} G`).setColor(PokePalette.textWhite);
-      this.buySub.setText(`보유 ${gold.toLocaleString()} G`).setColor('#aaccff');
+      this.buyTxt.setText(t(`구매  ${nextCost.toLocaleString()} G`, `Buy  ${nextCost.toLocaleString()} G`)).setColor(PokePalette.textWhite);
+      this.buySub.setText(t(`보유 ${gold.toLocaleString()} G`, `Have ${gold.toLocaleString()} G`)).setColor('#aaccff');
     } else {
       this.buyBtn.setFillStyle(PokePalette.panelShadow).disableInteractive();
-      this.buyTxt.setText(`${nextCost.toLocaleString()} G 필요`).setColor(PokePalette.textGray);
-      this.buySub.setText(`${(nextCost - gold).toLocaleString()} G 부족`).setColor('#888870');
+      this.buyTxt.setText(t(`${nextCost.toLocaleString()} G 필요`, `Need ${nextCost.toLocaleString()} G`)).setColor(PokePalette.textGray);
+      this.buySub.setText(t(`${(nextCost - gold).toLocaleString()} G 부족`, `${(nextCost - gold).toLocaleString()} G short`)).setColor('#888870');
     }
   }
 
