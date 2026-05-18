@@ -35,6 +35,7 @@ router.post('/:id', async (req, res) => {
     upgrades   = {},
   } = req.body;
 
+  console.log(`[user POST] id=${id} rank_stage=${rank_stage} rank_time=${rank_time} best_time=${best_time}`);
   try {
     await pool.query(
       `INSERT INTO user_records
