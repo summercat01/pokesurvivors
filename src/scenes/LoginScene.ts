@@ -20,6 +20,8 @@ export class LoginScene extends Phaser.Scene {
 
   create() {
     this.isSignupMode = false;
+    // HTML input 필드에서 키 입력이 Phaser에 차단되지 않도록
+    this.input.keyboard?.disableGlobalCapture();
     this.createBackground();
     this.createOverlay();
   }
