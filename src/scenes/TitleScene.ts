@@ -937,11 +937,6 @@ export class TitleScene extends Phaser.Scene {
       this.input.off('wheel', onWheel);
       allItems.forEach(o => o.destroy());
     };
-    const hideToday = () => {
-      const today = new Date().toISOString().slice(0, 10);
-      localStorage.setItem(`notice_hide_${notice.id}`, today);
-      close();
-    };
 
     // 반투명 배경
     const dimBg = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.78)
@@ -953,7 +948,7 @@ export class TitleScene extends Phaser.Scene {
     const PANEL_H  = Math.min(H - 80, 400);
     const PANEL_Y  = H / 2 - 10;
     const HEADER_H = 48;
-    const FOOTER_H = 58;
+    const FOOTER_H = 52;
 
     const panelG = PokeUI.panel(this, CX, PANEL_Y, PANEL_W, PANEL_H, PokePalette.panelBg, D + 1);
     panelG.setDepth(D + 1);
@@ -1027,34 +1022,19 @@ export class TitleScene extends Phaser.Scene {
     const divLine = this.add.rectangle(CX, CONTENT_BOT, PANEL_W - 12, 1, 0xbbbbaa).setDepth(D + 2);
     allItems.push(divLine);
 
-    const BTN_Y    = PANEL_Y + PANEL_H / 2 - FOOTER_H / 2;
-    const HALF_BTN = (PANEL_W - 48) / 2;
+    const BTN_Y   = PANEL_Y + PANEL_H / 2 - FOOTER_H / 2;
+    const CLOSE_W = 120;
 
-    // "오늘 하루 안 보기" 버튼 (왼쪽)
-    const hideX  = CX - HALF_BTN / 2 - 4;
-    const hideBg = this.add.rectangle(hideX, BTN_Y, HALF_BTN, 36, 0x1a2a44)
-      .setDepth(D + 3).setInteractive({ useHandCursor: true });
-    const hideBorder = this.add.graphics().lineStyle(1, 0x3355aa, 0.9)
-      .strokeRect(hideX - HALF_BTN / 2, BTN_Y - 18, HALF_BTN, 36).setDepth(D + 3);
-    const hideTxt = this.add.text(hideX, BTN_Y, t('오늘 하루 안 보기', "Don't show today"), {
-      fontFamily: POKE_FONT, fontSize: '11px', color: '#7799cc', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(D + 4);
-    hideBg.on('pointerover', () => { hideBg.setFillStyle(0x2a3a55); hideTxt.setColor('#aabbee'); });
-    hideBg.on('pointerout',  () => { hideBg.setFillStyle(0x1a2a44); hideTxt.setColor('#7799cc'); });
-    hideBg.on('pointerdown', hideToday);
-    allItems.push(hideBg, hideBorder, hideTxt);
-
-    // "닫기" 버튼 (오른쪽)
-    const closeX   = CX + HALF_BTN / 2 + 4;
-    const closeBg2 = this.add.rectangle(closeX, BTN_Y, HALF_BTN, 36, 0x2a2a1a)
+    // "닫기" 버튼 (중앙)
+    const closeBg2 = this.add.rectangle(CX, BTN_Y, CLOSE_W, 34, 0x2a2a1a)
       .setDepth(D + 3).setInteractive({ useHandCursor: true });
     const closeBorder = this.add.graphics().lineStyle(1, 0x666655, 0.9)
-      .strokeRect(closeX - HALF_BTN / 2, BTN_Y - 18, HALF_BTN, 36).setDepth(D + 3);
-    const closeTxt2 = this.add.text(closeX, BTN_Y, t('닫기', 'Close'), {
-      fontFamily: POKE_FONT, fontSize: '11px', color: '#aaaaaa', fontStyle: 'bold',
+      .strokeRect(CX - CLOSE_W / 2, BTN_Y - 17, CLOSE_W, 34).setDepth(D + 3);
+    const closeTxt2 = this.add.text(CX, BTN_Y, t('닫기', 'Close'), {
+      fontFamily: POKE_FONT, fontSize: '12px', color: '#cccccc', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(D + 4);
-    closeBg2.on('pointerover', () => { closeBg2.setFillStyle(0x3a3a2a); closeTxt2.setColor('#cccccc'); });
-    closeBg2.on('pointerout',  () => { closeBg2.setFillStyle(0x2a2a1a); closeTxt2.setColor('#aaaaaa'); });
+    closeBg2.on('pointerover', () => { closeBg2.setFillStyle(0x3a3a2a); closeTxt2.setColor('#ffffff'); });
+    closeBg2.on('pointerout',  () => { closeBg2.setFillStyle(0x2a2a1a); closeTxt2.setColor('#cccccc'); });
     closeBg2.on('pointerdown', close);
     allItems.push(closeBg2, closeBorder, closeTxt2);
   }
