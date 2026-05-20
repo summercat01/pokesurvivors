@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { getCurrentUser, getNickname, signOut } from '../lib/auth';
 import { loadUserRecord } from '../lib/userDB';
+import { getTotalGold } from '../data/upgrades';
 import { getBgmVolume } from '../lib/storage';
 import { PokeUI, POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { SceneHelper } from '../utils/SceneHelper';
@@ -74,6 +75,51 @@ const PATCH_NOTES: PatchEntry[] = [
   },
 ];
 
+// ── 공지사항 ──
+interface NoticeEntry {
+  id: string;
+  titleKo: string;
+  titleEn: string;
+  linesKo: string[];
+  linesEn: string[];
+}
+
+// 현재 표시할 공지. null로 설정하면 팝업 비활성화.
+const ACTIVE_NOTICE: NoticeEntry | null = {
+  id: 'notice_event_0520',
+  titleKo: '🏆 전공박람회 이벤트 결과',
+  titleEn: '🏆 Major Fair Event Results',
+  linesKo: [
+    '전공박람회 종료 시점 (5.20 16:00) 기준',
+    '1~10위에 오르신 분들께 안내드립니다.',
+    '',
+    '🎁 상품 수령 안내',
+    '공과대학 3호관 D4 409호',
+    '컴퓨터비전 실험실로 와서',
+    '상품 받아가세요!',
+    '',
+    '🎉 축하드립니다!',
+    '',
+    '이번 행사 동안 게임을 즐겨주신',
+    '모든 분들께 감사 인사 드리며',
+    '앞으로도 많은 관심 부탁드립니다~!',
+  ],
+  linesEn: [
+    'As of the end of the Major Fair (5.20 16:00)',
+    'here is the notice for ranks 1–10.',
+    '',
+    '🎁 Prize Collection',
+    'Please visit Engineering Building 3, D4, Room 409',
+    '(Computer Vision Lab) to pick up your prize!',
+    '',
+    '🎉 Congratulations!',
+    '',
+    'Thank you to everyone who played',
+    'during the event.',
+    'We hope to see you again! 😊',
+  ],
+};
+
 // 배경에 돌아다닐 포켓몬 스프라이트 키 목록 (17개 무기 포켓몬)
 const BG_POKEMON = [
   'pokemon_174', // 푸푸린 (노말)
@@ -124,6 +170,7 @@ export class TitleScene extends Phaser.Scene {
         }
       });
     }
+
   }
 
   private playBGM() {
@@ -296,28 +343,39 @@ export class TitleScene extends Phaser.Scene {
       () => SceneHelper.transitionTo(this, 'StageSelectScene'),
     );
 
+    // Row 2: 업그레이드 | 랭킹
+    const HALF_W = (BTN_W - 8) / 2;
     this.createDPButton(
-      BTN_CX, BTN_Y0 + BTN_GAP,
-      BTN_W, BTN_H,
+      BTN_CX - HALF_W / 2 - 4, BTN_Y0 + BTN_GAP,
+      HALF_W, BTN_H,
       t('⬆  업그레이드', '⬆  Upgrades'),
       null,
       () => SceneHelper.transitionTo(this, 'UpgradeScene', { r: 24, g: 16, b: 40 }),
     );
-
-    const HALF_W = (BTN_W - 8) / 2;
     this.createDPButton(
-      BTN_CX - HALF_W / 2 - 4, BTN_Y0 + BTN_GAP * 2,
+      BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP,
       HALF_W, BTN_H,
       t('🏆 랭킹', '🏆 Ranking'),
       null,
       () => SceneHelper.transitionTo(this, 'RankingScene'),
     );
+
+    // Row 3: 설정 | 공지
     this.createDPButton(
-      BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP * 2,
+      BTN_CX - HALF_W / 2 - 4, BTN_Y0 + BTN_GAP * 2,
       HALF_W, BTN_H,
       t('⚙ 설정', '⚙ Settings'),
       null,
       () => this.showSettingsModal(),
+    );
+    // 공지가 있으면 황금 스트라이프로 "NEW" 표시
+    const hasNotice = ACTIVE_NOTICE !== null;
+    this.createDPButton(
+      BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP * 2,
+      HALF_W, BTN_H,
+      t('📢 공지', '📢 Notice'),
+      hasNotice ? 0xcc8800 : null,
+      () => { if (ACTIVE_NOTICE) this.showNoticePopup(ACTIVE_NOTICE); },
     );
   }
 
@@ -675,24 +733,27 @@ export class TitleScene extends Phaser.Scene {
   private createUserBadge() {
     const W    = this.scale.width;
     const user = getCurrentUser();
+    const D    = 30;
+
+    // ── 오른쪽 배지 (닉네임/로그인) ──────────────────
+    // 배지 좌측 경계를 계산해서 gold를 바로 왼쪽에 붙임
+    let badgeLeftEdge: number;
 
     if (user) {
-      // 로그인 상태: 닉네임 표시 + 로그아웃 버튼
       const nickname = getNickname();
-      const label    = nickname.length > 14 ? nickname.slice(0, 13) + '…' : nickname;
-      const nameTxt = this.add.text(W - 100, 20, `👤 ${label}`, {
+      const label    = nickname.length > 12 ? nickname.slice(0, 11) + '…' : nickname;
+
+      // 배지 배경: W-4 ~ W-134 (width 130, center W-69)
+      this.add.rectangle(W - 69, 20, 130, 28, 0x112233, 0.85).setDepth(D);
+      this.add.text(W - 100, 20, `👤 ${label}`, {
         fontSize: '10px', color: '#aaccee',
-      }).setOrigin(0, 0.5).setDepth(31);
+      }).setOrigin(0, 0.5).setDepth(D + 1);
 
-      const badgeBg = this.add.rectangle(W - 70, 20, 130, 28, 0x112233, 0.85)
-        .setDepth(30);
-      const emailTxt = nameTxt;  // alias for logout block below
-
-      const logoutBg = this.add.rectangle(W - 18, 20, 28, 22, 0x441122, 0.9)
-        .setDepth(31).setInteractive({ useHandCursor: true });
+      const logoutBg  = this.add.rectangle(W - 18, 20, 28, 22, 0x441122, 0.9)
+        .setDepth(D + 1).setInteractive({ useHandCursor: true });
       const logoutTxt = this.add.text(W - 18, 20, '⏻', {
         fontSize: '12px', color: '#ff8888',
-      }).setOrigin(0.5).setDepth(32);
+      }).setOrigin(0.5).setDepth(D + 2);
 
       logoutBg.on('pointerover', () => { logoutBg.setFillStyle(0x661133); logoutTxt.setColor('#ffaaaa'); });
       logoutBg.on('pointerout',  () => { logoutBg.setFillStyle(0x441122); logoutTxt.setColor('#ff8888'); });
@@ -701,19 +762,32 @@ export class TitleScene extends Phaser.Scene {
         SceneHelper.transitionTo(this, 'LoginScene');
       });
 
-      void [badgeBg, emailTxt, logoutTxt];
+      badgeLeftEdge = W - 134; // 배지 왼쪽 끝
     } else {
-      // 게스트 상태: 로그인 버튼
-      const loginBg = this.add.rectangle(W - 38, 20, 68, 26, 0x223355, 0.9)
-        .setDepth(30).setInteractive({ useHandCursor: true });
+      // 게스트: 로그인 버튼 (center W-38, width 68 → 좌 W-72 ~ 우 W-4)
+      const loginBg  = this.add.rectangle(W - 38, 20, 68, 26, 0x223355, 0.9)
+        .setDepth(D).setInteractive({ useHandCursor: true });
       const loginTxt = this.add.text(W - 38, 20, t('🔑 로그인', '🔑 Login'), {
         fontSize: '10px', color: '#88bbee',
-      }).setOrigin(0.5).setDepth(31);
+      }).setOrigin(0.5).setDepth(D + 1);
 
       loginBg.on('pointerover', () => { loginBg.setFillStyle(0x335577); loginTxt.setColor('#bbddff'); });
       loginBg.on('pointerout',  () => { loginBg.setFillStyle(0x223355); loginTxt.setColor('#88bbee'); });
       loginBg.on('pointerdown', () => SceneHelper.transitionTo(this, 'LoginScene'));
+
+      badgeLeftEdge = W - 72; // 로그인 버튼 왼쪽 끝
     }
+
+    // ── 보유 골드 (배지 바로 왼쪽) ───────────────────
+    const GOLD_W  = 100;
+    const GOLD_CX = badgeLeftEdge - 6 - GOLD_W / 2; // 6px 간격
+    const gold    = getTotalGold();
+
+    this.add.rectangle(GOLD_CX, 20, GOLD_W, 26, 0x221a06, 0.92).setDepth(D);
+    this.add.text(GOLD_CX, 20, `💰 ${gold.toLocaleString()} G`, {
+      fontFamily: POKE_FONT, fontSize: '10px', color: '#ffdd44', fontStyle: 'bold',
+      stroke: '#110d03', strokeThickness: 2,
+    }).setOrigin(0.5, 0.5).setDepth(D + 1);
   }
 
   // ─────────────────────────────────────────────
@@ -836,5 +910,152 @@ export class TitleScene extends Phaser.Scene {
     devHit.on('pointerover', () => devTxt.setColor('#bbddff'));
     devHit.on('pointerout',  () => devTxt.setColor('#88bbff'));
     devHit.on('pointerdown', () => window.open('https://github.com/summercat01', '_blank'));
+  }
+
+  // ─────────────────────────────────────────────
+  // 공지사항 팝업
+  // ─────────────────────────────────────────────
+  private showNoticePopup(notice: NoticeEntry) {
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const CX = W / 2;
+    const D  = 90; // patch notes(80)보다 위
+
+    const allItems: Phaser.GameObjects.GameObject[] = [];
+
+    let scrollY   = 0;
+    let maxScroll = 0;
+    let contentContainer: Phaser.GameObjects.Container | null = null;
+
+    const applyScroll = (newY: number) => {
+      scrollY = Phaser.Math.Clamp(newY, 0, maxScroll);
+      contentContainer?.setY(-scrollY);
+    };
+    const onWheel = (...args: unknown[]) => applyScroll(scrollY + (args[3] as number) * 0.5);
+
+    const close = () => {
+      this.input.off('wheel', onWheel);
+      allItems.forEach(o => o.destroy());
+    };
+    const hideToday = () => {
+      const today = new Date().toISOString().slice(0, 10);
+      localStorage.setItem(`notice_hide_${notice.id}`, today);
+      close();
+    };
+
+    // 반투명 배경
+    const dimBg = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.78)
+      .setDepth(D).setInteractive();
+    allItems.push(dimBg);
+
+    // 패널
+    const PANEL_W  = W - 28;
+    const PANEL_H  = Math.min(H - 80, 400);
+    const PANEL_Y  = H / 2 - 10;
+    const HEADER_H = 48;
+    const FOOTER_H = 58;
+
+    const panelG = PokeUI.panel(this, CX, PANEL_Y, PANEL_W, PANEL_H, PokePalette.panelBg, D + 1);
+    panelG.setDepth(D + 1);
+    allItems.push(panelG);
+
+    // 헤더 (황금빛)
+    const headerG = PokeUI.panel(this, CX, PANEL_Y - PANEL_H / 2 + HEADER_H / 2, PANEL_W - 6, HEADER_H, 0x3a2600, D + 2);
+    headerG.setDepth(D + 2);
+    allItems.push(headerG);
+
+    const titleTxt = this.add.text(CX, PANEL_Y - PANEL_H / 2 + HEADER_H / 2 - 2, t(notice.titleKo, notice.titleEn), {
+      fontFamily: POKE_FONT, fontSize: '14px', color: '#ffdd55', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(D + 3);
+    allItems.push(titleTxt);
+
+    // 헤더 ✕ 버튼
+    const xBg = this.add.rectangle(CX + PANEL_W / 2 - 20, PANEL_Y - PANEL_H / 2 + HEADER_H / 2, 30, 26, PokePalette.btnDanger)
+      .setDepth(D + 3).setInteractive({ useHandCursor: true });
+    const xTxt = this.add.text(CX + PANEL_W / 2 - 20, PANEL_Y - PANEL_H / 2 + HEADER_H / 2, '✕', {
+      fontFamily: POKE_FONT, fontSize: '12px', color: PokePalette.textWhite,
+    }).setOrigin(0.5).setDepth(D + 4);
+    xBg.on('pointerover', () => xBg.setFillStyle(0xdd4422));
+    xBg.on('pointerout',  () => xBg.setFillStyle(PokePalette.btnDanger));
+    xBg.on('pointerdown', close);
+    allItems.push(xBg, xTxt);
+
+    // ── 스크롤 콘텐츠 영역 ──────────────────────────
+    const CONTENT_TOP = PANEL_Y - PANEL_H / 2 + HEADER_H;
+    const CONTENT_BOT = PANEL_Y + PANEL_H / 2 - FOOTER_H;
+    const CONTENT_H   = CONTENT_BOT - CONTENT_TOP;
+    const LEFT        = CX - PANEL_W / 2 + 18;
+
+    const maskShape = this.add.graphics();
+    maskShape.fillStyle(0xffffff);
+    maskShape.fillRect(CX - PANEL_W / 2 + 4, CONTENT_TOP, PANEL_W - 8, CONTENT_H);
+    maskShape.setVisible(false);
+    const mask = maskShape.createGeometryMask();
+    allItems.push(maskShape);
+
+    const container = this.add.container(0, 0).setDepth(D + 2);
+    container.setMask(mask);
+    allItems.push(container);
+
+    const lines = getLang() === 'ko' ? notice.linesKo : notice.linesEn;
+    let localY = 0;
+    lines.forEach(line => {
+      if (line === '') { localY += 8; return; }
+      const lineTxt = this.add.text(LEFT, CONTENT_TOP + localY, line, {
+        fontFamily: POKE_FONT, fontSize: '11px', color: PokePalette.textDark,
+        wordWrap: { width: PANEL_W - 36 },
+      });
+      container.add(lineTxt);
+      localY += lineTxt.height + 4;
+    });
+
+    maxScroll        = Math.max(0, localY - CONTENT_H);
+    contentContainer = container;
+
+    this.input.on('wheel', onWheel);
+
+    let dragStartY = 0, dragStartScroll = 0;
+    const scrollArea = this.add.rectangle(CX, CONTENT_TOP + CONTENT_H / 2, PANEL_W - 8, CONTENT_H, 0xffffff, 0)
+      .setDepth(D + 5).setInteractive();
+    allItems.push(scrollArea);
+    scrollArea.on('pointerdown', (ptr: Phaser.Input.Pointer) => { dragStartY = ptr.y; dragStartScroll = scrollY; });
+    scrollArea.on('pointermove', (ptr: Phaser.Input.Pointer) => {
+      if (ptr.isDown) applyScroll(dragStartScroll + (dragStartY - ptr.y));
+    });
+
+    // ── 하단 푸터 ──────────────────────────────────
+    const divLine = this.add.rectangle(CX, CONTENT_BOT, PANEL_W - 12, 1, 0xbbbbaa).setDepth(D + 2);
+    allItems.push(divLine);
+
+    const BTN_Y    = PANEL_Y + PANEL_H / 2 - FOOTER_H / 2;
+    const HALF_BTN = (PANEL_W - 48) / 2;
+
+    // "오늘 하루 안 보기" 버튼 (왼쪽)
+    const hideX  = CX - HALF_BTN / 2 - 4;
+    const hideBg = this.add.rectangle(hideX, BTN_Y, HALF_BTN, 36, 0x1a2a44)
+      .setDepth(D + 3).setInteractive({ useHandCursor: true });
+    const hideBorder = this.add.graphics().lineStyle(1, 0x3355aa, 0.9)
+      .strokeRect(hideX - HALF_BTN / 2, BTN_Y - 18, HALF_BTN, 36).setDepth(D + 3);
+    const hideTxt = this.add.text(hideX, BTN_Y, t('오늘 하루 안 보기', "Don't show today"), {
+      fontFamily: POKE_FONT, fontSize: '11px', color: '#7799cc', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(D + 4);
+    hideBg.on('pointerover', () => { hideBg.setFillStyle(0x2a3a55); hideTxt.setColor('#aabbee'); });
+    hideBg.on('pointerout',  () => { hideBg.setFillStyle(0x1a2a44); hideTxt.setColor('#7799cc'); });
+    hideBg.on('pointerdown', hideToday);
+    allItems.push(hideBg, hideBorder, hideTxt);
+
+    // "닫기" 버튼 (오른쪽)
+    const closeX   = CX + HALF_BTN / 2 + 4;
+    const closeBg2 = this.add.rectangle(closeX, BTN_Y, HALF_BTN, 36, 0x2a2a1a)
+      .setDepth(D + 3).setInteractive({ useHandCursor: true });
+    const closeBorder = this.add.graphics().lineStyle(1, 0x666655, 0.9)
+      .strokeRect(closeX - HALF_BTN / 2, BTN_Y - 18, HALF_BTN, 36).setDepth(D + 3);
+    const closeTxt2 = this.add.text(closeX, BTN_Y, t('닫기', 'Close'), {
+      fontFamily: POKE_FONT, fontSize: '11px', color: '#aaaaaa', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(D + 4);
+    closeBg2.on('pointerover', () => { closeBg2.setFillStyle(0x3a3a2a); closeTxt2.setColor('#cccccc'); });
+    closeBg2.on('pointerout',  () => { closeBg2.setFillStyle(0x2a2a1a); closeTxt2.setColor('#aaaaaa'); });
+    closeBg2.on('pointerdown', close);
+    allItems.push(closeBg2, closeBorder, closeTxt2);
   }
 }

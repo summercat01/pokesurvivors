@@ -21,16 +21,19 @@ router.post('/signup', async (req, res) => {
     );
     const user = result.rows[0];
 
-    // 초기 레코드 생성
+    // 초기 레코드 생성 (신규 가입 보너스: 10,000 골드)
     await pool.query(
-      `INSERT INTO user_records (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
+      `INSERT INTO user_records (user_id, total_gold) VALUES ($1, 10000) ON CONFLICT DO NOTHING`,
       [user.id],
     );
 
     res.json({ id: user.id, username: user.username, nickname: user.nickname });
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: '이미 사용 중인 아이디입니다' });
+      if (err.constraint && err.constraint.includes('nickname')) {
+        return res.status(409).json({ error: 'users_nickname_unique' });
+      }
+      return res.status(409).json({ error: 'User already registered' });
     }
     console.error('[signup]', err.message);
     res.status(500).json({ error: '서버 오류' });

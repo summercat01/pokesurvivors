@@ -240,7 +240,7 @@ export class GameOverScene extends Phaser.Scene {
     };
 
     makeBtn(CX - BTN_W / 2 - 6, t('▶ 다시 도전', '▶ Retry'), PokePalette.btnPrimary, 0x3366cc, PokePalette.textWhite, () => {
-      SceneHelper.transitionTo(this, 'GameScene', { duration: 300, r: 12, g: 10, b: 24, data: { stageId } });
+      SceneHelper.transitionTo(this, 'StageSelectScene', { duration: 300, r: 12, g: 10, b: 24 });
     });
     makeBtn(CX + BTN_W / 2 + 6, t('⌂ 타이틀로', '⌂ Title'), PokePalette.btnNormal, PokePalette.btnHover, PokePalette.textDark, () => {
       SceneHelper.transitionTo(this, 'TitleScene', { duration: 300, r: 12, g: 10, b: 24 });

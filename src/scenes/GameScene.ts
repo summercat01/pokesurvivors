@@ -30,6 +30,7 @@ import {
 import { applyPermanentUpgrades } from '../data/upgrades';
 import type { LevelUpOption, PokemonType } from '../types';
 import { IS_DEV_MODE } from '../main';
+import { DEV_CONFIG } from '../constants/devConfig';
 import { clearStage } from '../lib/stageProgress';
 import { recordDefeatedId } from '../data/pokedex';
 import { getCurrentUser } from '../lib/auth';
@@ -181,6 +182,17 @@ export class GameScene extends Phaser.Scene {
     // 영구 업그레이드 스탯 적용
     applyPermanentUpgrades(this.player.stats);
 
+    // 개발자 모드 스탯 부스트
+    if (IS_DEV_MODE) {
+      this.player.stats.maxHp          = Math.round(this.player.stats.maxHp * DEV_CONFIG.hpMult);
+      this.player.stats.hp             = this.player.stats.maxHp;
+      this.player.stats.hpRegen         += DEV_CONFIG.hpRegen;
+      this.player.stats.projectileRange *= DEV_CONFIG.projectileRange;
+      this.player.stats.goldGain        *= DEV_CONFIG.goldGain;
+      this.player.stats.expGain         *= DEV_CONFIG.expGain;
+      this.gold = DEV_CONFIG.initGold;
+    }
+
     // UI 생성 전 월드 오브젝트 수 스냅샷
     const worldObjCount = this.children.list.length;
     // gameCam은 아직 생성 전이므로 임시 placeholder — 카메라 설정 후 hud/pauseOverlay에 실제 gameCam 전달
@@ -246,6 +258,11 @@ export class GameScene extends Phaser.Scene {
         this.hud.setBossPanelVisible(true);
       },
       onEnemySpawned: () => { this.activeEnemyCount++; },
+      ...(IS_DEV_MODE ? {
+        enemyHpMult:   DEV_CONFIG.enemyHpMult,
+        bossHpMult:    DEV_CONFIG.bossHpMult,
+        waveCountMult: DEV_CONFIG.waveCountMult,
+      } : {}),
     });
     this.bossPatternSystem = new BossPatternSystem({
       scene:          this,

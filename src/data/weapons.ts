@@ -9,6 +9,7 @@ export interface WeaponConfig {
   nameEn?: string;
   type: PokemonType;
   basePokemonId?: number;  // 진화 전 원본 pokemonId (진화 무기에만 설정)
+  tier?: 0 | 1 | 2;       // 진화 단계 (0=기본, 1=1차진화, 2=2차진화)
   description?: string;   // 무기 행동 설명
   descriptionEn?: string;
   damage: number;
@@ -57,7 +58,17 @@ export const MAX_PASSIVE_SLOTS = 6;
 const LV_DAMAGE_MULT:   readonly number[] = [1.0, 1.3, 1.7, 2.2, 3.0];
 const LV_COOLDOWN_MULT: readonly number[] = [1.0, 0.90, 0.82, 0.75, 0.65];
 const LV_COUNT_BONUS:   readonly number[] = [0,   0,    1,    1,    2];
-const LV_RANGE_BONUS:   readonly number[] = [0,   20,   40,   65,   100]; // melee/zone/beam 범위 성장 px
+
+/**
+ * 글로벌 범위 보너스 (인덱스 0 = 기본Lv1, 14 = 2차진화Lv5)
+ * tier 0(기본) Lv1~5 → tier 1(1차진화) Lv1~5 → tier 2(2차진화) Lv1~5
+ * 진화 시 범위가 리셋되지 않고 15레벨에 걸쳐 완만하게 증가
+ */
+const GLOBAL_RANGE_BONUS: readonly number[] = [
+   0,  14,  29,  47,  68,  // 기본 Lv1-5
+  90, 106, 119, 130, 140,  // 1차진화 Lv1-5
+ 150, 158, 165, 172, 178,  // 2차진화 Lv1-5
+];
 
 // ===== 전체 무기 풀 (레벨 1 기준치) =====
 export const ALL_WEAPONS: WeaponConfig[] = [
@@ -388,7 +399,12 @@ export function getWeaponByPokemonId(id: number): WeaponConfig | undefined {
 export function getUpgradedWeapon(base: WeaponConfig, level: number): WeaponConfig {
   const l = Math.max(1, Math.min(level, MAX_WEAPON_LEVEL)) - 1; // 0-index
   const behavior = base.behavior ?? 'projectile';
-  const rangeBonus = LV_RANGE_BONUS[l];
+
+  // 글로벌 인덱스: tier × 5 + 로컬레벨인덱스
+  // 진화해도 범위가 리셋되지 않고 1→15레벨에 걸쳐 연속으로 증가
+  const tier = base.tier ?? 0;
+  const globalIdx = Math.min(tier * MAX_WEAPON_LEVEL + l, GLOBAL_RANGE_BONUS.length - 1);
+  const rangeBonus = GLOBAL_RANGE_BONUS[globalIdx];
 
   return {
     ...base,
@@ -400,8 +416,10 @@ export function getUpgradedWeapon(base: WeaponConfig, level: number): WeaponConf
     beamLength:           base.beamLength  != null  ? base.beamLength  + rangeBonus : undefined,
     beamWidth:            base.beamWidth   != null  ? base.beamWidth   + Math.round(rangeBonus * 0.2) : undefined,
     zoneRadius:           base.zoneRadius  != null  ? base.zoneRadius  + rangeBonus : undefined,
+    orbitRadius:          base.orbitRadius != null  ? base.orbitRadius + Math.round(rangeBonus * 0.25) : undefined,
     orbitCount:           base.orbitCount  != null  ? base.orbitCount  + LV_COUNT_BONUS[l] : undefined,
     lightningChainCount:  base.lightningChainCount != null ? base.lightningChainCount + (base.chainCountPerLevel !== undefined ? base.chainCountPerLevel * l : LV_COUNT_BONUS[l]) : undefined,
+    lightningRange:       base.lightningRange != null ? base.lightningRange + Math.round(rangeBonus * 0.2) : undefined,
     explosionRadius:      base.explosionRadius != null ? base.explosionRadius + rangeBonus : undefined,
     rotateSpeed:          base.rotateSpeed != null ? +(base.rotateSpeed + l * 0.1).toFixed(2) : undefined,
     fallingCount:         base.fallingCount != null ? base.fallingCount + LV_COUNT_BONUS[l] : undefined,
@@ -581,15 +599,17 @@ export function buildEvolvedWeapon(
   evo: WeaponEvolution,
 ): WeaponConfig {
   // 원본 Lv1 스탯: basePokemonId가 있으면 그것, 없으면 currentWeapon 자체
-  const origId = currentWeapon.basePokemonId ?? currentWeapon.pokemonId;
-  const base   = ALL_WEAPONS.find(w => w.pokemonId === origId) ?? currentWeapon;
+  const origId  = currentWeapon.basePokemonId ?? currentWeapon.pokemonId;
+  const base    = ALL_WEAPONS.find(w => w.pokemonId === origId) ?? currentWeapon;
+  const newTier = Math.min((currentWeapon.tier ?? 0) + 1, 2) as 0 | 1 | 2;
   return {
     ...base,
-    pokemonId:    evo.toId,
-    name:         evo.toName,
-    nameEn:       evo.toNameEn,
-    damage:       Math.round(base.damage * evo.damageMult),
-    cooldown:     Math.round(base.cooldown * evo.cooldownMult),
+    pokemonId:     evo.toId,
+    name:          evo.toName,
+    nameEn:        evo.toNameEn,
+    damage:        Math.round(base.damage * evo.damageMult),
+    cooldown:      Math.round(base.cooldown * evo.cooldownMult),
     basePokemonId: origId,
+    tier:          newTier,
   };
 }

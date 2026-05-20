@@ -21,6 +21,11 @@ export interface SpawnContext {
   onDarkraiSpawned: (darkrai: Enemy) => void;
   /** 적 1마리 스폰될 때마다 호출 — activeEnemyCount 카운터 증가 */
   onEnemySpawned: () => void;
+  /** 개발자 모드: 적/보스 HP 배율 (기본 1.0) */
+  enemyHpMult?: number;
+  bossHpMult?: number;
+  /** 개발자 모드: 웨이브 소환 수 배율 (기본 1.0) */
+  waveCountMult?: number;
 }
 
 export class SpawnSystem {
@@ -37,7 +42,8 @@ export class SpawnSystem {
       return;
     }
 
-    const count = Math.round(6 + waveNumber * 2 + waveNumber * waveNumber * 0.3);
+    const baseCount = Math.round(6 + waveNumber * 2 + waveNumber * waveNumber * 0.3);
+    const count = Math.max(1, Math.round(baseCount * (this.ctx.waveCountMult ?? 1.0)));
     for (let i = 0; i < count; i++) {
       this.ctx.scene.time.delayedCall(i * 160, () => this.spawnEnemy(waveNumber));
     }
@@ -52,7 +58,8 @@ export class SpawnSystem {
     const { x, y } = this.getSpawnPosition();
     const pool  = getActiveEnemyPool(this.ctx.getStageId(), waveNumber);
     const entry = pool[Phaser.Math.Between(0, pool.length - 1)];
-    const hp    = entry.baseHp ?? (30 + entry.minWave * 40);
+    const baseHp = entry.baseHp ?? (30 + entry.minWave * 40);
+    const hp     = Math.round(baseHp * (this.ctx.enemyHpMult ?? 1.0));
 
     const enemy = new Enemy(this.ctx.scene, x, y, `pokemon_${entry.id}`, {
       hp,
@@ -73,7 +80,7 @@ export class SpawnSystem {
     const entry  = pool[Phaser.Math.Between(0, pool.length - 1)];
     const baseHp = entry.baseHp ?? 200;
     const elite  = new Enemy(this.ctx.scene, x, y, `pokemon_${entry.id}`, {
-      hp:           baseHp * 5,
+      hp:           Math.round(baseHp * 5 * (this.ctx.enemyHpMult ?? 1.0)),
       moveSpeed:    Math.min(65 + waveNumber * 4, 150),
       exp:          10 + waveNumber * 2,
       pokemonTypes: entry.types,
@@ -93,7 +100,7 @@ export class SpawnSystem {
     const bossConfig = wave === 10 ? stage.boss10 : stage.boss20;
 
     const boss = new Enemy(this.ctx.scene, x, y, `pokemon_${bossConfig.id}`, {
-      hp:              Math.round(bossConfig.hp * stage.difficulty),
+      hp:              Math.round(bossConfig.hp * stage.difficulty * (this.ctx.bossHpMult ?? 1.0)),
       moveSpeed:       bossConfig.moveSpeed,
       exp:             bossConfig.exp,
       isBoss:          true,

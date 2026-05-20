@@ -44,14 +44,17 @@ export class UpgradeScene extends Phaser.Scene {
     PokeUI.gridBackground(this);
     PokeUI.sceneHeader(this, t('영구 업그레이드', 'Permanent Upgrades'));
 
-    this.goldTxt = this.add.text(CX, 48, `💰 ${getTotalGold().toLocaleString()} G`, {
-      fontFamily: POKE_FONT, fontSize: '11px', color: '#ffdd44', fontStyle: 'bold',
-    }).setOrigin(0.5);
-
     PokeUI.divider(this, 10, 68, W - 10);
 
+    // 보유 골드 (헤더 아래 구분선 바로 밑, 오른쪽 정렬)
+    this.add.rectangle(W - 8, 80, 130, 24, 0x221a06, 0.92).setOrigin(1, 0.5).setDepth(12);
+    this.goldTxt = this.add.text(W - 14, 80, `💰 ${getTotalGold().toLocaleString()} G`, {
+      fontFamily: POKE_FONT, fontSize: '12px', color: '#ffdd44', fontStyle: 'bold',
+      stroke: '#110d03', strokeThickness: 2,
+    }).setOrigin(1, 0.5).setDepth(13);
+
     // ── 레이아웃 상수 ──
-    const GRID_TOP  = 72;
+    const GRID_TOP  = 94;
     const BACK_BTN_H = 40;
     const BUY_BTN_H  = 44;
     const INFO_H     = 90;
