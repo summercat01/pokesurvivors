@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db.js';
+import { signToken } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -27,7 +28,8 @@ router.post('/signup', async (req, res) => {
       [user.id],
     );
 
-    res.json({ id: user.id, username: user.username, nickname: user.nickname });
+    const token = signToken(user.id, user.username);
+    res.json({ id: user.id, username: user.username, nickname: user.nickname, token });
   } catch (err) {
     if (err.code === '23505') {
       if (err.constraint && err.constraint.includes('nickname')) {
@@ -68,7 +70,8 @@ router.post('/login', async (req, res) => {
       [user.id],
     );
 
-    res.json({ id: user.id, username: user.username, nickname: user.nickname });
+    const token = signToken(user.id, user.username);
+    res.json({ id: user.id, username: user.username, nickname: user.nickname, token });
   } catch (err) {
     console.error('[login]', err.message);
     res.status(500).json({ error: '서버 오류' });

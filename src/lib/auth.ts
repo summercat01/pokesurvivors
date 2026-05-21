@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, TOKEN_KEY } from './api';
 
 export interface PlayerSession {
   id:       string;
@@ -34,14 +34,18 @@ function saveSession(user: PlayerSession) {
 
 // ── 회원가입 ──────────────────────────────────────
 export async function signUp(username: string, password: string, nickname: string): Promise<PlayerSession> {
-  const user = await api.post<PlayerSession>('/auth/signup', { username, password, nickname });
+  const resp = await api.post<PlayerSession & { token: string }>('/auth/signup', { username, password, nickname });
+  const { token, ...user } = resp;
+  localStorage.setItem(TOKEN_KEY, token);
   saveSession(user);
   return user;
 }
 
 // ── 로그인 ────────────────────────────────────────
 export async function signIn(username: string, password: string): Promise<PlayerSession> {
-  const user = await api.post<PlayerSession>('/auth/login', { username, password });
+  const resp = await api.post<PlayerSession & { token: string }>('/auth/login', { username, password });
+  const { token, ...user } = resp;
+  localStorage.setItem(TOKEN_KEY, token);
   saveSession(user);
   return user;
 }
@@ -50,4 +54,5 @@ export async function signIn(username: string, password: string): Promise<Player
 export function signOut() {
   _session = null;
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(TOKEN_KEY);
 }

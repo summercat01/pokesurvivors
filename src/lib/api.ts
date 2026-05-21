@@ -5,14 +5,26 @@
  */
 
 const BASE = '/api';
+export const TOKEN_KEY = 'pkmn_token';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem(TOKEN_KEY);
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...options,
   });
 
   const data = await res.json();
+
+  // 토큰 만료 시 세션 초기화
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('pkmn_session');
+  }
 
   if (!res.ok) {
     throw new Error(data.error ?? `HTTP ${res.status}`);
