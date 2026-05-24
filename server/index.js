@@ -17,6 +17,7 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 
 app.use(express.json());
+app.set('trust proxy', 1); // Cloudflare Tunnel / 리버스 프록시 신뢰
 
 // ── Rate limiting ─────────────────────────────────────
 const authLimiter = rateLimit({
