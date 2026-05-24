@@ -21,6 +21,12 @@
   .search-bar input { flex: 1; padding: 8px 12px; background: #0f1117; border: 1px solid #333; border-radius: 6px; color: #e0e0e0; font-size: 13px; }
   .search-bar button { padding: 8px 16px; background: #1e3a5f; border: 1px solid #2a5080; border-radius: 6px; color: #88ccff; cursor: pointer; font-size: 13px; }
   .search-bar button:hover { background: #254870; }
+  .pagination { display: flex; align-items: center; gap: 6px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
+  .pg-btn { padding: 5px 12px; background: #1e2a3a; border: 1px solid #2a3a50; border-radius: 5px; color: #88aacc; cursor: pointer; font-size: 12px; }
+  .pg-btn:hover:not(:disabled) { background: #253545; }
+  .pg-btn:disabled { opacity: 0.35; cursor: default; }
+  .pg-btn.active { background: #1e3a5f; border-color: #2a5080; color: #88ccff; font-weight: bold; }
+  .pg-info { color: #556; font-size: 12px; padding: 0 4px; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   th { text-align: left; padding: 8px 10px; background: #0f1520; color: #6688aa; border-bottom: 1px solid #2a3448; white-space: nowrap; }
   td { padding: 8px 10px; border-bottom: 1px solid #1e2838; vertical-align: top; word-break: break-all; }
@@ -261,20 +267,30 @@ async function loadInquiries() {
 }
 
 // ── 유저 관리 ─────────────────────────────────────────
+let userCurrentPage = 1;
+let userCurrentQ    = '';
+
 async function searchUsers() {
-  const q = document.getElementById('user-search').value.trim();
-  loadUsers(q);
+  userCurrentQ    = document.getElementById('user-search').value.trim();
+  userCurrentPage = 1;
+  loadUsers(userCurrentQ, userCurrentPage);
 }
 
 document.getElementById('user-search').addEventListener('keydown', e => {
   if (e.key === 'Enter') searchUsers();
 });
 
-async function loadUsers(q) {
+async function loadUsers(q, page = 1) {
+  userCurrentQ    = q;
+  userCurrentPage = page;
   const el = document.getElementById('users-content');
   el.innerHTML = '<div class="loading">불러오는 중...</div>';
   try {
-    const users = await apiFetch(`/admin/users?q=${encodeURIComponent(q)}`);
+    const limit = 20;
+    const data  = await apiFetch(`/admin/users?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`);
+    const { users, total } = data;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
     if (users.length === 0) {
       el.innerHTML = '<div class="empty">검색 결과가 없습니다.</div>';
       return;
@@ -294,6 +310,7 @@ async function loadUsers(q) {
         </thead>
         <tbody id="users-tbody"></tbody>
       </table>
+      <div id="users-pagination" class="pagination"></div>
     `;
 
     const tbody = document.getElementById('users-tbody');
@@ -306,19 +323,20 @@ async function loadUsers(q) {
         <td>${esc(u.nickname)}</td>
         <td>${u.is_admin ? '<span class="badge badge-amber">관리자</span>' : '<span class="badge badge-gray">일반</span>'}</td>
         <td>${isBanned
-          ? `<span class="badge badge-red">밴됨</span>`
-          : `<span class="badge badge-green">정상</span>`}
+          ? '<span class="badge badge-red">밴됨</span>'
+          : '<span class="badge badge-green">정상</span>'}
         </td>
         <td>${new Date(u.created_at).toLocaleDateString('ko-KR')}</td>
         <td>
           ${!isBanned
             ? `<button class="btn btn-danger" onclick="banUser('${esc(u.id)}', '${esc(u.nickname)}')">밴</button> `
             : `<button class="btn btn-success" onclick="unbanUser('${esc(u.id)}', '${esc(u.nickname)}')">밴해제</button> `}
-          <button class="btn btn-primary" onclick="viewUserPosts('${esc(u.id)}', '${esc(u.nickname)}')">글 보기</button>
         </td>
       `;
       tbody.appendChild(tr);
     }
+
+    renderPagination('users-pagination', page, totalPages, p => loadUsers(userCurrentQ, p));
   } catch (err) {
     el.innerHTML = `<div class="empty">오류: ${esc(err.message)}</div>`;
   }
@@ -329,7 +347,10 @@ async function banUser(userId, nickname) {
   try {
     await apiFetch(`/admin/ban/${userId}`, { method: 'POST' });
     showToast(`${nickname} 밴 완료`);
-    loadReports();
+    // 현재 활성 탭 기준으로 새로고침
+    const activeTab = document.querySelector('.tab.active')?.dataset.tab;
+    if (activeTab === 'users') loadUsers(userCurrentQ, userCurrentPage);
+    else loadReports();
   } catch (err) {
     showToast(err.message, true);
   }
@@ -340,14 +361,44 @@ async function unbanUser(userId, nickname) {
   try {
     await apiFetch(`/admin/unban/${userId}`, { method: 'POST' });
     showToast(`${nickname} 밴 해제 완료`);
-    loadReports();
+    const activeTab = document.querySelector('.tab.active')?.dataset.tab;
+    if (activeTab === 'users') loadUsers(userCurrentQ, userCurrentPage);
+    else loadReports();
   } catch (err) {
     showToast(err.message, true);
   }
 }
 
-async function viewUserPosts(userId, nickname) {
-  alert(`"${nickname}"의 글 목록은 신고 관리 탭에서 해당 닉네임으로 확인하세요.`);
+// ── 공통 페이지네이션 렌더 ────────────────────────────
+function renderPagination(containerId, currentPage, totalPages, onPage) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+
+  const mkBtn = (label, page, disabled = false, active = false) => {
+    const b = document.createElement('button');
+    b.className = 'pg-btn' + (active ? ' active' : '');
+    b.textContent = label;
+    b.disabled = disabled;
+    if (!disabled) b.addEventListener('click', () => onPage(page));
+    el.appendChild(b);
+  };
+
+  mkBtn('◀ 이전', currentPage - 1, currentPage <= 1);
+
+  // 현재 페이지 주변 5개 버튼
+  const start = Math.max(1, currentPage - 2);
+  const end   = Math.min(totalPages, start + 4);
+  for (let p = start; p <= end; p++) {
+    mkBtn(String(p), p, false, p === currentPage);
+  }
+
+  mkBtn('다음 ▶', currentPage + 1, currentPage >= totalPages);
+
+  const info = document.createElement('span');
+  info.className = 'pg-info';
+  info.textContent = `${currentPage} / ${totalPages} 페이지`;
+  el.appendChild(info);
 }
 
 // ── 초기화: 어드민 권한 확인 ─────────────────────────

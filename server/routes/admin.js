@@ -125,19 +125,36 @@ router.post('/unban/:userId', async (req, res) => {
   }
 });
 
-// GET /api/admin/users — 유저 목록 (검색용)
+// GET /api/admin/users?q=&page=1&limit=20
 router.get('/users', async (req, res) => {
-  const q = (req.query.q || '').toString().trim().slice(0, 50);
+  const q      = (req.query.q || '').toString().trim().slice(0, 50);
+  const limit  = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const offset = (page - 1) * limit;
+
   try {
-    const result = await pool.query(
-      `SELECT id, username, nickname, is_admin, banned_at, created_at
-       FROM players
-       WHERE ($1 = '' OR username ILIKE $2 OR nickname ILIKE $2)
-       ORDER BY created_at DESC
-       LIMIT 50`,
-      [q, `%${q}%`],
-    );
-    res.json(result.rows);
+    const [dataRes, countRes] = await Promise.all([
+      pool.query(
+        `SELECT id, username, nickname, is_admin, banned_at, created_at
+         FROM players
+         WHERE ($1 = '' OR username ILIKE $2 OR nickname ILIKE $2)
+         ORDER BY created_at DESC
+         LIMIT $3 OFFSET $4`,
+        [q, `%${q}%`, limit, offset],
+      ),
+      pool.query(
+        `SELECT COUNT(*) FROM players
+         WHERE ($1 = '' OR username ILIKE $2 OR nickname ILIKE $2)`,
+        [q, `%${q}%`],
+      ),
+    ]);
+
+    res.json({
+      users:  dataRes.rows,
+      total:  parseInt(countRes.rows[0].count),
+      page,
+      limit,
+    });
   } catch (err) {
     console.error('[admin users GET]', err.message);
     res.status(500).json({ error: '서버 오류' });
