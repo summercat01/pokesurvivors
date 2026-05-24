@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import authRouter from './routes/auth.js';
 import userRouter from './routes/user.js';
 import leaderboardRouter from './routes/leaderboard.js';
+import communityRouter from './routes/community.js';
+import inquiryRouter from './routes/inquiry.js';
+import adminRouter from './routes/admin.js';
 
 dotenv.config({ path: new URL('../.env.server', import.meta.url).pathname });
 
@@ -16,7 +19,6 @@ const PORT = process.env.PORT || 3002;
 app.use(express.json());
 
 // ── Rate limiting ─────────────────────────────────────
-// 로그인/가입: 1분에 10회
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
@@ -25,7 +27,6 @@ const authLimiter = rateLimit({
   message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
 });
 
-// 일반 API: 1분에 120회
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 120,
@@ -34,10 +35,26 @@ const apiLimiter = rateLimit({
   message: { error: '요청이 너무 많습니다.' },
 });
 
+const communityLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+});
+
 // ── API 라우터 ────────────────────────────────────────
-app.use('/api/auth', authLimiter, authRouter);
-app.use('/api/user', apiLimiter, userRouter);
-app.use('/api/leaderboard', apiLimiter, leaderboardRouter);
+app.use('/api/auth',      authLimiter,      authRouter);
+app.use('/api/user',      apiLimiter,       userRouter);
+app.use('/api/leaderboard', apiLimiter,     leaderboardRouter);
+app.use('/api/community', communityLimiter, communityRouter);
+app.use('/api/inquiry',   communityLimiter, inquiryRouter);
+app.use('/api/admin',     apiLimiter,       adminRouter);
+
+// ── 어드민 페이지 ─────────────────────────────────────
+app.get('/admin', (_req, res) => {
+  res.sendFile(join(__dirname, '../admin/index.html'));
+});
 
 // 정적 파일 서빙 (Vite 빌드 결과물)
 const distPath = join(__dirname, '../dist');

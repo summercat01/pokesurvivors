@@ -5,7 +5,7 @@ import { signToken } from '../middleware/auth.js';
 
 const router = Router();
 
-// POST /api/signup
+// POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   const { username, password, nickname } = req.body;
   if (!username || !password || !nickname) {
@@ -22,13 +22,12 @@ router.post('/signup', async (req, res) => {
     );
     const user = result.rows[0];
 
-    // 초기 레코드 생성 (신규 가입 보너스: 10,000 골드)
     await pool.query(
       `INSERT INTO user_records (user_id, total_gold) VALUES ($1, 10000) ON CONFLICT DO NOTHING`,
       [user.id],
     );
 
-    const token = signToken(user.id, user.username);
+    const token = signToken(user.id, user.username, false);
     res.json({ id: user.id, username: user.username, nickname: user.nickname, token });
   } catch (err) {
     if (err.code === '23505') {
@@ -42,7 +41,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// POST /api/login
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
@@ -51,7 +50,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT id, username, nickname, password_hash FROM players WHERE username = $1`,
+      `SELECT id, username, nickname, password_hash, is_admin, banned_at FROM players WHERE username = $1`,
       [username],
     );
     const user = result.rows[0];
@@ -64,13 +63,16 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: '아이디 또는 비밀번호가 틀렸습니다' });
     }
 
-    // 레코드가 없으면 초기화
+    if (user.banned_at) {
+      return res.status(403).json({ error: '이용이 정지된 계정입니다. 운영자에게 문의하세요.' });
+    }
+
     await pool.query(
       `INSERT INTO user_records (user_id) VALUES ($1) ON CONFLICT DO NOTHING`,
       [user.id],
     );
 
-    const token = signToken(user.id, user.username);
+    const token = signToken(user.id, user.username, user.is_admin ?? false);
     res.json({ id: user.id, username: user.username, nickname: user.nickname, token });
   } catch (err) {
     console.error('[login]', err.message);

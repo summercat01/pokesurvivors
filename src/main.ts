@@ -14,6 +14,8 @@ import { LoginScene } from './scenes/LoginScene';
 import { RankingScene } from './scenes/RankingScene';
 import { PokedexScene } from './scenes/PokedexScene';
 import { TypeMatchupScene } from './scenes/TypeMatchupScene';
+import { CommunityScene } from './scenes/CommunityScene';
+import { InquiryScene } from './scenes/InquiryScene';
 
 inject();
 
@@ -55,7 +57,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, LoginScene, TitleScene, OakGuideScene, StageSelectScene, CharacterSelectScene, UpgradeScene, GameScene, GameOverScene, LevelUpScene, DevScene, RankingScene, PokedexScene, TypeMatchupScene],
+  scene: [BootScene, LoginScene, TitleScene, OakGuideScene, StageSelectScene, CharacterSelectScene, UpgradeScene, GameScene, GameOverScene, LevelUpScene, DevScene, RankingScene, PokedexScene, TypeMatchupScene, CommunityScene, InquiryScene],
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,

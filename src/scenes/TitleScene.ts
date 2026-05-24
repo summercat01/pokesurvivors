@@ -326,22 +326,23 @@ export class TitleScene extends Phaser.Scene {
     const H      = this.scale.height;
     const W      = this.scale.width;
     const BTN_W  = Math.min(280, W - 60);
-    const BTN_H  = 54;
+    const BTN_H  = 48;
     const BTN_CX = W / 2;
 
-    // 버튼 영역: 로고 하단(H*0.41)과 푸터 상단(H-170) 사이에 균등 배치
+    // 버튼 영역: 로고 하단(H*0.41)과 푸터 상단(H-170) 사이에 균등 배치 (4행)
     const FOOTER_TOP   = H - 170;
     const logoBottom   = Math.round(H * 0.41) + 10;
     const btnSpan      = FOOTER_TOP - logoBottom;
-    const spaceBetween = Math.max(10, Math.floor((btnSpan - BTN_H * 3) / 4));
+    const spaceBetween = Math.max(8, Math.floor((btnSpan - BTN_H * 4) / 5));
     const BTN_GAP      = BTN_H + spaceBetween;
     const BTN_Y0       = logoBottom + spaceBetween + Math.floor(BTN_H / 2);
 
+    // Row 1: 게임 시작 (전체 폭)
     this.createDPButton(
       BTN_CX, BTN_Y0,
       BTN_W, BTN_H,
       t('▶  게임 시작', '▶  Start Game'),
-      0x44cc66,      // 포인트 컬러 (초록)
+      0x44cc66,
       () => SceneHelper.transitionTo(this, 'StageSelectScene'),
     );
 
@@ -362,18 +363,33 @@ export class TitleScene extends Phaser.Scene {
       () => SceneHelper.transitionTo(this, 'RankingScene'),
     );
 
-    // Row 3: 설정 | 공지
+    // Row 3: 커뮤니티 | 문의하기
     this.createDPButton(
       BTN_CX - HALF_W / 2 - 4, BTN_Y0 + BTN_GAP * 2,
+      HALF_W, BTN_H,
+      t('💬 커뮤니티', '💬 Community'),
+      0x2266aa,
+      () => SceneHelper.transitionTo(this, 'CommunityScene'),
+    );
+    this.createDPButton(
+      BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP * 2,
+      HALF_W, BTN_H,
+      t('📩 문의하기', '📩 Contact'),
+      null,
+      () => SceneHelper.transitionTo(this, 'InquiryScene'),
+    );
+
+    // Row 4: 설정 | 공지
+    this.createDPButton(
+      BTN_CX - HALF_W / 2 - 4, BTN_Y0 + BTN_GAP * 3,
       HALF_W, BTN_H,
       t('⚙ 설정', '⚙ Settings'),
       null,
       () => this.showSettingsModal(),
     );
-    // 공지가 있으면 황금 스트라이프로 "NEW" 표시
     const hasNotice = ACTIVE_NOTICE !== null;
     this.createDPButton(
-      BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP * 2,
+      BTN_CX + HALF_W / 2 + 4, BTN_Y0 + BTN_GAP * 3,
       HALF_W, BTN_H,
       t('📢 공지', '📢 Notice'),
       hasNotice ? 0xcc8800 : null,
