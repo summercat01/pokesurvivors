@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { api } from '../lib/api';
 import { getCurrentUser } from '../lib/auth';
-import { POKE_FONT, PokePalette } from '../ui/PokeUI';
 import { SceneHelper } from '../utils/SceneHelper';
 import { t } from '../i18n';
 
@@ -24,18 +23,13 @@ export class CommunityScene extends Phaser.Scene {
     this.input.keyboard?.disableGlobalCapture();
     this.createBackground();
     this.createOverlay();
-
     this.events.once('shutdown', () => this.removeOverlay());
   }
 
   private createBackground() {
     const W = this.scale.width;
     const H = this.scale.height;
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0f1420);
-    const g = this.add.graphics();
-    g.lineStyle(1, 0x1a2233, 0.6);
-    for (let x = 0; x < W; x += 48) g.lineBetween(x, 0, x, H);
-    for (let y = 0; y < H; y += 48) g.lineBetween(0, y, W, y);
+    this.add.rectangle(W / 2, H / 2, W, H, 0x0a0e18);
   }
 
   private createOverlay() {
@@ -56,53 +50,54 @@ export class CommunityScene extends Phaser.Scene {
       flexDirection: 'column',
       zIndex:        '1000',
       fontFamily:    '"Noto Sans KR", "Malgun Gothic", Arial, sans-serif',
-      fontSize:      '13px',
-      color:         '#e0e0e0',
+      background:    '#0f1520',
     });
 
-    const catLabels = { bug: '🐛 버그', update: '💡 업데이트', other: '💬 기타' };
-    const writeArea = user ? `
-      <div id="comm-write" style="padding:8px;background:#0f1520;border-top:1px solid #2a3448;flex-shrink:0;">
-        <textarea id="comm-input" maxlength="300"
-          placeholder="${t('댓글을 입력하세요 (최대 300자)', 'Write a comment (max 300 chars)')}"
-          style="width:100%;height:72px;resize:none;padding:8px;background:#1a2030;border:1px solid #2a3448;
-                 border-radius:6px;color:#e0e0e0;font-size:12px;font-family:inherit;outline:none;"></textarea>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
-          <span id="comm-charcount" style="color:#555;font-size:11px;">0/300</span>
-          <button id="comm-submit"
-            style="padding:6px 18px;background:#1e3a5f;border:1px solid #2a5080;border-radius:6px;
-                   color:#88ccff;cursor:pointer;font-family:inherit;font-size:12px;">
-            ${t('작성', 'Post')}
-          </button>
-        </div>
+    const inputBar = user ? `
+      <div style="display:flex;align-items:flex-end;gap:8px;padding:8px 10px;
+                  background:#1a2030;border-top:1px solid #252e40;flex-shrink:0;">
+        <textarea id="comm-input" maxlength="300" rows="1"
+          placeholder="${t('메시지 입력...', 'Message...')}"
+          style="flex:1;resize:none;padding:8px 12px;background:#252e40;border:none;
+                 border-radius:18px;color:#e8eaf0;font-size:13px;font-family:inherit;
+                 outline:none;line-height:1.45;max-height:90px;overflow-y:auto;"></textarea>
+        <button id="comm-submit"
+          style="flex-shrink:0;width:38px;height:38px;background:#3a7bd5;border:none;
+                 border-radius:50%;color:#fff;font-size:18px;cursor:pointer;
+                 display:flex;align-items:center;justify-content:center;padding:0;">
+          ➤
+        </button>
       </div>
     ` : `
-      <div style="padding:10px;background:#0f1520;border-top:1px solid #2a3448;text-align:center;
-                  color:#556;font-size:12px;flex-shrink:0;">
-        ${t('댓글을 작성하려면 로그인해주세요', 'Please log in to write a comment')}
+      <div style="padding:10px;background:#1a2030;border-top:1px solid #252e40;
+                  text-align:center;color:#445;font-size:12px;flex-shrink:0;">
+        ${t('채팅하려면 로그인해주세요', 'Log in to chat')}
       </div>
     `;
 
     this.overlay.innerHTML = `
-      <div style="display:flex;align-items:center;padding:10px 14px;background:#1a2233;border-bottom:1px solid #2a3448;flex-shrink:0;">
+      <div style="display:flex;align-items:center;padding:8px 12px;
+                  background:#151e30;border-bottom:1px solid #252e40;flex-shrink:0;gap:10px;">
         <button id="comm-back"
-          style="padding:5px 12px;background:#1e2a3a;border:1px solid #2a3a50;border-radius:6px;
-                 color:#88aacc;cursor:pointer;font-family:inherit;font-size:12px;margin-right:12px;">
-          ← ${t('뒤로', 'Back')}
-        </button>
-        <span style="font-weight:bold;font-size:15px;color:#88ccff;">💬 ${t('커뮤니티', 'Community')}</span>
+          style="background:none;border:none;color:#7a9cc4;font-size:20px;
+                 cursor:pointer;padding:0;line-height:1;">‹</button>
+        <span style="font-size:14px;font-weight:bold;color:#d0daf0;">
+          💬 ${t('커뮤니티', 'Community')}
+        </span>
         <button id="comm-refresh"
-          style="margin-left:auto;padding:5px 10px;background:#1e2a3a;border:1px solid #2a3a50;border-radius:6px;
-                 color:#668899;cursor:pointer;font-family:inherit;font-size:11px;">
-          🔄 ${t('새로고침', 'Refresh')}
-        </button>
+          style="margin-left:auto;background:none;border:none;color:#4a6080;
+                 font-size:15px;cursor:pointer;padding:2px;">↻</button>
       </div>
 
-      <div id="comm-list" style="flex:1;overflow-y:auto;padding:8px;pointer-events:all;">
-        <div style="text-align:center;color:#444;padding:24px;">${t('불러오는 중...', 'Loading...')}</div>
+      <div id="comm-list"
+        style="flex:1;overflow-y:auto;padding:10px 10px 4px;display:flex;
+               flex-direction:column;gap:6px;">
+        <div style="text-align:center;color:#334;font-size:12px;margin:auto;">
+          ${t('불러오는 중...', 'Loading...')}
+        </div>
       </div>
 
-      ${writeArea}
+      ${inputBar}
     `;
 
     document.body.appendChild(this.overlay);
@@ -114,98 +109,154 @@ export class CommunityScene extends Phaser.Scene {
     this.overlay.querySelector('#comm-back')!.addEventListener('click', () => {
       SceneHelper.transitionTo(this, 'TitleScene');
     });
-
     this.overlay.querySelector('#comm-refresh')!.addEventListener('click', () => {
       this.loadPosts();
     });
 
     if (!user) return;
 
-    const input   = this.overlay.querySelector('#comm-input') as HTMLTextAreaElement;
-    const counter = this.overlay.querySelector('#comm-charcount') as HTMLSpanElement;
-    const submit  = this.overlay.querySelector('#comm-submit') as HTMLButtonElement;
+    const input  = this.overlay.querySelector('#comm-input') as HTMLTextAreaElement;
+    const submit = this.overlay.querySelector('#comm-submit') as HTMLButtonElement;
 
+    // textarea 자동 높이
     input.addEventListener('input', () => {
-      counter.textContent = `${input.value.length}/300`;
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 90) + 'px';
+    });
+
+    // Enter 전송 (Shift+Enter는 줄바꿈)
+    input.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submit.click();
+      }
     });
 
     submit.addEventListener('click', async () => {
       const content = input.value.trim();
       if (!content) return;
       submit.disabled = true;
-      submit.textContent = t('작성 중...', 'Posting...');
       try {
         await api.post('/community', { content });
         input.value = '';
-        counter.textContent = '0/300';
-        this.loadPosts();
+        input.style.height = 'auto';
+        this.loadPosts(true);
       } catch (err: unknown) {
         alert(err instanceof Error ? err.message : t('오류가 발생했습니다', 'An error occurred'));
       } finally {
         submit.disabled = false;
-        submit.textContent = t('작성', 'Post');
       }
     });
   }
 
-  private async loadPosts() {
+  private async loadPosts(scrollToBottom = false) {
     const listEl = this.overlay.querySelector('#comm-list') as HTMLDivElement;
     const user   = getCurrentUser();
 
     try {
-      const data = await api.get<{ posts: Post[]; total: number }>('/community?page=1');
-      const { posts } = data;
-
-      if (posts.length === 0) {
-        listEl.innerHTML = `<div style="text-align:center;color:#444;padding:32px;">${t('아직 글이 없습니다. 첫 댓글을 남겨보세요!', 'No posts yet. Be the first!')}</div>`;
-        return;
-      }
+      const data  = await api.get<{ posts: Post[] }>('/community?page=1');
+      // 서버가 최신순으로 주므로 뒤집어서 오래된 게 위로
+      const posts = [...data.posts].reverse();
 
       listEl.innerHTML = '';
 
+      if (posts.length === 0) {
+        listEl.innerHTML = `
+          <div style="text-align:center;color:#334;font-size:12px;margin:auto;">
+            ${t('아직 메시지가 없어요. 첫 메시지를 남겨보세요!', 'No messages yet. Say hi!')}
+          </div>`;
+        return;
+      }
+
+      let prevNick = '';
       posts.forEach(post => {
-        const card = document.createElement('div');
-        card.style.cssText = `
-          background:#1a2030;border:1px solid #2a3448;border-radius:8px;
-          padding:10px 12px;margin-bottom:8px;
+        const isMe = user && String(post.user_id) === String(user.id);
+        const showNick = !isMe && post.nickname !== prevNick;
+        prevNick = post.nickname;
+
+        const bubble = document.createElement('div');
+        bubble.style.cssText = `
+          display:flex;
+          flex-direction:column;
+          align-items:${isMe ? 'flex-end' : 'flex-start'};
+          max-width:100%;
         `;
 
-        const isOwn  = user && String(post.user_id) === String(user.id);
-        const canDel = isOwn;
+        // 닉네임 (상대방만, 연속 메시지면 생략)
+        if (showNick) {
+          const nick = document.createElement('div');
+          nick.style.cssText = 'font-size:10px;color:#5a7a9a;margin-bottom:2px;padding-left:4px;';
+          nick.textContent = post.nickname;
+          bubble.appendChild(nick);
+        }
 
-        const timeStr = this.formatTime(post.created_at);
+        const row = document.createElement('div');
+        row.style.cssText = `display:flex;align-items:flex-end;gap:5px;flex-direction:${isMe ? 'row-reverse' : 'row'};max-width:85%;`;
 
-        card.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-weight:bold;color:${isOwn ? '#88ffaa' : '#88aacc'};font-size:12px;">
-              ${this.esc(post.nickname)}${isOwn ? ` <span style="color:#556;font-size:10px;">(${t('나', 'me')})</span>` : ''}
-            </span>
-            <span style="color:#445;font-size:10px;">${timeStr}</span>
-          </div>
-          <div style="color:#d0d8e8;line-height:1.55;white-space:pre-wrap;word-break:break-all;font-size:12px;">
-            ${this.esc(post.content)}
-          </div>
-          <div style="margin-top:8px;display:flex;gap:8px;">
-            ${canDel ? `<button data-del="${post.id}" style="font-size:10px;padding:2px 8px;background:#3a1a1a;border:1px solid #5a2a2a;border-radius:4px;color:#ff8888;cursor:pointer;font-family:inherit;">${t('삭제', 'Delete')}</button>` : ''}
-            ${user && !isOwn ? `<button data-rep="${post.id}" style="font-size:10px;padding:2px 8px;background:#2a2a1a;border:1px solid #4a4a2a;border-radius:4px;color:#aaa88a;cursor:pointer;font-family:inherit;">${t('신고', 'Report')}</button>` : ''}
-          </div>
+        // 말풍선
+        const msgBubble = document.createElement('div');
+        msgBubble.style.cssText = `
+          padding:8px 12px;
+          border-radius:${isMe ? '16px 4px 16px 16px' : '4px 16px 16px 16px'};
+          background:${isMe ? '#3a7bd5' : '#1e2a3e'};
+          color:${isMe ? '#fff' : '#d0daf0'};
+          font-size:13px;
+          line-height:1.5;
+          word-break:break-all;
+          white-space:pre-wrap;
+          max-width:100%;
+          position:relative;
         `;
+        msgBubble.textContent = post.content;
 
-        const delBtn = card.querySelector(`[data-del="${post.id}"]`) as HTMLButtonElement | null;
-        delBtn?.addEventListener('click', () => this.deletePost(post.id));
+        // 시간
+        const timeEl = document.createElement('div');
+        timeEl.style.cssText = 'font-size:9px;color:#3a4a5a;flex-shrink:0;padding-bottom:2px;';
+        timeEl.textContent = this.formatTime(post.created_at);
 
-        const repBtn = card.querySelector(`[data-rep="${post.id}"]`) as HTMLButtonElement | null;
-        repBtn?.addEventListener('click', () => this.reportPost(post.id, post.nickname));
+        row.appendChild(msgBubble);
+        row.appendChild(timeEl);
+        bubble.appendChild(row);
 
-        listEl.appendChild(card);
+        // 삭제/신고 버튼 (말풍선 아래 작게)
+        if (isMe || (user && !isMe)) {
+          const actions = document.createElement('div');
+          actions.style.cssText = `display:flex;gap:6px;margin-top:2px;padding:0 4px;`;
+
+          if (isMe) {
+            const delBtn = document.createElement('button');
+            delBtn.textContent = t('삭제', 'Del');
+            delBtn.style.cssText = 'font-size:10px;background:none;border:none;color:#3a4a5a;cursor:pointer;padding:0;';
+            delBtn.addEventListener('click', () => this.deletePost(post.id));
+            actions.appendChild(delBtn);
+          } else if (user) {
+            const repBtn = document.createElement('button');
+            repBtn.textContent = t('신고', 'Rep');
+            repBtn.style.cssText = 'font-size:10px;background:none;border:none;color:#3a4a5a;cursor:pointer;padding:0;';
+            repBtn.addEventListener('click', () => this.reportPost(post.id, post.nickname));
+            actions.appendChild(repBtn);
+          }
+
+          bubble.appendChild(actions);
+        }
+
+        listEl.appendChild(bubble);
       });
+
+      // 새 메시지 전송 시 or 첫 로드 시 맨 아래로 스크롤
+      if (scrollToBottom || listEl.scrollTop === 0) {
+        listEl.scrollTop = listEl.scrollHeight;
+      }
     } catch {
-      listEl.innerHTML = `<div style="text-align:center;color:#844;padding:24px;">${t('불러오기 실패. 다시 시도해주세요.', 'Failed to load. Please try again.')}</div>`;
+      listEl.innerHTML = `
+        <div style="text-align:center;color:#553333;font-size:12px;margin:auto;">
+          ${t('불러오기 실패. ↻ 를 눌러 다시 시도해주세요.', 'Failed to load. Tap ↻ to retry.')}
+        </div>`;
     }
   }
 
   private async deletePost(id: number) {
-    if (!confirm(t('이 댓글을 삭제하시겠습니까?', 'Delete this post?'))) return;
+    if (!confirm(t('이 메시지를 삭제하시겠습니까?', 'Delete this message?'))) return;
     try {
       await api.delete(`/community/${id}`);
       this.loadPosts();
@@ -215,16 +266,10 @@ export class CommunityScene extends Phaser.Scene {
   }
 
   private async reportPost(id: number, nickname: string) {
-    const reasons = [
-      t('욕설/비방', 'Abuse/Defamation'),
-      t('스팸', 'Spam'),
-      t('부적절한 내용', 'Inappropriate content'),
-      t('기타', 'Other'),
-    ];
     const reason = prompt(
-      `"${nickname}"${t('의 댓글을 신고합니다.\n사유를 입력해주세요:', '\'s post — enter report reason:')}\n(${reasons.join(' / ')})`,
+      `"${nickname}" ${t('메시지 신고 사유:', 'report reason:')}\n${t('욕설 / 스팸 / 부적절한 내용 / 기타', 'Abuse / Spam / Inappropriate / Other')}`,
     );
-    if (!reason || !reason.trim()) return;
+    if (!reason?.trim()) return;
     try {
       await api.post(`/community/${id}/report`, { reason: reason.trim() });
       alert(t('신고가 접수되었습니다.', 'Report submitted.'));
@@ -236,14 +281,10 @@ export class CommunityScene extends Phaser.Scene {
   private formatTime(dateStr: string): string {
     const d    = new Date(dateStr);
     const diff = Math.floor((Date.now() - d.getTime()) / 1000);
-    if (diff < 60)   return t(`${diff}초 전`, `${diff}s ago`);
-    if (diff < 3600) return t(`${Math.floor(diff / 60)}분 전`, `${Math.floor(diff / 60)}m ago`);
-    if (diff < 86400) return t(`${Math.floor(diff / 3600)}시간 전`, `${Math.floor(diff / 3600)}h ago`);
-    return d.toLocaleDateString();
-  }
-
-  private esc(str: string): string {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if (diff < 60)    return t(`${diff}초 전`, `${diff}s`);
+    if (diff < 3600)  return t(`${Math.floor(diff / 60)}분 전`, `${Math.floor(diff / 60)}m`);
+    if (diff < 86400) return t(`${Math.floor(diff / 3600)}시간 전`, `${Math.floor(diff / 3600)}h`);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
   }
 
   private removeOverlay() {
