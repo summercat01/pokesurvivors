@@ -7,6 +7,7 @@ import { TOP_H, BOT_H, MAP_SCALE, MAX_ENEMIES } from '../constants/layout';
 import { getBgmVolume } from '../lib/storage';
 import { GameHud } from '../ui/GameHud';
 import { JoystickInput } from '../input/JoystickInput';
+import { GamepadInput } from '../input/GamepadInput';
 import { AudioManager } from '../managers/AudioManager';
 import { ComboSystem } from '../managers/ComboSystem';
 import { PauseOverlay } from '../ui/PauseOverlay';
@@ -79,6 +80,7 @@ export class GameScene extends Phaser.Scene {
 
   // 외부 시스템
   private joystick!: JoystickInput;
+  private gamepad!: GamepadInput;
   private audio!: AudioManager;
   private combo!: ComboSystem;
 
@@ -244,6 +246,8 @@ export class GameScene extends Phaser.Scene {
         this.hud.resetBossHpRatio();
         this.hud.setBossPanelVisible(true);
         this.audio.startBossBgm();
+        // 컨트롤러 햅틱 — 보스 등장 진동
+        this.gamepad.rumble(1.0, 0.6, 700);
       },
       onDarkraiPhase: () => {
         this.darkraiSpawned   = true;
@@ -297,6 +301,14 @@ export class GameScene extends Phaser.Scene {
 
     // 가상 조이스틱
     this.joystick = new JoystickInput(this, this.gameCam, {
+      isBlocked: () => this.isGameOver || this.isLevelingUp,
+      onPause:   () => this.pauseGame(),
+      onResume:  () => this.resumeGame(),
+      isPaused:  () => this.isPaused,
+    });
+
+    // 컨트롤러 (PS5 DualSense / 표준 Gamepad API)
+    this.gamepad = new GamepadInput({
       isBlocked: () => this.isGameOver || this.isLevelingUp,
       onPause:   () => this.pauseGame(),
       onResume:  () => this.resumeGame(),
@@ -373,7 +385,11 @@ export class GameScene extends Phaser.Scene {
     this.gameTime += delta;
     this.waveTimer += delta;
 
-    this.player.update(delta, this.joystick.dx, this.joystick.dy);
+    this.gamepad.update();
+    // 컨트롤러가 연결되어 있으면 gamepad 입력 우선, 없으면 터치 조이스틱 사용
+    const moveDx = this.gamepad.connected ? this.gamepad.dx : this.joystick.dx;
+    const moveDy = this.gamepad.connected ? this.gamepad.dy : this.joystick.dy;
+    this.player.update(delta, moveDx, moveDy);
 
     // 게임오버 체크 (부활 처리 포함)
     if (this.player.isDead()) {

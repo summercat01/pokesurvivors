@@ -45,6 +45,9 @@ const config: Phaser.Types.Core.GameConfig = {
     roundPixels: true,  // 텍스트·스프라이트를 정수 픽셀에 배치 → 미세한 흐림 감소
     antialias: true,
   },
+  input: {
+    gamepad: true,
+  },
   physics: {
     default: 'arcade',
     arcade: {
