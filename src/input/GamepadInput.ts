@@ -20,6 +20,14 @@ export interface GamepadCallbacks {
   isPaused:  () => boolean;
 }
 
+/** 연결된 첫 번째 gamepad를 반환. 없으면 null. */
+function getActiveGamepad(): Gamepad | null {
+  for (const gp of navigator.getGamepads()) {
+    if (gp && gp.connected) return gp;
+  }
+  return null;
+}
+
 export class GamepadInput {
   dx = 0;
   dy = 0;
@@ -33,7 +41,7 @@ export class GamepadInput {
 
   /** GameScene.update() 안에서 매 프레임 호출 */
   update() {
-    const gp = navigator.getGamepads()[0];
+    const gp = getActiveGamepad();
     if (!gp) { this.dx = 0; this.dy = 0; return; }
 
     // 왼쪽 스틱
@@ -75,7 +83,7 @@ export class GamepadInput {
    * @param ms      진동 지속 시간(밀리초)
    */
   rumble(strong = 1.0, weak = 0.6, ms = 700) {
-    const gp = navigator.getGamepads()[0];
+    const gp = getActiveGamepad();
     if (!gp) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const va = (gp as any).vibrationActuator;
@@ -88,8 +96,8 @@ export class GamepadInput {
     }).catch(() => { /* 지원 안 하는 브라우저/컨트롤러 무시 */ });
   }
 
-  /** 현재 gamepad가 연결되어 있는지 여부 */
+  /** 현재 연결·활성화된 gamepad가 있는지 여부 */
   get connected(): boolean {
-    return !!(navigator.getGamepads()[0]);
+    return getActiveGamepad() !== null;
   }
 }

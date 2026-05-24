@@ -386,9 +386,11 @@ export class GameScene extends Phaser.Scene {
     this.waveTimer += delta;
 
     this.gamepad.update();
-    // 컨트롤러가 연결되어 있으면 gamepad 입력 우선, 없으면 터치 조이스틱 사용
-    const moveDx = this.gamepad.connected ? this.gamepad.dx : this.joystick.dx;
-    const moveDy = this.gamepad.connected ? this.gamepad.dy : this.joystick.dy;
+    // 컨트롤러 입력과 터치 조이스틱 중 더 큰 값 사용 (둘 다 동시 지원)
+    const moveDx = Math.abs(this.gamepad.dx) >= Math.abs(this.joystick.dx)
+      ? this.gamepad.dx : this.joystick.dx;
+    const moveDy = Math.abs(this.gamepad.dy) >= Math.abs(this.joystick.dy)
+      ? this.gamepad.dy : this.joystick.dy;
     this.player.update(delta, moveDx, moveDy);
 
     // 게임오버 체크 (부활 처리 포함)
