@@ -12,6 +12,16 @@ import type { Lang } from '../i18n';
 interface PatchEntry { version: string; date: string; changes: string[] }
 const PATCH_NOTES: PatchEntry[] = [
   {
+    version: 'v0.8.0', date: '2026-05-25',
+    changes: [
+      'PS5 DualSense 컨트롤러 지원 — 왼쪽 스틱/D-패드 이동, Options 일시정지, 보스 등장 시 햅틱',
+      '커뮤니티 추가 — 유저 간 실시간 채팅 (카톡 스타일 말풍선)',
+      '문의하기 추가 — 버그·업데이트 건의·기타 문의 접수',
+      '랭킹 페이지네이션 — 20명씩 페이지 구분',
+      '보안 강화 — JWT 인증, 서버사이드 값 검증, Rate Limiting',
+    ],
+  },
+  {
     version: 'v0.6.0', date: '2026-03-15',
     changes: [
       '타입 상성표 추가 — 17×17 매트릭스, 타이틀·일시정지에서 접근 가능',
