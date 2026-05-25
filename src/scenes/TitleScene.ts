@@ -916,6 +916,12 @@ export class TitleScene extends Phaser.Scene {
         wordWrap: { width: W - 24 },
       }).setOrigin(0.5, 0).setDepth(10);
 
+    // ── 컨트롤러 안내 ──
+    this.add.text(W / 2, H - 42,
+      t('🎮 컨트롤러와 함께 즐기면 더 풍부한 몰입감을 제공해 드립니다', '🎮 For a richer experience, play with a controller'),
+      { fontSize: '9px', color: '#4a5a4a', align: 'center' },
+    ).setOrigin(0.5, 0).setDepth(10);
+
     // ── 개발자 정보 ──
     const DEV_Y    = H - 20;
     const GAP      = 6;
