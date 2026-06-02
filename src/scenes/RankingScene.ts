@@ -53,7 +53,7 @@ export class RankingScene extends Phaser.Scene {
     PokeUI.sceneHeader(this, t('🏆 랭킹', '🏆 Ranking'), t('최고 스테이지 · 최고 시간 기준', 'Best stage · Best time'), { depth: 10 });
 
     // ── 뒤로 버튼 ──
-    const NAV_H  = 44;
+    const NAV_H  = 30;
     const backY  = H - NAV_H;
     PokeUI.navButton(this, CX, backY, 140, 36, t('← 뒤로', '← Back'),
       () => SceneHelper.transitionTo(this, 'TitleScene'));
@@ -103,7 +103,7 @@ export class RankingScene extends Phaser.Scene {
     // ── 페이지네이션 영역 높이 계산 ──
     const PAGING_H   = this.totalPages > 1 ? 44 : 0;
     const SCROLL_TOP = TABLE_TOP + 36;
-    const SCROLL_BOT = backY - PAGING_H - 8;
+    const SCROLL_BOT = backY - PAGING_H - 26;
 
     // ── 스크롤 영역 ──
     const scrollPanel = new ScrollablePanel(this, { top: SCROLL_TOP, bottom: SCROLL_BOT });
