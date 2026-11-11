@@ -15,6 +15,7 @@ dotenv.config({ path: new URL('../.env.server', import.meta.url).pathname });
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3002;
+const HOST = process.env.HOST || '0.0.0.0';
 
 app.use(express.json());
 app.set('trust proxy', 1); // Cloudflare Tunnel / 리버스 프록시 신뢰
@@ -66,6 +67,6 @@ app.get('/{*path}', (_req, res) => {
   res.sendFile(join(distPath, 'index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`[server] pokesurv running on port ${PORT}`);
 });
